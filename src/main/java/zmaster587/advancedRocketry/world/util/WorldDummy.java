@@ -1,7 +1,5 @@
 package zmaster587.advancedRocketry.world.util;
 
-import javax.annotation.Nullable;
-
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.multiplayer.ChunkProviderClient;
 import net.minecraft.entity.Entity;
@@ -14,7 +12,6 @@ import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.IChunkProvider;
-import net.minecraft.world.storage.MapStorage;
 import net.minecraft.world.storage.WorldInfo;
 import net.minecraftforge.common.capabilities.CapabilityDispatcher;
 import net.minecraftforge.event.ForgeEventFactory;
@@ -23,25 +20,29 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 import zmaster587.advancedRocketry.api.AdvancedRocketryBiomes;
 import zmaster587.advancedRocketry.util.StorageChunk;
 
+import javax.annotation.Nullable;
+
 public class WorldDummy extends World  {
 
 	private final static ProviderDummy dummyProvider = new ProviderDummy();
 
 	StorageChunk storage;
 	public int displayListIndex = -1;
-	private final CapabilityDispatcher capabilities;
+	private CapabilityDispatcher capabilities;
 	
 	public WorldDummy(Profiler p_i45368_5_, StorageChunk storage) {
 		super(new DummySaveHandler(), new WorldInfo(new NBTTagCompound()), dummyProvider, p_i45368_5_, false);
 		dummyProvider.setWorld(this);
 		this.storage = storage;
 		this.chunkProvider = new ChunkProviderDummy(this, storage);
-		this.capabilities = ForgeEventFactory.gatherCapabilities(this, null);
+		
 	}
 	
 	@Override
 	public World init() {
 		this.mapStorage = new MapStorageDummy(this.saveHandler);
+		this.capabilities = ForgeEventFactory.gatherCapabilities(this, null);
+		
 		return super.init();
 	}
 	

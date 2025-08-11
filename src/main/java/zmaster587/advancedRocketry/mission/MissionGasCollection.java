@@ -9,9 +9,11 @@ import net.minecraftforge.common.DimensionManager;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.CapabilityFluidHandler;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import zmaster587.advancedRocketry.api.ARConfiguration;
 import zmaster587.advancedRocketry.api.IInfrastructure;
+import zmaster587.advancedRocketry.api.fuel.FuelRegistry;
 import zmaster587.advancedRocketry.entity.EntityRocket;
 import zmaster587.advancedRocketry.entity.EntityStationDeployedRocket;
 import zmaster587.libVulpes.LibVulpes;
@@ -22,7 +24,7 @@ import java.util.LinkedList;
 public class MissionGasCollection extends MissionResourceCollection {
 
 
-	Fluid gasFluid;
+	private Fluid gasFluid;
 	public MissionGasCollection() {
 		super();
 	}
@@ -41,14 +43,10 @@ public class MissionGasCollection extends MissionResourceCollection {
 	public void onMissionComplete() {
 
 		if((int)rocketStats.getStatTag("intakePower") > 0 && gasFluid != null) {
-			int amountOfGas = Integer.MAX_VALUE;
 			Fluid type = gasFluid;//FluidRegistry.getFluid("hydrogen");
 			//Fill gas tanks
 			for(TileEntity tile : this.rocketStorage.getFluidTiles()) {
-				amountOfGas -= ((IFluidHandler)tile).fill(new FluidStack(type, amountOfGas), true);
-
-				if(amountOfGas == 0)
-					break;
+				tile.getCapability(CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY, null).fill(new FluidStack(type, 64000), true);
 			}
 		}
 
@@ -60,8 +58,14 @@ public class MissionGasCollection extends MissionResourceCollection {
 		}
 		
 		EntityStationDeployedRocket rocket = new EntityStationDeployedRocket(world, rocketStorage, rocketStats, x, y, z);
-		rocket.setFuelAmount(0);
-		rocket.readMissionPersistantNBT(missionPersistantNBT);
+
+		FuelRegistry.FuelType fuelType = rocket.getRocketFuelType();
+		if(fuelType != null) {
+			rocket.setFuelAmount(fuelType, 0);
+			if (fuelType == FuelRegistry.FuelType.LIQUID_BIPROPELLANT)
+				rocket.setFuelAmount(FuelRegistry.FuelType.LIQUID_OXIDIZER, 0);
+		}
+		rocket.readMissionPersistentNBT(missionPersistantNBT);
 
 		EnumFacing dir = rocket.forwardDirection;
 		rocket.forceSpawn = true;

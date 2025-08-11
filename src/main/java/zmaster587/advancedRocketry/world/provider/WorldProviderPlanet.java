@@ -5,6 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -23,23 +24,25 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 import org.apache.commons.lang3.ArrayUtils;
 
 import zmaster587.advancedRocketry.AdvancedRocketry;
-import zmaster587.advancedRocketry.api.AdvancedRocketryBlocks;
 import zmaster587.advancedRocketry.api.ARConfiguration;
+import zmaster587.advancedRocketry.api.AdvancedRocketryItems;
 import zmaster587.advancedRocketry.api.IAtmosphere;
 import zmaster587.advancedRocketry.api.IPlanetaryProvider;
 import zmaster587.advancedRocketry.api.dimension.solar.StellarBody;
+import zmaster587.advancedRocketry.armor.ItemSpaceArmor;
 import zmaster587.advancedRocketry.atmosphere.AtmosphereHandler;
 import zmaster587.advancedRocketry.capability.DimensionCompat;
-import zmaster587.advancedRocketry.client.render.planet.RenderAsteroidSky;
 import zmaster587.advancedRocketry.client.render.planet.RenderPlanetarySky;
-import zmaster587.advancedRocketry.compat.Compat;
 import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.dimension.DimensionProperties;
+import zmaster587.advancedRocketry.integration.CompatibilityMgr;
+import zmaster587.advancedRocketry.util.AstronomicalBodyHelper;
 import zmaster587.advancedRocketry.world.ChunkManagerPlanet;
-import zmaster587.advancedRocketry.world.ChunkProviderAsteroids;
 import zmaster587.advancedRocketry.world.ChunkProviderCavePlanet;
 import zmaster587.advancedRocketry.world.ChunkProviderPlanet;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Set;
 
 public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProvider {
@@ -58,6 +61,7 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 	}*/
 
 	@Override
+	@Nonnull
 	public IChunkGenerator createChunkGenerator() {
 		int genType = DimensionManager.getInstance().getDimensionProperties(world.provider.getDimension()).getGenType();
 		if(genType == 1)
@@ -70,8 +74,9 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 
 	@Override
 	@SideOnly(Side.CLIENT)
+	@Nullable
 	public IRenderHandler getSkyRenderer() {
-		if(!ARConfiguration.getCurrentConfig().planetSkyOverride)
+		if(!ARConfiguration.getCurrentConfig().planetSkyOverride || DimensionManager.getInstance().getDimensionProperties(world.provider.getDimension()).skyRenderOverride)
 			return null;
 		
 		int genType = DimensionManager.getInstance().getDimensionProperties(world.provider.getDimension()).getGenType();
@@ -109,7 +114,7 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 	}
 	@Override
 	public boolean canDoRainSnowIce(Chunk chunk) {
-		return getAtmosphereDensity(new BlockPos(0,0,0)) > 75 ? super.canDoRainSnowIce(chunk) : false;
+		return getAtmosphereDensity(new BlockPos(0, 0, 0)) > 75 && super.canDoRainSnowIce(chunk);
 	}
 	
 	@Override
@@ -127,7 +132,7 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 	private void doWeatherStuff()
 	{
 		if (getAtmosphereDensity(new BlockPos(0,0,0)) <= 75 && world.isRaining()) {
-			if(!Compat.isSpongeInstalled)
+			if(!CompatibilityMgr.isSpongeInstalled)
 			{
 				try
 				{
@@ -147,14 +152,14 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 	}
 
 	@Override
-	public int getRespawnDimension(EntityPlayerMP player) {
+	public int getRespawnDimension(@Nonnull EntityPlayerMP player) {
 		if(ARConfiguration.getCurrentConfig().canPlayerRespawnInSpace) {
 			BlockPos coords = player.getBedLocation(getDimension());
+			AtmosphereHandler atmhandler = AtmosphereHandler.getOxygenHandler(player.world.provider.getDimension());
 
-			if(coords != null) {
-				if (ARConfiguration.getCurrentConfig().forcePlayerRespawnInSpace || AtmosphereHandler.hasAtmosphereHandler(player.world.provider.getDimension()) && AtmosphereHandler.getOxygenHandler(player.world.provider.getDimension()).getAtmosphereType(coords).isBreathable()) {
-					return getDimension();
-				}
+			//this absolutely can be null, ignore your IDE's warning!
+			if (ARConfiguration.getCurrentConfig().forcePlayerRespawnInSpace || coords != null && AtmosphereHandler.hasAtmosphereHandler(player.world.provider.getDimension()) && atmhandler != null && atmhandler.getAtmosphereType(coords).isBreathable()) {
+				return getDimension();
 			}
 		}
 
@@ -162,8 +167,11 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 	}
 	
 	@Override
-	public WorldSleepResult canSleepAt(EntityPlayer player, BlockPos pos) {
-		if (ARConfiguration.getCurrentConfig().forcePlayerRespawnInSpace || AtmosphereHandler.hasAtmosphereHandler(player.world.provider.getDimension()) && AtmosphereHandler.getOxygenHandler(player.world.provider.getDimension()).getAtmosphereType(pos).isBreathable()) {
+	@Nonnull
+	public WorldSleepResult canSleepAt(@Nonnull EntityPlayer player, @Nonnull BlockPos pos) {
+		AtmosphereHandler atmhandler = AtmosphereHandler.getOxygenHandler(player.world.provider.getDimension());
+
+		if (ARConfiguration.getCurrentConfig().forcePlayerRespawnInSpace || AtmosphereHandler.hasAtmosphereHandler(player.world.provider.getDimension()) && atmhandler != null && atmhandler.getAtmosphereType(pos).isBreathable()) {
 			return WorldSleepResult.ALLOW;
 		}
 		else
@@ -179,17 +187,18 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 
 	@Override
 	@SideOnly(Side.CLIENT)
-	public float[] calcSunriseSunsetColors(float p_76560_1_, float p_76560_2_) {
-
+	public float[] calcSunriseSunsetColors(float celestialAngle, float partialTicks) {
+		EntityPlayer cameraEntity = Minecraft.getMinecraft().player;
 		float[] colors = getDimensionProperties(new BlockPos((int)Minecraft.getMinecraft().player.posX,0 , (int)Minecraft.getMinecraft().player.posZ)).sunriseSunsetColors;
 
 		if(colors == null)
-			return super.calcSunriseSunsetColors(p_76560_1_, p_76560_2_);
+			return super.calcSunriseSunsetColors(celestialAngle, partialTicks);
 
-		float finalColors[] = new float[4];
+		float[] intermediateColors = new float[3];
+		float[] finalColors = new float[4];
 
 		float f2 = 0.4F;
-		float f3 = MathHelper.cos(p_76560_1_ * (float)Math.PI * 2.0F) - 0.0F;
+		float f3 = MathHelper.cos(celestialAngle * (float)Math.PI * 2.0F) - 0.0F;
 		float f4 = -0.0F;
 
 		if (f3 >= f4 - f2 && f3 <= f4 + f2)
@@ -197,9 +206,19 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 			float f5 = (f3 - f4) / f2 * 0.5F + 0.5F;
 			float f6 = 1.0F - (1.0F - MathHelper.sin(f5 * (float)Math.PI)) * 0.99F;
 			f6 *= f6;
-			finalColors[0] = f5 * 0.3F + colors[0];
-			finalColors[1] = f5 * f5 * 0.7F + colors[1];
-			finalColors[2] = f5 * f5 * 0.1F + colors[2];
+			intermediateColors[0] = f5 * 0.3F + colors[0];
+			intermediateColors[1] = f5 * f5 * 0.7F + colors[1];
+			intermediateColors[2] = f5 * f5 * 0.1F + colors[2];
+
+			//Multiplied by brightness value to make dark atmospheres actually dark (if needed)
+			if (cameraEntity.world.provider instanceof WorldProviderPlanet) {
+				WorldProviderPlanet world = ((WorldProviderPlanet)cameraEntity.world.provider);
+				intermediateColors = operateFloatOnTriFloatArray(intermediateColors,world.getSunBrightness(partialTicks));
+			}
+
+			finalColors[0] = intermediateColors[0];
+			finalColors[1] = intermediateColors[1];
+			finalColors[2] = intermediateColors[2];
 			finalColors[3] = f6 * (getAtmosphereDensityFromHeight(Minecraft.getMinecraft().getRenderViewEntity().posY, new BlockPos((int)Minecraft.getMinecraft().player.posX, 0, (int)Minecraft.getMinecraft().player.posZ)));
 			return finalColors;
 		}
@@ -212,10 +231,13 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 	}
 
 	@Override
+	@SideOnly(Side.CLIENT)
 	public float getSunBrightness(float partialTicks) {
+		DimensionProperties properties = getDimensionProperties(Minecraft.getMinecraft().player.getPosition());
+		StellarBody star = properties.getStar();
 		
+		//This is inaccurate at times, moreso for atmosphere, but I am NOT doing the required math for the realistic counterpart
 		float atmosphere = getAtmosphereDensity(new BlockPos(0,0,0));
-		Math.abs(1-atmosphere);
 		//calculateCelestialAngle(p_76563_1_, p_76563_3_)
 		float f1 = world.getCelestialAngle(partialTicks);
 		float f2 = 1.0F - (MathHelper.cos(f1 * (float)Math.PI * 2.0F) * 2.0F + 0.2F) - atmosphere/4f;
@@ -232,9 +254,12 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 
 		f2 = 1.0F - f2;
 
+		//Vary brightness depending upon sun luminosity and planet distance
+		//This takes into account how eyes work, that they're not linear in sensing light
+		f2 *= shouldOverrideDistanceBrightness(Minecraft.getMinecraft().player) ? 1 : (float)AstronomicalBodyHelper.getPlanetaryLightLevelMultiplier(AstronomicalBodyHelper.getStellarBrightness(star, properties.getSolarOrbitalDistance()));
+		
 		//Eclipse handling
 		if(this.world.isRemote) {
-			DimensionProperties properties = getDimensionProperties(Minecraft.getMinecraft().player.getPosition());
 			if(properties.isMoon()) {
 				f2 = eclipseValue(properties, f2, partialTicks);
 			}
@@ -246,23 +271,10 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 			}
 		}
 		
-		StellarBody star = DimensionManager.getInstance().getDimensionProperties(world.provider.getDimension()).getStar();
-		boolean blackHole = star != null && star.isBlackHole();
-		for(StellarBody star2 : star.getSubStars())
-			if(!star2.isBlackHole())
-			{
-				blackHole = false;
-				break;
-			}
-			
-		
-		if(blackHole)
-			f2 *=0.25;
-		
 		return f2*super.getSunBrightness(partialTicks);
 	}
 
-	private float eclipseValue(DimensionProperties properties, float lightValue, double partialTicks) {
+	private float eclipseValue(@Nonnull DimensionProperties properties, float lightValue, double partialTicks) {
 		
 		double currentTheta = (((partialTicks*properties.orbitTheta + ((1-partialTicks)*properties.prevOrbitalTheta)) * 180/Math.PI)  % 360d);
 		int solarDistance = properties.getSolarOrbitalDistance();
@@ -271,15 +283,15 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 		float difference = solarDistance/(200-planetaryDistance + 0.00001f);
 		
 		
-		float phiMuliplier = (float) (Math.max(Math.abs(MathHelper.cos((float)(properties.orbitalPhi * Math.PI/180)))-0.95f, 0)*20);
+		float phiMultiplier = Math.max(Math.abs(MathHelper.cos((float)(properties.orbitalPhi * Math.PI/180)))-0.95f, 0)*20;
 
 		int offset = (int)((200-planetaryDistance)/2f);
 
 		//1 is fast attenuation
 		//-1 is no atten
 		//solar distance conrols fade, planetary distance controls duration
-		if(phiMuliplier !=0 && currentTheta > 180 - offset && currentTheta < 180 + offset ) {
-			lightValue *= phiMuliplier*(MathHelper.clamp((float) ((difference/20f) + (Math.abs(currentTheta - 180)*difference)/(10f)) ,0,1)) + (1-phiMuliplier);
+		if(phiMultiplier !=0 && currentTheta > 180 - offset && currentTheta < 180 + offset ) {
+			lightValue *= phiMultiplier*(MathHelper.clamp((float) ((difference/20f) + (Math.abs(currentTheta - 180)*difference)/(10f)) ,0,1)) + (1-phiMultiplier);
 			//f2 = 0;
 		}
 		return lightValue;
@@ -298,24 +310,33 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 	}
 
 	@Override
-	public Vec3d getSkyColor(Entity cameraEntity, float partialTicks) {
-		float[] vec = getDimensionProperties(new BlockPos((int)cameraEntity.posX, 0, (int)cameraEntity.posZ)).skyColor;
-		if(vec == null)
-			return super.getSkyColor(cameraEntity, partialTicks);
-		else {
-			Vec3d skyColorVec = super.getSkyColor(cameraEntity, partialTicks);
-			return new Vec3d(vec[0] * skyColorVec.x, vec[1] * skyColorVec.y, vec[2] * skyColorVec.z) ;
+	@Nonnull
+	public Vec3d getSkyColor(@Nonnull Entity cameraEntity, float partialTicks) {
+		//Multiplied by brightness value to make dark atmospheres actually dark
+		float[] vec = getDimensionProperties(new BlockPos((int) cameraEntity.posX, 0, (int) cameraEntity.posZ)).skyColor;
+		if (cameraEntity.world.provider instanceof WorldProviderPlanet && cameraEntity instanceof EntityPlayer) {
+			WorldProviderPlanet world = ((WorldProviderPlanet)cameraEntity.world.provider);
+			vec = operateFloatOnTriFloatArray(vec, world.getSunBrightness(partialTicks));
 		}
+		Vec3d skyColorVec = getDimensionProperties(new BlockPos((int)cameraEntity.posX, 0, (int)cameraEntity.posZ)).colorOverride ? new Vec3d(1.0, 1.0, 1.0) : super.getSkyColor(cameraEntity, partialTicks);
+		return new Vec3d(vec[0] * skyColorVec.x, vec[1] * skyColorVec.y, vec[2] * skyColorVec.z) ;
 	}
 
 	@Override
 	@SideOnly(Side.CLIENT)
+	@Nonnull
 	public Vec3d getFogColor(float p_76562_1_, float p_76562_2_) {
+        EntityPlayer cameraEntity = Minecraft.getMinecraft().player;
 
-		Vec3d superVec = super.getFogColor(p_76562_1_, p_76562_2_);
-		//float multiplier = getAtmosphereDensityFromHeight(Minecraft.getMinecraft().renderViewEntity.posY);
+		Vec3d superVec = getDimensionProperties(new BlockPos((int)cameraEntity.posX, 0, (int)cameraEntity.posZ)).colorOverride ? new Vec3d(1.0, 1.0, 1.0) : super.getFogColor(p_76562_1_, p_76562_2_);
 
-		float[] vec = getDimensionProperties(new BlockPos((int)Minecraft.getMinecraft().player.posX, 0, (int)Minecraft.getMinecraft().player.posZ)).fogColor;
+		//Multiplied by brightness value to make dark atmospheres actually dark
+		float[] vec = getDimensionProperties(new BlockPos((int) cameraEntity.posX, 0, (int) cameraEntity.posZ)).fogColor;
+		if (cameraEntity.world.provider instanceof WorldProviderPlanet) {
+			WorldProviderPlanet world = ((WorldProviderPlanet)cameraEntity.world.provider);
+			vec = operateFloatOnTriFloatArray(vec, world.getSunBrightness(Minecraft.getMinecraft().getRenderPartialTicks()));
+		}
+
 		return new Vec3d(vec[0] * superVec.x, vec[1] * superVec.y, vec[2] * superVec.z);
 	}
 
@@ -359,49 +380,49 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 	}
 
 	@Override
-	public double getGravitationalMultiplier(BlockPos pos) {
+	public double getGravitationalMultiplier(@Nullable BlockPos pos) {
 		return getDimensionProperties(pos).gravitationalMultiplier;
 	}
 
 	@Override
-	public int getOrbitingDimension(BlockPos pos) {
+	public int getOrbitingDimension(@Nullable BlockPos pos) {
 		return getDimensionProperties(pos).getParentPlanet();
 	}
 
 	@Override
-	public int[] getDimensionsInOrbit(BlockPos pos) {
+	public int[] getDimensionsInOrbit(@Nullable BlockPos pos) {
 		Set<Integer> intSet = getDimensionProperties(pos).getChildPlanets();
 		Integer[] intArray = new Integer[intSet.size()];
 		return ArrayUtils.toPrimitive(getDimensionProperties(pos).getChildPlanets().toArray(intArray));
 	}
 
 	@Override
-	public int getOrbitalDistance(BlockPos pos) {
+	public int getOrbitalDistance(@Nullable BlockPos pos) {
 		return getDimensionProperties(pos).orbitalDist;
 	}
 	
 	@Override
-	public IAtmosphere getAtmosphere(BlockPos pos) {
+	public IAtmosphere getAtmosphere(@Nullable BlockPos pos) {
 		return getDimensionProperties(pos).getAtmosphere();
 	}
 
 	@Override
-	public float getAtmosphereDensity(BlockPos pos) {
-		return (float)(getDimensionProperties(pos).getAtmosphereDensity()/100f);
+	public float getAtmosphereDensity(@Nullable BlockPos pos) {
+		return getDimensionProperties(pos).getAtmosphereDensity() / 100f;
 	}
 
 	@Override
-	public float getAtmosphereDensityFromHeight(double y, BlockPos pos) {
+	public float getAtmosphereDensityFromHeight(double y, @Nullable BlockPos pos) {
 		return getDimensionProperties(pos).getAtmosphereDensityAtHeight(y);
 	}
 
 	@Override
-	public int getAverageTemperature(BlockPos pos) {
+	public int getAverageTemperature(@Nullable BlockPos pos) {
 		return getDimensionProperties(pos).getAverageTemp();
 	}
 
 	@Override
-	public int getRotationalPeriod(BlockPos pos) {
+	public int getRotationalPeriod(@Nullable BlockPos pos) {
 		return getDimensionProperties(new BlockPos(0,0,0)).rotationalPeriod;
 	}
 
@@ -421,24 +442,40 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 	}
 
 	@Override
-	public Vec3d getSunColor(BlockPos pos) {
+	public Vec3d getSunColor(@Nullable BlockPos pos) {
 		float[] vec = getDimensionProperties(pos).getSunColor();
 		return new Vec3d(vec[0],vec[1],vec[2]);
 	}
 
 
-	public int getSolarOrbitalDistance(BlockPos pos) {
+	public int getSolarOrbitalDistance(@Nullable BlockPos pos) {
 		return getDimensionProperties(pos).getSolarOrbitalDistance();
 	}
 
 	@Override
-	public DimensionProperties getDimensionProperties(BlockPos pos) {
+	public DimensionProperties getDimensionProperties(@Nullable BlockPos pos) {
 		DimensionProperties properties = DimensionManager.getInstance().getDimensionProperties(this.getDimension());
 		return properties == null ? new DimensionProperties(this.getDimension()) : properties;
 	}
 
 	@Override
+	@Nonnull
 	public DimensionType getDimensionType() {
 		return DimensionManager.PlanetDimensionType;
+	}
+
+	private float[] operateFloatOnTriFloatArray(float[] array, float f) {
+		return new float[] {array[0] * f, array[1] * f, array[2] * f};
+	}
+
+	private boolean shouldOverrideDistanceBrightness(EntityPlayer player) {
+		for (ItemStack stack : player.getArmorInventoryList()) {
+	        if (stack.getItem() == AdvancedRocketryItems.itemSpaceSuit_Helmet) {
+				for (ItemStack stack1 : ((ItemSpaceArmor)stack.getItem()).getComponents(stack)) {
+					return (stack1.getItem() == AdvancedRocketryItems.itemUpgrade && stack1.getItemDamage() == 5);
+				}
+			}
+		}
+		return false;
 	}
 }

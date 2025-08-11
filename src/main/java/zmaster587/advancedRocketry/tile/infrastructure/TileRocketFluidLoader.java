@@ -11,10 +11,10 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.ITickable;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.TextComponentString;
 import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.world.World;
 import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.CapabilityFluidHandler;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.fml.relauncher.Side;
 import zmaster587.advancedRocketry.api.AdvancedRocketryBlocks;
@@ -23,7 +23,7 @@ import zmaster587.advancedRocketry.api.IInfrastructure;
 import zmaster587.advancedRocketry.api.IMission;
 import zmaster587.advancedRocketry.block.multiblock.BlockARHatch;
 import zmaster587.advancedRocketry.entity.EntityRocket;
-import zmaster587.advancedRocketry.tile.TileRocketBuilder;
+import zmaster587.advancedRocketry.tile.TileRocketAssemblingMachine;
 import zmaster587.libVulpes.LibVulpes;
 import zmaster587.libVulpes.inventory.modules.*;
 import zmaster587.libVulpes.items.ItemLinker;
@@ -33,6 +33,8 @@ import zmaster587.libVulpes.tile.multiblock.hatch.TileFluidHatch;
 import zmaster587.libVulpes.util.INetworkMachine;
 import zmaster587.libVulpes.util.ZUtils.RedstoneState;
 
+import javax.annotation.Nonnull;
+import java.util.Calendar;
 import java.util.List;
 
 public class TileRocketFluidLoader extends TileFluidHatch  implements IInfrastructure,  ITickable,  IButtonInventory, INetworkMachine, IGuiCallback {
@@ -43,8 +45,8 @@ public class TileRocketFluidLoader extends TileFluidHatch  implements IInfrastru
 	ModuleRedstoneOutputButton inputRedstoneControl;
 	RedstoneState inputstate;
 	ModuleBlockSideSelector sideSelectorModule;
-	
-	private static int ALLOW_REDSTONEOUT = 2;
+
+	private final static int ALLOW_REDSTONEOUT = 2;
 
 	public TileRocketFluidLoader() {
 		redstoneControl = new ModuleRedstoneOutputButton(174, 4, 0, "", this, LibVulpes.proxy.getLocalizedString("msg.fluidLoader.loadingState"));
@@ -52,7 +54,7 @@ public class TileRocketFluidLoader extends TileFluidHatch  implements IInfrastru
 		inputRedstoneControl = new ModuleRedstoneOutputButton(174, 32, 1, "", this, LibVulpes.proxy.getLocalizedString("msg.fluidLoader.allowLoading"));
 		inputstate = RedstoneState.OFF;
 		inputRedstoneControl.setRedstoneState(inputstate);
-		sideSelectorModule = new ModuleBlockSideSelector(90, 15, this, new String[] {LibVulpes.proxy.getLocalizedString("msg.fluidLoader.none"), LibVulpes.proxy.getLocalizedString("msg.fluidLoader.allowredstoneoutput"), LibVulpes.proxy.getLocalizedString("msg.fluidLoader.allowredstoneinput")});
+		sideSelectorModule = new ModuleBlockSideSelector(90, 15, this, LibVulpes.proxy.getLocalizedString("msg.fluidLoader.none"), LibVulpes.proxy.getLocalizedString("msg.fluidLoader.allowredstoneoutput"), LibVulpes.proxy.getLocalizedString("msg.fluidLoader.allowredstoneinput"));
 	}
 
 	public TileRocketFluidLoader(int size) {
@@ -62,14 +64,14 @@ public class TileRocketFluidLoader extends TileFluidHatch  implements IInfrastru
 		inputRedstoneControl = new ModuleRedstoneOutputButton(174, 32, 1, "", this, LibVulpes.proxy.getLocalizedString("msg.fluidLoader.allowLoading"));
 		inputstate = RedstoneState.OFF;
 		inputRedstoneControl.setRedstoneState(inputstate);
-		sideSelectorModule = new ModuleBlockSideSelector(90, 15, this, new String[] {LibVulpes.proxy.getLocalizedString("msg.fluidLoader.none"), LibVulpes.proxy.getLocalizedString("msg.fluidLoader.allowredstoneoutput"), LibVulpes.proxy.getLocalizedString("msg.fluidLoader.allowredstoneinput")});
+		sideSelectorModule = new ModuleBlockSideSelector(90, 15, this, LibVulpes.proxy.getLocalizedString("msg.fluidLoader.none"), LibVulpes.proxy.getLocalizedString("msg.fluidLoader.allowredstoneoutput"), LibVulpes.proxy.getLocalizedString("msg.fluidLoader.allowredstoneinput"));
 	}
 
 	@Override
 	public void invalidate() {
 		super.invalidate();
-		if(getMasterBlock() instanceof TileRocketBuilder)
-			((TileRocketBuilder)getMasterBlock()).removeConnectedInfrastructure(this);
+		if(getMasterBlock() instanceof TileRocketAssemblingMachine)
+			((TileRocketAssemblingMachine)getMasterBlock()).removeConnectedInfrastructure(this);
 	}
 
 	@Override
@@ -101,32 +103,32 @@ public class TileRocketFluidLoader extends TileFluidHatch  implements IInfrastru
 	
 	@Override
 	public void update() {
-		//Move a stack of items
+		//Move fluids
 		if(!world.isRemote && rocket != null) {
 
 			boolean isAllowToOperate = (inputstate == RedstoneState.OFF || isStateActive(inputstate, getStrongPowerForSides(world, getPos())));
 
 			List<TileEntity> tiles = rocket.storage.getFluidTiles();
-			boolean rocketContainsItems = false;
+			boolean rocketFluidFull = false;
 
 			//Function returns if something can be moved
 			for(TileEntity tile : tiles) {
-				IFluidHandler handler = (IFluidHandler)tile;
+				IFluidHandler handler = tile.getCapability(CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY, null);
 
 				//See if we have anything to fill because redstone output
-				FluidStack stack = handler.drain(1, false);
-				if(stack == null || handler.fill(stack, false) > 0)
-					rocketContainsItems = true;
+				FluidStack rocketFluid = handler.drain(1, false);
+				if(handler.fill(rocketFluid, false) > 0)
+					rocketFluidFull = true;
 
 				if(isAllowToOperate) {
-					stack = fluidTank.drain(fluidTank.getCapacity(), false);
-					if(stack != null && stack.amount > 0)
-						fluidTank.drain(handler.fill(stack, true), true);
+					rocketFluid = fluidTank.drain(fluidTank.getCapacity(), false);
+					if(rocketFluid != null && rocketFluid.amount > 0)
+						fluidTank.drain(handler.fill(rocketFluid, true), true);
 				}
 			}
 
 			//Update redstone state
-			setRedstoneState(!rocketContainsItems);
+			setRedstoneState(!rocketFluidFull);
 
 		}
 	}
@@ -162,8 +164,8 @@ public class TileRocketFluidLoader extends TileFluidHatch  implements IInfrastru
 	}
 
 	@Override
-	public boolean onLinkStart(ItemStack item, TileEntity entity,
-			EntityPlayer player, World world) {
+	public boolean onLinkStart(@Nonnull ItemStack item, TileEntity entity,
+							   EntityPlayer player, World world) {
 
 		ItemLinker.setMasterCoords(item, this.getPos());
 
@@ -178,7 +180,7 @@ public class TileRocketFluidLoader extends TileFluidHatch  implements IInfrastru
 	}
 
 	@Override
-	public boolean onLinkComplete(ItemStack item, TileEntity entity,
+	public boolean onLinkComplete(@Nonnull ItemStack item, TileEntity entity,
 			EntityPlayer player, World world) {
 		if(player.world.isRemote)
 			Minecraft.getMinecraft().ingameGUI.getChatGUI().printChatMessage(new TextComponentTranslation("msg.linker.error.firstMachine"));
@@ -215,7 +217,7 @@ public class TileRocketFluidLoader extends TileFluidHatch  implements IInfrastru
 	}
 
 	@Override
-	public boolean linkMission(IMission misson) {
+	public boolean linkMission(IMission mission) {
 		return false;
 	}
 
@@ -279,7 +281,7 @@ public class TileRocketFluidLoader extends TileFluidHatch  implements IInfrastru
 		nbt.setByte("state", in.readByte());
 		nbt.setByte("inputstate", in.readByte());
 
-		byte bytes[] = new byte[6];
+		byte[] bytes = new byte[6];
 		for(int i = 0; i < 6; i++)
 			bytes[i] = in.readByte();
 		nbt.setByteArray("bytes", bytes);
@@ -291,7 +293,7 @@ public class TileRocketFluidLoader extends TileFluidHatch  implements IInfrastru
 		state = RedstoneState.values()[nbt.getByte("state")];
 		inputstate = RedstoneState.values()[nbt.getByte("inputstate")];
 
-		byte bytes[] = nbt.getByteArray("bytes");
+		byte[] bytes = nbt.getByteArray("bytes");
 		for(int i = 0; i < 6; i++)
 			sideSelectorModule.setStateForSide(i, bytes[i]);
 

@@ -18,10 +18,7 @@ import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.fml.relauncher.Side;
 import zmaster587.advancedRocketry.AdvancedRocketry;
-import zmaster587.advancedRocketry.api.AdvancedRocketryBlocks;
-import zmaster587.advancedRocketry.api.AdvancedRocketryFluids;
-import zmaster587.advancedRocketry.api.AdvancedRocketryItems;
-import zmaster587.advancedRocketry.api.ARConfiguration;
+import zmaster587.advancedRocketry.api.*;
 import zmaster587.advancedRocketry.api.satellite.SatelliteBase;
 import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.dimension.DimensionProperties;
@@ -44,6 +41,7 @@ import zmaster587.libVulpes.tile.multiblock.TileMultiblockMachine.NetworkPackets
 import zmaster587.libVulpes.util.EmbeddedInventory;
 import zmaster587.libVulpes.util.IconResource;
 
+import javax.annotation.Nonnull;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -280,7 +278,7 @@ public class TileAtmosphereTerraformer extends TileMultiPowerConsumer implements
 		text = new ModuleText(10, 100, "", 0x282828);
 		powerPerTick = 1000;
 
-		List<ModuleToggleSwitch> buttons = new LinkedList<ModuleToggleSwitch>();
+		List<ModuleToggleSwitch> buttons = new LinkedList<>();
 		buttons.add(buttonIncrease);
 		buttons.add(buttonDecrease);
 		radioButton = new ModuleRadioButton(this, buttons);
@@ -383,15 +381,15 @@ public class TileAtmosphereTerraformer extends TileMultiPowerConsumer implements
 			int requiredN2 = ARConfiguration.getCurrentConfig().terraformliquidRate, requiredO2 =  ARConfiguration.getCurrentConfig().terraformliquidRate;
 
 			for(IFluidHandler handler : fluidInPorts) {
-				FluidStack stack = handler.drain(new FluidStack(AdvancedRocketryFluids.fluidNitrogen, requiredN2), true);
+				FluidStack fStack = handler.drain(new FluidStack(AdvancedRocketryFluids.fluidNitrogen, requiredN2), true);
 
-				if(stack != null)
-					requiredN2 -= stack.amount;
+				if(fStack != null)
+					requiredN2 -= fStack.amount;
 
-				stack = handler.drain(new FluidStack(AdvancedRocketryFluids.fluidOxygen, requiredO2), true);
+				fStack = handler.drain(new FluidStack(AdvancedRocketryFluids.fluidOxygen, requiredO2), true);
 
-				if(stack != null)
-					requiredO2 -= stack.amount;
+				if(fStack != null)
+					requiredO2 -= fStack.amount;
 			}
 
 			if(!world.isRemote) {
@@ -422,7 +420,7 @@ public class TileAtmosphereTerraformer extends TileMultiPowerConsumer implements
 		ItemStack biomeChanger = inv.getStackInSlot(0);
 		SatelliteBase satellite;
 				
-		return biomeChanger != null && (biomeChanger.getItem() instanceof ItemBiomeChanger) && DimensionManager.getInstance().getSatellite(((ItemBiomeChanger)biomeChanger.getItem()).getSatelliteId(biomeChanger)) != null &&
+		return !biomeChanger.isEmpty() && (biomeChanger.getItem() instanceof ItemBiomeChanger) && SatelliteRegistry.getSatellite(biomeChanger) != null &&
 				(satellite = ((ItemSatelliteIdentificationChip)AdvancedRocketryItems.itemBiomeChanger).getSatellite(biomeChanger)).getDimensionId() == world.provider.getDimension() &&
 				satellite instanceof SatelliteBiomeChanger;
 	}
@@ -434,7 +432,7 @@ public class TileAtmosphereTerraformer extends TileMultiPowerConsumer implements
 
 	@Override
 	public boolean isRunning() {
-		boolean bool = getMachineEnabled() && super.isRunning() && zmaster587.advancedRocketry.api.ARConfiguration.getCurrentConfig().allowTerraforming;
+		boolean bool = getMachineEnabled() && super.isRunning() && zmaster587.advancedRocketry.api.ARConfiguration.getCurrentConfig().enableTerraforming;
 
 		if(!bool)
 			currentTime = 0;
@@ -465,7 +463,7 @@ public class TileAtmosphereTerraformer extends TileMultiPowerConsumer implements
 		DimensionProperties properties = DimensionManager.getInstance().getDimensionProperties(world.provider.getDimension());
 		if( !world.isRemote && properties != null && properties.getId() == world.provider.getDimension() && ((world.provider.getClass().equals(WorldProviderPlanet.class) && 
 				properties.isNativeDimension) || ARConfiguration.getCurrentConfig().allowTerraformNonAR) ) {
-			if(buttonIncrease.getState() && properties.getAtmosphereDensity() < 200)
+			if(buttonIncrease.getState() && properties.getAtmosphereDensity() < 1600)
 				properties.setAtmosphereDensity(properties.getAtmosphereDensity()+1);
 			else if(buttonDecrease.getState() && properties.getAtmosphereDensity() > 0) {
 				properties.setAtmosphereDensity(properties.getAtmosphereDensity()-1);
@@ -479,7 +477,7 @@ public class TileAtmosphereTerraformer extends TileMultiPowerConsumer implements
 
 
 		if(packetId == (byte)TileMultiblockMachine.NetworkPackets.TOGGLE.ordinal()) {
-			radioButton.setOptionSelected((int)in.readByte());
+			radioButton.setOptionSelected(in.readByte());
 		}
 		super.readDataFromNetwork(in, packetId, nbt);
 	}
@@ -554,7 +552,7 @@ public class TileAtmosphereTerraformer extends TileMultiPowerConsumer implements
 
 	@Override
 	public String getMachineName() {
-		return "tile.atmoshereTerraformer.name";
+		return AdvancedRocketryBlocks.blockAtmosphereTerraformer.getLocalizedName();
 	}
 
 	@Override
@@ -573,16 +571,19 @@ public class TileAtmosphereTerraformer extends TileMultiPowerConsumer implements
 	}
 
 	@Override
+	@Nonnull
 	public ItemStack getStackInSlot(int index) {
 		return inv.getStackInSlot(index);
 	}
 
 	@Override
+	@Nonnull
 	public ItemStack decrStackSize(int index, int count) {
 		return inv.decrStackSize(index, count);
 	}
 
 	@Override
+	@Nonnull
 	public ItemStack removeStackFromSlot(int index) {
 		ItemStack stack = inv.removeStackFromSlot(index);
 		if(world.isRemote)
@@ -591,7 +592,7 @@ public class TileAtmosphereTerraformer extends TileMultiPowerConsumer implements
 	}
 
 	@Override
-	public void setInventorySlotContents(int index, ItemStack stack) {
+	public void setInventorySlotContents(int index, @Nonnull ItemStack stack) {
 		inv.setInventorySlotContents(index, stack);
 		if(world.isRemote)
 			setText();
@@ -613,7 +614,7 @@ public class TileAtmosphereTerraformer extends TileMultiPowerConsumer implements
 	}
 
 	@Override
-	public boolean isItemValidForSlot(int index, ItemStack stack) {
+	public boolean isItemValidForSlot(int index, @Nonnull ItemStack stack) {
 		return inv.isItemValidForSlot(index, stack);
 	}
 
