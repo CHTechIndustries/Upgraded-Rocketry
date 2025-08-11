@@ -3,8 +3,8 @@ package zmaster587.advancedRocketry;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.BlockPos;
-import zmaster587.advancedRocketry.api.Configuration;
-import zmaster587.advancedRocketry.util.AsteroidSmall;
+import zmaster587.advancedRocketry.api.ARConfiguration;
+import zmaster587.advancedRocketry.util.Asteroid;
 
 import java.util.LinkedList;
 public class Test {
@@ -12,7 +12,7 @@ public class Test {
 	public static void main(String[] args) {
 
 		for(int x = 2048; x < 2048+1024; x++) {
-			int y = (int) Math.round((x)/(2f*Configuration.stationSize));
+			int y = Math.round((x)/(2f*ARConfiguration.getCurrentConfig().stationSize));
 			
 			if(y != 1) {
 				System.out.println("x: " + y);
@@ -28,8 +28,8 @@ public class Test {
 
 	public static int thing2(BlockPos pos) {
 		int x = pos.getX(); int z = pos.getZ();
-		x = (x-Configuration.stationSize/2)/(2*Configuration.stationSize);
-		z = (z-Configuration.stationSize/2)/(2*Configuration.stationSize);
+		x = (x-ARConfiguration.getCurrentConfig().stationSize/2)/(2*ARConfiguration.getCurrentConfig().stationSize);
+		z = (z-ARConfiguration.getCurrentConfig().stationSize/2)/(2*ARConfiguration.getCurrentConfig().stationSize);
 		int radius = Math.max(Math.abs(x), Math.abs(z));
 
 		int index = (int) Math.pow((2*radius-1),2) + x + radius;
@@ -78,10 +78,10 @@ public class Test {
 			else
 				x = radius;
 		}
-		return new BlockPos(2*Configuration.stationSize*x + Configuration.stationSize/2,0,2*Configuration.stationSize*z + Configuration.stationSize/2);
+		return new BlockPos(2*ARConfiguration.getCurrentConfig().stationSize*x + ARConfiguration.getCurrentConfig().stationSize/2,0,2*ARConfiguration.getCurrentConfig().stationSize*z + ARConfiguration.getCurrentConfig().stationSize/2);
 	}
 	
-	public static AsteroidSmall testeroid = new AsteroidSmall();
+	public static Asteroid testeroid = new Asteroid();
 	
 	static {
 		testeroid.distance = 10;
@@ -92,7 +92,7 @@ public class Test {
 		testeroid.probability = 1f;
 		testeroid.richness = 0.2f;
 		testeroid.richnessVariability = .5f;
-		testeroid.itemStacks = new LinkedList<ItemStack>();
+		testeroid.itemStacks = new LinkedList<>();
 		
 		testeroid.itemStacks.add(new ItemStack(Blocks.IRON_ORE));
 		testeroid.itemStacks.add(new ItemStack(Blocks.GOLD_ORE));
@@ -100,13 +100,13 @@ public class Test {
 		testeroid.itemStacks.add(new ItemStack(Blocks.DIAMOND_ORE));
 		testeroid.itemStacks.add(new ItemStack(Blocks.REDSTONE_ORE));
 		
-		testeroid.stackProbabilites = new LinkedList<Float>();
-		testeroid.stackProbabilites.add(15f);
-		testeroid.stackProbabilites.add(10f);
-		testeroid.stackProbabilites.add(10f);
-		testeroid.stackProbabilites.add(1f);
-		testeroid.stackProbabilites.add(6f);
+		testeroid.stackProbabilities = new LinkedList<>();
+		testeroid.stackProbabilities.add(15f);
+		testeroid.stackProbabilities.add(10f);
+		testeroid.stackProbabilities.add(10f);
+		testeroid.stackProbabilities.add(1f);
+		testeroid.stackProbabilities.add(6f);
 		
-		Configuration.asteroidTypes.put("Test", testeroid);
+		ARConfiguration.getCurrentConfig().asteroidTypes.put("Test", testeroid);
 	}
 }

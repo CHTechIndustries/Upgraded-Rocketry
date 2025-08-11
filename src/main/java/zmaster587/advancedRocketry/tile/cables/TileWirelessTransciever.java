@@ -11,7 +11,7 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.ITickable;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.relauncher.Side;
 import zmaster587.advancedRocketry.api.DataStorage;
@@ -32,6 +32,7 @@ import zmaster587.libVulpes.network.PacketHandler;
 import zmaster587.libVulpes.network.PacketMachine;
 import zmaster587.libVulpes.util.INetworkMachine;
 
+import javax.annotation.Nonnull;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -56,12 +57,12 @@ public class TileWirelessTransciever extends TileEntity implements INetworkMachi
 
 
 	@Override
-	public boolean onLinkStart(ItemStack item, TileEntity entity, EntityPlayer player, World world) {
+	public boolean onLinkStart(@Nonnull ItemStack item, TileEntity entity, EntityPlayer player, World world) {
 
 		ItemLinker.setMasterCoords(item, getPos());
-		
-		if(!world.isRemote)
-			player.sendMessage(new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.linker.program")));
+
+		if(world.isRemote)
+			player.sendMessage(new TextComponentTranslation("msg.linker.program"));
 
 		return true;
 	}
@@ -74,7 +75,7 @@ public class TileWirelessTransciever extends TileEntity implements INetworkMachi
 	}
 
 	@Override
-	public boolean onLinkComplete(ItemStack item, TileEntity entity, EntityPlayer player, World world) {
+	public boolean onLinkComplete(@Nonnull ItemStack item, TileEntity entity, EntityPlayer player, World world) {
 		BlockPos pos = ItemLinker.getMasterCoords(item);
 
 		TileEntity tile = world.getTileEntity(pos);
@@ -82,11 +83,14 @@ public class TileWirelessTransciever extends TileEntity implements INetworkMachi
 		if(tile instanceof TileWirelessTransciever )
 		{
 			if(world.isRemote)
+			{
+				player.sendMessage(new TextComponentTranslation("msg.linker.success"));
 				return true;
+			}
 
-			int othernetworkid = ((TileWirelessTransciever)tile).networkID;
+			int otherNetworkId = ((TileWirelessTransciever)tile).networkID;
 
-			if(networkID == -1 && othernetworkid == -1)
+			if(networkID == -1 && otherNetworkId == -1)
 			{
 				networkID = NetworkRegistry.dataNetwork.getNewNetworkID();
 				((TileWirelessTransciever)tile).networkID = networkID;
@@ -94,22 +98,22 @@ public class TileWirelessTransciever extends TileEntity implements INetworkMachi
 			}
 			else if(networkID == -1)
 			{
-				networkID = othernetworkid;
+				networkID = otherNetworkId;
 			}
-			else if(othernetworkid == -1)
+			else if(otherNetworkId == -1)
 			{
 				((TileWirelessTransciever)tile).networkID = networkID;
 			}
 			else
 			{
-				networkID = NetworkRegistry.dataNetwork.mergeNetworks(othernetworkid, networkID);
+				networkID = NetworkRegistry.dataNetwork.mergeNetworks(otherNetworkId, networkID);
 				((TileWirelessTransciever)tile).networkID = networkID;
 			}
 			addToNetwork();
 			((TileWirelessTransciever)tile).addToNetwork();
-			
-			player.sendMessage(new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.linker.success")));
-			
+
+			ItemLinker.resetPosition(item);
+
 			return true;
 		}
 
@@ -119,7 +123,7 @@ public class TileWirelessTransciever extends TileEntity implements INetworkMachi
 	private void addToNetwork()
 	{
 
-		if(networkID == -1 || !enabled)
+		if(networkID == -1 || world.isRemote)
 			return;
 		else if(!NetworkRegistry.dataNetwork.doesNetworkExist(networkID))
 			NetworkRegistry.dataNetwork.getNewNetworkID(networkID);
@@ -164,7 +168,7 @@ public class TileWirelessTransciever extends TileEntity implements INetworkMachi
 
 	@Override
 	public List<ModuleBase> getModules(int id, EntityPlayer player) {
-		LinkedList list = new LinkedList<ModuleBase>();
+		LinkedList<ModuleBase> list = new LinkedList<>();
 
 		list.add(toggle);
 		list.add(toggleSwitch);
@@ -219,13 +223,6 @@ public class TileWirelessTransciever extends TileEntity implements INetworkMachi
 			else if(id == 1)
 			{
 				enabled = nbt.getBoolean("state");
-				if(!enabled)
-				{
-					if(NetworkRegistry.dataNetwork.doesNetworkExist(networkID))
-						NetworkRegistry.dataNetwork.getNetwork(networkID).removeFromAll(this);
-				}
-				else
-					addToNetwork();
 			}
 		}
 	}
@@ -238,15 +235,17 @@ public class TileWirelessTransciever extends TileEntity implements INetworkMachi
 		enabled = nbt.getBoolean("enabled");
 		networkID = nbt.getInteger("networkID");
 		data.readFromNBT(nbt);
-		addToNetwork();
+		//addToNetwork();
 
 		toggle.setToggleState(extractMode);
 		toggleSwitch.setToggleState(enabled);
 	}
 
 	@Override
+	@Nonnull
 	public NBTTagCompound writeToNBT(NBTTagCompound nbt) {
 		nbt.setBoolean("mode", extractMode);
+		nbt.setBoolean("enabled", enabled);
 		nbt.setInteger("networkID", networkID);
 		data.writeToNBT(nbt);
 		return super.writeToNBT(nbt);
@@ -255,41 +254,64 @@ public class TileWirelessTransciever extends TileEntity implements INetworkMachi
 	@Override
 	public int extractData(int maxAmount, DataType type, EnumFacing dir,
 			boolean commit) {
-		return data.extractData(maxAmount, type, dir, commit);
+		return enabled ? data.extractData(maxAmount, type, dir, commit) : 0;
 	}
 
 	@Override
 	public int addData(int maxAmount, DataType type, EnumFacing dir,
 			boolean commit) {
-		return data.addData(maxAmount, type, dir, commit);
+		return enabled ? data.addData(maxAmount, type, dir, commit) : 0;
 	}
 
+	@Override
+	public void onLoad() {
+		super.onLoad();
+		if(!world.isRemote)
+		{
+
+			if(!NetworkRegistry.dataNetwork.doesNetworkExist(networkID))
+				NetworkRegistry.dataNetwork.getNewNetworkID(networkID);
+			
+			NetworkRegistry.dataNetwork.getNetwork(networkID).removeFromAll(this);
+
+			if(extractMode) 
+				NetworkRegistry.dataNetwork.getNetwork(networkID).addSource(this, EnumFacing.UP);
+			else
+				NetworkRegistry.dataNetwork.getNetwork(networkID).addSink(this, EnumFacing.UP);
+
+		}
+	}
 
 	@Override
 	public void update() {
 
-		IBlockState state = world.getBlockState(getPos());
-		if (state.getBlock() instanceof RotatableBlock) {
-			EnumFacing facing = RotatableBlock.getFront(state).getOpposite();
+		if(!world.isRemote) {
+			IBlockState state = world.getBlockState(getPos());
+			if (state.getBlock() instanceof RotatableBlock) {
+				EnumFacing facing = RotatableBlock.getFront(state).getOpposite();
 
-			TileEntity tile = world.getTileEntity(getPos().add(facing.getFrontOffsetX(),facing.getFrontOffsetY(),facing.getFrontOffsetZ()));
+				TileEntity tile = world.getTileEntity(getPos().add(facing.getFrontOffsetX(),facing.getFrontOffsetY(),facing.getFrontOffsetZ()));
 
-			if( tile instanceof IDataHandler && !(tile instanceof TileWirelessTransciever))
-			{
-				for(DataType data : DataType.values())
+				if( tile instanceof IDataHandler && !(tile instanceof TileWirelessTransciever))
 				{
-
-					if(data == DataStorage.DataType.UNDEFINED)
-						continue;
-
-					if(!extractMode) {
-						int amt = ((IDataHandler)tile).addData(this.data.getDataAmount(data), data, facing.getOpposite(), true);
-						this.data.extractData(amt, data, facing.getOpposite(), true);
-					}
-					else
+					for(DataType data : DataType.values())
 					{
-						int amt = ((IDataHandler)tile).extractData(this.data.getMaxData() - this.data.getDataAmount(data), data, facing.getOpposite(), true);
-						this.data.addData(amt, data, facing.getOpposite(), true);
+
+						if(data == DataStorage.DataType.UNDEFINED)
+							continue;
+
+						if(!extractMode) {
+							int amountCurrent = this.data.getDataAmount(data);
+							if (amountCurrent > 0) {
+								int amt = ((IDataHandler)tile).addData(amountCurrent, data, facing.getOpposite(), true);
+								this.data.extractData(amt, data, facing.getOpposite(), true);
+							}
+						}
+						else
+						{
+							int amt = ((IDataHandler)tile).extractData(this.data.getMaxData() - this.data.getDataAmount(data), data, facing.getOpposite(), true);
+							this.data.addData(amt, data, facing.getOpposite(), true);
+						}
 					}
 				}
 			}

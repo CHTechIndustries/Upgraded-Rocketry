@@ -4,9 +4,10 @@ import net.minecraft.entity.Entity;
 import net.minecraft.profiler.Profiler;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import net.minecraft.world.biome.Biome;
 import net.minecraftforge.common.DimensionManager;
 import net.minecraftforge.fml.common.FMLCommonHandler;
-import zmaster587.advancedRocketry.api.Configuration;
+import zmaster587.advancedRocketry.api.ARConfiguration;
 import zmaster587.advancedRocketry.api.stations.ISpaceObject;
 import zmaster587.advancedRocketry.network.PacketLaserGun;
 import zmaster587.advancedRocketry.network.PacketStationUpdate;
@@ -14,7 +15,8 @@ import zmaster587.libVulpes.network.PacketHandler;
 
 public class CommonProxy {
 
-
+	private static final zmaster587.advancedRocketry.dimension.DimensionManager dimensionManagerServer = new zmaster587.advancedRocketry.dimension.DimensionManager();
+	
 	public void registerRenderers() {
 
 	}
@@ -42,7 +44,7 @@ public class CommonProxy {
 	}
 
 	public void fireFogBurst(ISpaceObject station) {
-		PacketHandler.sendToNearby(new PacketStationUpdate(station, PacketStationUpdate.Type.SIGNAL_WHITE_BURST), Configuration.spaceDimId, station.getSpawnLocation().x, 128, station.getSpawnLocation().z, Configuration.stationSize);
+		PacketHandler.sendToNearby(new PacketStationUpdate(station, PacketStationUpdate.Type.SIGNAL_WHITE_BURST), ARConfiguration.getCurrentConfig().spaceDimId, station.getSpawnLocation().x, 128, station.getSpawnLocation().z, ARConfiguration.getCurrentConfig().stationSize);
 	}
 
 
@@ -77,13 +79,7 @@ public class CommonProxy {
 		
 	}
 
-	public void saveUILayout(
-			net.minecraftforge.common.config.Configuration configuration) {
-		// TODO Auto-generated method stub
-		
-	}
-	
-	public void displayMessage(String msg, int time) {
+    public void displayMessage(String msg, int time) {
 		
 	}
 
@@ -95,5 +91,13 @@ public class CommonProxy {
 	public void preInitItems() {
 		// TODO Auto-generated method stub
 		
+	}
+
+	public String getNameFromBiome(Biome biome) {
+		return "";
+	}
+
+	public zmaster587.advancedRocketry.dimension.DimensionManager getDimensionManager() {
+		return dimensionManagerServer;
 	}
 }

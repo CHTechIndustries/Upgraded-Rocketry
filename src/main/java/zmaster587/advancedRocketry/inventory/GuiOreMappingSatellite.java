@@ -14,50 +14,53 @@ import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
 import zmaster587.advancedRocketry.client.render.ClientDynamicTexture;
 import zmaster587.advancedRocketry.satellite.SatelliteOreMapping;
+import zmaster587.libVulpes.LibVulpes;
 import zmaster587.libVulpes.render.RenderHelper;
 import zmaster587.libVulpes.util.VulpineMath;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.nio.IntBuffer;
 
 public class GuiOreMappingSatellite extends GuiContainer {
 
-	ClientDynamicTexture texture;
-	Thread currentMapping;
+	private ClientDynamicTexture texture;
+	private Thread currentMapping;
 	TileEntity masterConsole;
-	boolean merged = false;
+	private boolean merged = false;
 	private static final int SCREEN_SIZE = 146;
-	private int maxZoom = 128;
+	private int maxZoom;
 	private static final int MAXRADIUS = 16;
 	private static final int FANCYSCANMAXSIZE = 57;
 	private int fancyScanOffset;
 	private long prevWorldTickTime;
 	private int prevSlot;
 	private int mouseValue;
-	private int scanSize = 2;
+	private int scanSize;
 	private int radius = 1;
+	private int zoomScale;
 	private int xSelected, zSelected, xCenter, zCenter, playerPosX, playerPosZ;
 	private static final ResourceLocation backdrop = new ResourceLocation("advancedrocketry", "textures/gui/VideoSatallite.png");
-	int[][] oreMap;
-	World world;
-	SatelliteOreMapping tile;
+	private int[][] oreMap;
+	private World world;
+	private SatelliteOreMapping satellite;
 
-	public GuiOreMappingSatellite(SatelliteOreMapping tile,EntityPlayer inventoryPlayer) {
-		super( new ContainerOreMappingSatallite(tile,inventoryPlayer.inventory));
+	public GuiOreMappingSatellite(SatelliteOreMapping satellite,EntityPlayer inventoryPlayer) {
+		super( new ContainerOreMappingSatellite(satellite,inventoryPlayer.inventory));
 		world = inventoryPlayer.world;
 
 		prevSlot = -1;
-		this.tile = tile;
-		//masterConsole = tile;
+		this.satellite = satellite;
+		//masterConsole = satellite;
 		playerPosX = xCenter = (int) inventoryPlayer.posX;
 		playerPosZ = zCenter = (int) inventoryPlayer.posZ;
 
 		//Max zoom is 128
-		if(tile != null)
-			maxZoom = (int) Math.pow(2, tile.getZoomRadius());
+		maxZoom = (int) Math.pow(2, satellite.getZoomRadius());
+		zoomScale = satellite.getZoomRadius();
 
 		if(maxZoom == 1)
-			this.tile = null;
+			this.satellite = null;
 		scanSize = maxZoom;
 
 		prevWorldTickTime = world.getTotalWorldTime();
@@ -66,13 +69,11 @@ public class GuiOreMappingSatellite extends GuiContainer {
 	}
 
 	//Create separate thread to do this because it takes a while!
-	Runnable mapper = new Runnable() {
+	private Runnable mapper = new Runnable() {
 		@Override
 		public void run() {
-			oreMap = SatelliteOreMapping.scanChunk(world, xCenter, zCenter, scanSize/2, radius);
-			if(oreMap != null)
-				merged = true;
-			else merged = false;
+			oreMap = satellite.scanChunk(world, xCenter, zCenter, scanSize/2, radius, zoomScale);
+			merged = oreMap != null && !Thread.interrupted();
 		}
 	};
 
@@ -80,55 +81,48 @@ public class GuiOreMappingSatellite extends GuiContainer {
 	class ItemMapper implements Runnable {
 		private ItemStack myBlock;
 
-		ItemMapper(ItemStack block) {
-			//Copy so we dont have any possible CME or oddness due to that
+		ItemMapper(@Nonnull ItemStack block) {
+			//Copy so we don't have any possible CME or oddness due to that
 			myBlock = block.copy();
 		}
 
 		@Override
 		public void run() {
-			oreMap = SatelliteOreMapping.scanChunk(world, xCenter, zCenter, scanSize/2, radius, myBlock);
-			if(oreMap != null)
-				merged = true;
-			else merged = false;
+			oreMap = satellite.scanChunk(world, xCenter, zCenter, scanSize/2, radius, myBlock, zoomScale);
+			merged = oreMap != null && !Thread.interrupted();
 		}
-	};
+	}
 
 	//Don't pause the game whilst player is looking at the satellite
 	public boolean doesGuiPauseGame(){ return false; }
 
 	private void runMapperWithSelection() {
-		if(tile == null)
+		if(satellite == null)
 			return;
 
 		currentMapping.interrupt();
 		resetTexture();
 		if(prevSlot == -1) {
 			currentMapping = new Thread(mapper);
-			currentMapping.setName("Ore Scan");
 		}
 		else {
 
 			currentMapping = new Thread(new ItemMapper(inventorySlots.getSlot(prevSlot).getStack()));
-			currentMapping.setName("Ore Scan");
 		}
+		currentMapping.setName("Ore Scan");
 		currentMapping.start();
 	}
 
 	@Override
 	protected void mouseClicked(int x, int y,
 			int button) throws IOException {
-		// TODO Auto-generated method stub
 		super.mouseClicked(x, y, button);
-
-		if(tile == null)
-			return;
 
 		int xOffset = 47 + (width - 240) / 2, yOffset = 20 + (height - 192) / 2;
 
 		//Get selected slot and begin scan!
-		if(button == 0 && tile.getSelectedSlot() != prevSlot) {
-			prevSlot = tile.getSelectedSlot();
+		if(button == 0 && satellite.getSelectedSlot() != prevSlot) {
+			prevSlot = satellite.getSelectedSlot();
 			runMapperWithSelection();
 		}
 
@@ -211,7 +205,7 @@ public class GuiOreMappingSatellite extends GuiContainer {
 
 		ItemStack stack = inventorySlots.getSlot(0).getStack();
 
-		if(tile != null) {
+		if(satellite != null) {
 			currentMapping = new Thread(mapper);
 			currentMapping.setName("Ore Scan");
 			currentMapping.start();
@@ -242,29 +236,29 @@ public class GuiOreMappingSatellite extends GuiContainer {
 		//Draw fancy things
 		GlStateManager.disableTexture2D();
 		GlStateManager.color(0f, 0.8f, 0f);
-		buffer.begin(GL11.GL_QUADS, buffer.getVertexFormat());
-		buffer.pos(-21, 82 + fancyScanOffset, (double)this.zLevel).endVertex();
-		buffer.pos(0, 84 + fancyScanOffset, (double)this.zLevel).endVertex();
-		buffer.pos(0, 81 + fancyScanOffset, (double)this.zLevel).endVertex();
-		buffer.pos(-21, 81 + fancyScanOffset, (double)this.zLevel).endVertex();
-		buffer.finishDrawing();
+		buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION);
+		buffer.pos(-21, 82 + fancyScanOffset, this.zLevel).endVertex();
+		buffer.pos(0, 84 + fancyScanOffset, this.zLevel).endVertex();
+		buffer.pos(0, 81 + fancyScanOffset, this.zLevel).endVertex();
+		buffer.pos(-21, 81 + fancyScanOffset, this.zLevel).endVertex();
+		Tessellator.getInstance().draw();
 
 
-		buffer.begin(GL11.GL_QUADS, buffer.getVertexFormat());
-		buffer.pos(-21, 82 - fancyScanOffset + FANCYSCANMAXSIZE, (double)this.zLevel).endVertex();
-		buffer.pos(0, 84 - fancyScanOffset + FANCYSCANMAXSIZE, (double)this.zLevel).endVertex();
-		buffer.pos(0, 81 - fancyScanOffset + FANCYSCANMAXSIZE, (double)this.zLevel).endVertex();
-		buffer.pos(-21, 81 - fancyScanOffset + FANCYSCANMAXSIZE, (double)this.zLevel).endVertex();
-		buffer.finishDrawing();
+		buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION);
+		buffer.pos(-21, 82 - fancyScanOffset + FANCYSCANMAXSIZE, this.zLevel).endVertex();
+		buffer.pos(0, 84 - fancyScanOffset + FANCYSCANMAXSIZE, this.zLevel).endVertex();
+		buffer.pos(0, 81 - fancyScanOffset + FANCYSCANMAXSIZE, this.zLevel).endVertex();
+		buffer.pos(-21, 81 - fancyScanOffset + FANCYSCANMAXSIZE, this.zLevel).endVertex();
+		Tessellator.getInstance().draw();
 
 
 		GlStateManager.enableBlend();
 		GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_DST_ALPHA);
 		GlStateManager.color(0.5f, 0.5f, 0.0f,0.3f + ((float)Math.sin(Math.PI*(fancyScanOffset/(float)FANCYSCANMAXSIZE))/3f));
 
-		buffer.begin(GL11.GL_QUADS, buffer.getVertexFormat());
+		buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_NORMAL);
 		RenderHelper.renderNorthFace(buffer, this.zLevel, 173, 82, 194, 141);
-		buffer.finishDrawing();
+		Tessellator.getInstance().draw();
 
 		GL11.glEnable(GL11.GL_TEXTURE_2D);
 		GL11.glDisable(GL11.GL_BLEND);
@@ -281,13 +275,13 @@ public class GuiOreMappingSatellite extends GuiContainer {
 
 		//If a slot is selected draw an indicator
 		int slot;
-		if(tile != null && (slot = tile.getSelectedSlot()) != -1) {
+		if(satellite != null && (slot = satellite.getSelectedSlot()) != -1) {
 
 			GlStateManager.disableTexture2D();
 			GlStateManager.color(0f, 0.8f, 0f, 1f);
 
 			buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-			RenderHelper.renderNorthFaceWithUV(buffer, this.zLevel, 13 + (18*slot), 155, 13 + 16 + (18*slot), 155 + 16, 0, 1, 0, 1);
+			RenderHelper.renderNorthFaceWithUV(buffer, this.zLevel, 13 + (18*slot), 155, 13 + 16 + (18*slot), 155 + 16, 0, 0, 0, 0);
 			Tessellator.getInstance().draw();
 			GlStateManager.enableTexture2D();
 		}
@@ -305,11 +299,16 @@ public class GuiOreMappingSatellite extends GuiContainer {
 			IntBuffer buffer = texture.getByteBuffer();
 			int scanWidth = Math.max(scanSize/radius,1);
 
-			for(int yt = 0; yt < (texture.getImage().getHeight() * texture.getImage().getWidth()); yt++) {
-				buffer.put(yt, oreMap[yt % scanWidth][yt / scanWidth] | 0xFF000000);
+			try {
+				for(int yt = 0; yt < (texture.getImage().getHeight() * texture.getImage().getWidth()); yt++) {
+					buffer.put(yt, oreMap[yt % scanWidth][scanWidth - 1 - yt / scanWidth] | 0xFF000000);
+				}
+				buffer.flip();
+				texture.setByteBuffer(buffer);
+			} catch (IndexOutOfBoundsException e)
+			{
+				
 			}
-			buffer.flip();
-			texture.setByteBuffer(buffer);
 			merged = false;
 		}
 
@@ -330,20 +329,20 @@ public class GuiOreMappingSatellite extends GuiContainer {
 
 
 		//Render player location
-		float offsetX = playerPosX - xCenter;
-		float offsetY = zCenter - playerPosZ ;
-		double numPixels = SCREEN_SIZE/scanSize;//(scanSize/(float)(SCREEN_SIZE*radius));
+		float offsetX = playerPosX - xCenter + 0.5f;
+		float offsetY = zCenter - playerPosZ + 0.5f;
+		double numPixels = ((float) SCREEN_SIZE)/scanSize;//(scanSize/(float)(SCREEN_SIZE*radius));
 
 
 		float radius = 2;
-		if(Math.abs(offsetX) < scanSize/2 && Math.abs(offsetY) < scanSize/2) {
+		if(Math.abs(offsetX) < scanSize/2f && Math.abs(offsetY) < scanSize/2f) {
 			offsetX *= numPixels;
 			offsetY *= numPixels;
-			
+
 			GlStateManager.disableTexture2D();
 			GlStateManager.color(0.4f, 1f, 0.4f);
 			buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-			RenderHelper.renderNorthFaceWithUV(buffer, this.zLevel, offsetX + 47 + x + SCREEN_SIZE/2 - radius,  offsetY + 20 + y + SCREEN_SIZE/2 - radius, offsetX + 47 + x + SCREEN_SIZE/2 + radius, offsetY + 20 + y + SCREEN_SIZE/2 + radius, 0, 1, 0, 1);
+			RenderHelper.renderNorthFaceWithUV(buffer, this.zLevel, offsetX + 47 + x + SCREEN_SIZE/2d - radius,  offsetY + 20 + y + SCREEN_SIZE/2d - radius, offsetX + 47 + x + SCREEN_SIZE/2d + radius, offsetY + 20 + y + SCREEN_SIZE/2d + radius, 0, 1, 0, 1);
 			Tessellator.getInstance().draw();
 			GlStateManager.color(1, 1, 1);
 			GlStateManager.enableTexture2D();
@@ -361,17 +360,17 @@ public class GuiOreMappingSatellite extends GuiContainer {
 		//this.drawString(this.fontRendererObj, "Clarity", 198 + x, 52 + y, 0xb0b0b0);
 		this.drawString(this.fontRenderer, "X: " + xSelected, 6 + x, 33 + y, 0xF0F0F0);
 		this.drawString(this.fontRenderer, "Z: " + zSelected, 6 + x, 49 + y, 0xF0F0F0);
-		//this.drawString(this.fontRendererObj, "Value: ", 6 + x, 65 + y, 0xF0F0F0);
-		//this.drawString(this.fontRendererObj, String.valueOf(mouseValue), 6 + x, 79 + y, 0xF0F0F0);
+		this.drawString(this.fontRenderer,  LibVulpes.proxy.getLocalizedString("msg.itemorescanner.value"), 6 + x, 65 + y, 0xF0F0F0);
+		this.drawString(this.fontRenderer, String.valueOf(mouseValue), 6 + x, 79 + y, 0xF0F0F0);
 	}
 
-    /**
-     * Draws the screen and all the components in it.
-     */
-    public void drawScreen(int mouseX, int mouseY, float partialTicks)
-    {
-        this.drawDefaultBackground();
-        super.drawScreen(mouseX, mouseY, partialTicks);
-        this.renderHoveredToolTip(mouseX, mouseY);
-    }
+	/**
+	 * Draws the screen and all the components in it.
+	 */
+	public void drawScreen(int mouseX, int mouseY, float partialTicks)
+	{
+		this.drawDefaultBackground();
+		super.drawScreen(mouseX, mouseY, partialTicks);
+		this.renderHoveredToolTip(mouseX, mouseY);
+	}
 }

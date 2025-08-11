@@ -11,7 +11,7 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
 import org.lwjgl.opengl.GL11;
-import zmaster587.advancedRocketry.api.Configuration;
+import zmaster587.advancedRocketry.api.ARConfiguration;
 import zmaster587.advancedRocketry.tile.multiblock.energy.TileMicrowaveReciever;
 import zmaster587.libVulpes.render.RenderHelper;
 
@@ -43,13 +43,13 @@ public class RendererMicrowaveReciever extends TileEntitySpecialRenderer {
         
         
 		//Draw heat FX
-		if(Configuration.advancedVFX && multiBlockTile.getPowerMadeLastTick() > 0) {
+		if(ARConfiguration.getCurrentConfig().advancedVFX && multiBlockTile.getPowerMadeLastTick() > 0) {
 			double distance = Math.sqrt(Minecraft.getMinecraft().player.getDistanceSq(tile.getPos()));
 			if(distance < 16 ) {
 				double u = 256/distance;
 				double resolution = (int)u;
 
-				double yLoc[][] = new double[(int)resolution][(int)resolution];
+				double[][] yLoc = new double[(int)resolution][(int)resolution];
 
 				for(int i = 0; i < (int)resolution; i++) {
 					for(int g = 0; g < (int)resolution; g++) {
@@ -109,7 +109,7 @@ public class RendererMicrowaveReciever extends TileEntitySpecialRenderer {
 			GL11.glDepthMask(false);
 
 			GL11.glDisable(GL11.GL_TEXTURE_2D);
-			GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
+			GlStateManager.tryBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ONE, GL11.GL_NONE);
 			GL11.glPushMatrix();
 			GlStateManager.color(0.2F, 0.2F, 0.2F, 0.3F);
 			buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION);
@@ -124,13 +124,13 @@ public class RendererMicrowaveReciever extends TileEntitySpecialRenderer {
 					buffer.pos(- x , -y + 200,  - z).endVertex();
 					buffer.pos(- x, -y + 200, - z).endVertex();
 					buffer.pos(- (radius* Math.cos(i)) + 0.5F, 0,- (radius* Math.sin(i)) + 0.5F).endVertex();
-					buffer.pos(+ (radius* Math.sin(i)) + 0.5F, 0, (radius* Math.cos(i)) + 0.5F).endVertex();
+					buffer.pos((radius* Math.sin(i)) + 0.5F, 0, (radius* Math.cos(i)) + 0.5F).endVertex();
 				}
 
 				for(double i = 0; i < 2*Math.PI; i += Math.PI) {
 					buffer.pos(- x, -y + 200,- z).endVertex();
 					buffer.pos(- x, -y + 200, - z).endVertex();
-					buffer.pos(+ (radius* Math.sin(i)) + 0.5F, 0, -(radius* Math.cos(i)) + 0.5F).endVertex();
+					buffer.pos((radius* Math.sin(i)) + 0.5F, 0, -(radius* Math.cos(i)) + 0.5F).endVertex();
 					buffer.pos(- (radius* Math.cos(i)) + 0.5F, 0,(radius* Math.sin(i)) + 0.5F).endVertex();
 				}
 			}

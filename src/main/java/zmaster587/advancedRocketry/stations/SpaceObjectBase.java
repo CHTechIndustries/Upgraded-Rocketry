@@ -8,7 +8,7 @@ import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import zmaster587.advancedRocketry.AdvancedRocketry;
-import zmaster587.advancedRocketry.api.Configuration;
+import zmaster587.advancedRocketry.api.ARConfiguration;
 import zmaster587.advancedRocketry.api.stations.ISpaceObject;
 import zmaster587.advancedRocketry.api.stations.IStorageChunk;
 import zmaster587.advancedRocketry.dimension.DimensionProperties;
@@ -20,8 +20,8 @@ public abstract class SpaceObjectBase implements ISpaceObject {
 	private int posX, posY;
 	private int altitude;
 	private HashedBlockPosition spawnLocation;
-	private double rotation[];
-	private double angularVelocity[];
+	private double[] rotation;
+	private double[] angularVelocity;
 	private long lastTimeModification = 0;
 	private DimensionProperties properties;
 
@@ -64,7 +64,7 @@ public abstract class SpaceObjectBase implements ISpaceObject {
 	}
 
 	/**
-	 * @return the DIMID of the planet the object is currently orbiting, -1 if none
+	 * @return the DIMID of the planet the object is currently orbiting, Constants.INVALID_PLANET if none
 	 */
 	@Override
 	public int getOrbitingPlanetId() {
@@ -86,6 +86,20 @@ public abstract class SpaceObjectBase implements ISpaceObject {
 	public EnumFacing getForwardDirection() {
 			return EnumFacing.DOWN;
 	}
+
+	/**
+	 * @return if the object is anchored in place by anything
+	 */
+	@Override
+	public boolean isAnchored() { return false;}
+
+	/**
+	 * Sets if the object is anchored or not
+	 */
+	@Override
+	public void setIsAnchored(boolean anchored) {
+	}
+
 	/**
 	 * @return the altitude above the parent DIM the object currently is
 	 */
@@ -138,7 +152,7 @@ public abstract class SpaceObjectBase implements ISpaceObject {
 	}
 
 	private long getWorldTime() {
-		return AdvancedRocketry.proxy.getWorldTimeUniversal(Configuration.spaceDimId);
+		return AdvancedRocketry.proxy.getWorldTimeUniversal(ARConfiguration.getCurrentConfig().spaceDimId);
 	}
 	
 	/**
@@ -222,7 +236,7 @@ public abstract class SpaceObjectBase implements ISpaceObject {
 	 * @param chunk
 	 */
 	public void onModuleUnpack(IStorageChunk chunk) {
-		World worldObj = DimensionManager.getWorld(Configuration.spaceDimId);
+		World worldObj = DimensionManager.getWorld(ARConfiguration.getCurrentConfig().spaceDimId);
 		chunk.pasteInWorld(worldObj, spawnLocation.x - chunk.getSizeX()/2, spawnLocation.y - chunk.getSizeY()/2, spawnLocation.z - chunk.getSizeZ()/2);
 
 	}

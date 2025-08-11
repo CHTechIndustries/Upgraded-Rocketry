@@ -9,20 +9,23 @@ import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
+import zmaster587.advancedRocketry.api.Constants;
 import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.dimension.DimensionProperties;
-import zmaster587.advancedRocketry.tile.station.TilePlanetaryHologram;
+import zmaster587.advancedRocketry.tile.station.TileHolographicPlanetSelector;
+
+import javax.annotation.Nullable;
 
 public class EntityUIPlanet extends Entity {
 
 	DimensionProperties properties;
-	protected TilePlanetaryHologram tile;
-	protected static final DataParameter<Integer> planetID =  EntityDataManager.<Integer>createKey(EntityUIPlanet.class, DataSerializers.VARINT);
-	protected static final DataParameter<Float> scale =  EntityDataManager.<Float>createKey(EntityUIPlanet.class, DataSerializers.FLOAT);
-	protected static final DataParameter<Boolean> selected =  EntityDataManager.<Boolean>createKey(EntityUIPlanet.class, DataSerializers.BOOLEAN);
+	protected TileHolographicPlanetSelector tile;
+	protected static final DataParameter<Integer> planetID =  EntityDataManager.createKey(EntityUIPlanet.class, DataSerializers.VARINT);
+	protected static final DataParameter<Float> scale =  EntityDataManager.createKey(EntityUIPlanet.class, DataSerializers.FLOAT);
+	protected static final DataParameter<Boolean> selected =  EntityDataManager.createKey(EntityUIPlanet.class, DataSerializers.BOOLEAN);
 	
 	
-	public EntityUIPlanet(World worldIn, DimensionProperties properties, TilePlanetaryHologram tile, double x, double y, double z) {
+	public EntityUIPlanet(World worldIn, DimensionProperties properties, TileHolographicPlanetSelector tile, double x, double y, double z) {
 		this(worldIn);
 		setPosition(x, y, z);
 		setProperties(properties);
@@ -35,7 +38,7 @@ public class EntityUIPlanet extends Entity {
 	}
 	
 	public float getScale() {
-		float scale = this.dataManager.get(this.scale);
+		float scale = this.dataManager.get(EntityUIPlanet.scale);
 		setSize(0.1f*scale, 0.1f*scale);
 		return scale;
 	}
@@ -46,6 +49,7 @@ public class EntityUIPlanet extends Entity {
 	}
 
 	@Override
+	@Nullable
 	public NBTTagCompound writeToNBT(NBTTagCompound p_189511_1_) {
 		//DO not save
 		return null;
@@ -53,7 +57,7 @@ public class EntityUIPlanet extends Entity {
 
 	@Override
 	protected void entityInit() {
-		this.dataManager.register(planetID, properties == null ? -1 : properties.getId());
+		this.dataManager.register(planetID, properties == null ? Constants.INVALID_PLANET : properties.getId());
 		this.dataManager.register(scale, 1f);
 		this.dataManager.register(selected, false);
 		
@@ -84,7 +88,7 @@ public class EntityUIPlanet extends Entity {
 	}
 
 	@Override
-	public boolean writeToNBTOptional(NBTTagCompound compound) {
+	public boolean writeToNBTOptional(@Nullable NBTTagCompound compound) {
 		return false;
 	}
 	
@@ -93,7 +97,7 @@ public class EntityUIPlanet extends Entity {
 	}
 	
 	public DimensionProperties getProperties() {
-		if((properties == null && getPlanetID() != -1) || (properties != null && getPlanetID() != properties.getId())) {
+		if((properties == null && getPlanetID() != Constants.INVALID_PLANET) || (properties != null && getPlanetID() != properties.getId())) {
 			properties = DimensionManager.getInstance().getDimensionProperties(getPlanetID());
 		}
 
@@ -104,12 +108,12 @@ public class EntityUIPlanet extends Entity {
 		//this.dataManager.set(planetID, 256);
 
 		if(!world.isRemote)
-			return properties == null ? -1 : properties.getId();
+			return properties == null ? Constants.INVALID_PLANET : properties.getId();
 
 		int planetId = this.dataManager.get(planetID);
 
 		if(properties != null && properties.getId() != planetId) {
-			if(planetId == -1 )
+			if(planetId == Constants.INVALID_PLANET )
 				properties = null;
 			else
 				properties = DimensionManager.getInstance().getDimensionProperties(planetId);
@@ -123,7 +127,7 @@ public class EntityUIPlanet extends Entity {
 		if(properties != null)
 			this.dataManager.set(planetID, properties.getId());
 		else
-			this.dataManager.set(planetID, -1);
+			this.dataManager.set(planetID, Constants.INVALID_PLANET);
 	}
 	
 	public void setSelected(boolean isSelected) {
