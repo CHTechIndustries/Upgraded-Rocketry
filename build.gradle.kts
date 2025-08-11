@@ -1,14 +1,21 @@
+import com.matthewprenger.cursegradle.CurseArtifact
+import com.matthewprenger.cursegradle.CurseProject
+import com.matthewprenger.cursegradle.CurseRelation
 import org.ajoberstar.grgit.Grgit
 import org.gradle.internal.jvm.Jvm
+import se.bjurr.gitchangelog.plugin.gradle.GitChangelogTask
 import java.util.Date
 import java.text.SimpleDateFormat
 import java.util.TimeZone
 
 plugins {
     idea
-    id("net.minecraftforge.gradle") version "5.1.+"
-    id("wtf.gofancy.fancygradle") version "1.1.+"
+    id("net.minecraftforge.gradle") version "6.+"
+    id("wtf.gofancy.fancygradle") version "1.+"
     id("org.ajoberstar.grgit") version "4.1.1"
+    id("com.matthewprenger.cursegradle") version "1.4.0"
+    id("se.bjurr.gitchangelog.git-changelog-gradle-plugin") version "1.72.0"
+    `maven-publish`
 }
 
 val mcVersion: String by project
@@ -22,16 +29,12 @@ val jeiVersion: String by project
 val icVersion: String by project
 val gcVersion: String by project
 
+val startGitRev: String by project
+
 group = "zmaster587.advancedRocketry"
 setProperty("archivesBaseName", archiveBase)
 
-val buildNumber: String by lazy {
-    if (System.getenv("BUILD_NUMBER") != null) {
-        "-${System.getenv("BUILD_NUMBER")}"
-    } else {
-        getDate()
-    }
-}
+val buildNumber: String by lazy { System.getenv("BUILD_NUMBER") ?: getDate() }
 
 fun getDate(): String {
     val format = SimpleDateFormat("HH-mm-dd-MM-yyyy")
@@ -41,13 +44,20 @@ fun getDate(): String {
 
 version = "$modVersion-$buildNumber"
 
-println("$archiveBase v$version")
+println("$archiveBase v$mcVersion-$version")
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(8))
+    }
+}
 
 //sourceCompatibility = targetCompatibility = '1.8' // Need this here so eclipse task generates correctly.
 tasks.compileJava {
     sourceCompatibility = "1.8"
     targetCompatibility = "1.8"
 }
+
 
 minecraft {
     mappings("snapshot", "20170624-1.12")
@@ -117,7 +127,7 @@ repositories {
     }
     maven {
         name = "Galacticraft"
-        url = uri("https://maven.galacticraft.dev")
+        url = uri("https://maven.galacticraft.dev/repository/legacy-releases/")
     }
     maven {
         name = "LibVulpes"
@@ -135,10 +145,7 @@ dependencies {
     compileOnly("net.industrial-craft:industrialcraft-2:$icVersion:dev")
     //implementation("zmaster587.libVulpes:LibVulpes:$mcVersion-$libVulpesVersion-$libVulpesBuildNum-deobf")
 
-    compileOnly("micdoodle8.mods:galacticraft-api:$gcVersion")
-    compileOnly("micdoodle8.mods:galacticraft-core:$gcVersion")
-    compileOnly("micdoodle8.mods:galacticraft-planets:$gcVersion")
-    compileOnly("micdoodle8.mods:micdoodlecore:$gcVersion")
+    compileOnly(fg.deobf("dev.galacticraft:galacticraft-legacy:$gcVersion"))
 
     compileOnly(fg.deobf("mezz.jei:jei_${mcVersion}:${jeiVersion}:api"))
     runtimeOnly(fg.deobf("mezz.jei:jei_${mcVersion}:${jeiVersion}"))
@@ -212,10 +219,94 @@ tasks.withType(Jar::class) {
 
 val deobfJar by tasks.registering(Jar::class) {
     from(sourceSets["main"].output)
+    archiveClassifier.set("deobf")
 }
 
 tasks.build {
     dependsOn(deobfJar)
+}
+
+val makeChangelog by tasks.creating(GitChangelogTask::class.java) {
+    file = file("changelog.html")
+    untaggedName = "Current release ${mcVersion}-${project.version}"
+
+    //Get the last commit from the cache or config if no cache exists
+    val lastHashFile = file("lasthash.txt")
+
+    fromCommit = if (!lastHashFile.exists())
+        startGitRev
+    else
+        lastHashFile.readText()
+
+    lastHashFile.writeText(gitHash)
+
+    toRef = "HEAD"
+    gitHubIssuePattern = "nonada123";
+    templateContent = """
+        {{#tags}}
+          <h3>{{name}}</h3>
+          <ul>
+            {{#commits}}
+            <li> <a href="https://github.com/zmaster587/AdvancedRocketry/commit/{{hash}}" target=_blank> {{{message}}}</a>
+        </li>
+            {{/commits}}
+          </ul>
+        {{/tags}}
+    """.trimIndent()
+}
+
+curseforge {
+    apiKey = (project.findProperty("thecursedkey") as String?).orEmpty()
+
+    project(closureOf<CurseProject> {
+        id = "236542"
+        relations(closureOf<CurseRelation> {
+            requiredDependency("libvulpes")
+        })
+        changelog = file("changelog.html")
+        changelogType = "html"
+        // Why is it hardcoded to beta tho?..
+        releaseType = "release"
+        addGameVersion(mcVersion)
+        mainArtifact(tasks.jar.get(), closureOf<CurseArtifact> {
+            displayName = "AdvancedRocketry ${ project.version } build $buildNumber for $mcVersion"
+            })
+        addArtifact(deobfJar.get(), closureOf<CurseArtifact> {
+            displayName = "AdvancedRocketry ${ project.version }-deobf build $buildNumber for $mcVersion"
+        })
+    })
+}
+
+tasks.curseforge {
+    dependsOn(makeChangelog)
+}
+
+publishing {
+    repositories {
+        maven {
+            url = if (project.findProperty("local") == "true")
+                uri("$buildDir/build/maven")
+            else
+                uri("file:///usr/share/nginx/maven/")
+        }
+    }
+    publications {
+        register("mavenJava", MavenPublication::class) {
+            //from(components["java"])
+
+            artifact(tasks.jar.get())
+            artifact(deobfJar.get())
+            artifact(makeChangelog.file)
+        }
+    }
+}
+
+tasks.curseforge {
+  dependsOn("reobfJar")
+}
+
+tasks.publish {
+    dependsOn(makeChangelog)
 }
 
 idea {
