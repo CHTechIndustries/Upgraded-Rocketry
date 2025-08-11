@@ -1,11 +1,11 @@
 package zmaster587.advancedRocketry.satellite;
 
 import zmaster587.advancedRocketry.api.DataStorage;
-import zmaster587.advancedRocketry.api.DataStorage.DataType;
 
 public class SatelliteDensity extends SatelliteData {
 
 	public SatelliteDensity() {
+		super();
 		data = new DataStorage(DataStorage.DataType.ATMOSPHEREDENSITY);
 		data.lockDataType(DataStorage.DataType.ATMOSPHEREDENSITY);
 	}

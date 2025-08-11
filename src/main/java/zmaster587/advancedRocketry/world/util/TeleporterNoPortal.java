@@ -14,15 +14,14 @@ public class TeleporterNoPortal extends Teleporter {
 
 		if (entity.isEntityAlive()) {
 			entity.setLocationAndAngles(entity.posX, entity.posY, entity.posZ, entity.rotationYaw, entity.rotationPitch);
-			world.spawnEntityInWorld(entity);
+			world.spawnEntity(entity);
 			world.updateEntityWithOptionalForce(entity, false);
 		}
 		entity.setWorld(world);
 	}
 
 	@Override
-	public boolean placeInExistingPortal(Entity par1Entity, double par2, double par4, double par6, float par8)
-	{
+	public boolean placeInExistingPortal(Entity entityIn, float rotationYaw) {
 		return false;
 	}
 
@@ -31,10 +30,6 @@ public class TeleporterNoPortal extends Teleporter {
 	{
 	}
 
-	@Override
-	public void placeInPortal(Entity par1Entity, double par2, double par4, double par6, float par8)
-	{
-	}
 	
 	@Override
 	public boolean makePortal(Entity p_85188_1_) {

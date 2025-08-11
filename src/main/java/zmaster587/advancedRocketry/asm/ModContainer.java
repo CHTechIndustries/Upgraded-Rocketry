@@ -1,17 +1,17 @@
 package zmaster587.advancedRocketry.asm;
 
-import java.util.Arrays;
+import net.minecraftforge.fml.common.DummyModContainer;
+import net.minecraftforge.fml.common.LoadController;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.ModMetadata;
+import net.minecraftforge.fml.common.eventhandler.EventBus;
+import net.minecraftforge.fml.common.event.FMLConstructionEvent;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 
-import com.google.common.eventbus.EventBus;
+import java.util.Collections;
 
-import cpw.mods.fml.common.DummyModContainer;
-import cpw.mods.fml.common.LoadController;
-import cpw.mods.fml.common.ModMetadata;
-import cpw.mods.fml.common.event.FMLConstructionEvent;
-import cpw.mods.fml.common.event.FMLInitializationEvent;
-import cpw.mods.fml.common.event.FMLPostInitializationEvent;
-import cpw.mods.fml.common.event.FMLPreInitializationEvent;
-import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 
 public class ModContainer extends DummyModContainer {
 	
@@ -24,11 +24,11 @@ public class ModContainer extends DummyModContainer {
 		
 		ModMetadata meta = getMetadata();
 		
-		meta.modId = "AdvancedRocketry";
-		meta.name = "Advanced Rocketry";
+		meta.modId = "advancedrocketrycore";
+		meta.name = "Advanced Rocketry Core";
 		meta.version = "1";
 		meta.credits = "Created by Zmaster587";
-		meta.authorList = Arrays.asList("Zmaster587");
+		meta.authorList = Collections.singletonList("Zmaster587");
 		meta.description = "ASM handler for AR";
 		meta.url = "";
 		meta.updateUrl = "";
@@ -36,7 +36,6 @@ public class ModContainer extends DummyModContainer {
 		meta.logoFile = "";
 	}
 
-	@Override
 	public boolean registerBus(EventBus bus, LoadController controller)
 	{
 		System.out.println("********* registerBus. OK");
@@ -44,15 +43,15 @@ public class ModContainer extends DummyModContainer {
 		return true;
 	}
 	
-	@SubscribeEvent
+	@EventHandler
 	public void modConstruction(FMLConstructionEvent event) {}
-	
-	@SubscribeEvent
+
+	@EventHandler
 	public void preInit(FMLPreInitializationEvent event) {}
-	
-	@SubscribeEvent
+
+	@EventHandler
 	public void load(FMLInitializationEvent event) {}
-	
-	@SubscribeEvent
+
+	@EventHandler
 	public void postInit(FMLPostInitializationEvent event) {}
 }

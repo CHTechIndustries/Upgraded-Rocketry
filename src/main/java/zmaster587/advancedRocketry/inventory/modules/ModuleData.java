@@ -1,22 +1,24 @@
 package zmaster587.advancedRocketry.inventory.modules;
 
-import java.util.LinkedList;
-import java.util.List;
-
-import zmaster587.advancedRocketry.api.DataStorage;
-import zmaster587.advancedRocketry.inventory.TextureResources;
-import zmaster587.advancedRocketry.util.IDataInventory;
-import zmaster587.libVulpes.gui.GuiImageButton;
-import zmaster587.libVulpes.util.IconResource;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.inventory.Container;
-import net.minecraft.inventory.ICrafting;
+import net.minecraft.inventory.IContainerListener;
 import net.minecraft.inventory.Slot;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+import zmaster587.advancedRocketry.api.DataStorage;
+import zmaster587.advancedRocketry.util.IDataInventory;
+import zmaster587.libVulpes.inventory.TextureResources;
+import zmaster587.libVulpes.inventory.modules.IButtonInventory;
+import zmaster587.libVulpes.inventory.modules.ModuleBase;
+import zmaster587.libVulpes.inventory.modules.ModuleButton;
+import zmaster587.libVulpes.util.IconResource;
+
+import java.util.LinkedList;
+import java.util.List;
 
 public class ModuleData extends ModuleBase implements IButtonInventory {
 
@@ -25,12 +27,12 @@ public class ModuleData extends ModuleBase implements IButtonInventory {
 	static final int textureOffsetX = 0;
 	static final int textureOffsetY = 215;
 
-	DataStorage data[];
-	int prevData[];
+	DataStorage[] data;
+	int[] prevData;
 	int prevDataType;
 	int slot;
 	IDataInventory chipStorage;
-	IconResource icon = TextureResources.ioSlot;
+	IconResource icon = zmaster587.advancedRocketry.inventory.TextureResources.ioSlot;
 	ModuleButton buttonStore, buttonLoad;
 
 	public ModuleData(int offsetX, int offsetY, int slot, IDataInventory chipStorage, DataStorage ... data) {
@@ -54,10 +56,10 @@ public class ModuleData extends ModuleBase implements IButtonInventory {
 	@Override
 	public void onInventoryButtonPressed(int buttonId) {
 		if(buttonId == 0) {
-			chipStorage.storeData();
+			chipStorage.storeData(slot);
 		}
 		else if(buttonId == 1) {
-			chipStorage.loadData();
+			chipStorage.loadData(slot);
 		}
 	}
 
@@ -69,7 +71,7 @@ public class ModuleData extends ModuleBase implements IButtonInventory {
 
 	@Override
 	public List<Slot> getSlots(Container container) {
-		slotList.add(new Slot(chipStorage, slot, offsetX + 10, offsetY + 16));
+		slotList.add(new SlotData(chipStorage, slot, offsetX + 10, offsetY + 16));
 		return slotList;
 	}
 
@@ -79,7 +81,7 @@ public class ModuleData extends ModuleBase implements IButtonInventory {
 	}
 
 	@Override
-	protected boolean needsUpdate(int localId) {
+	public boolean needsUpdate(int localId) {
 		if(localId < data.length)
 			return data[localId].getData() != prevData[localId];
 		return data[0].getDataType().ordinal() != prevDataType;
@@ -95,12 +97,12 @@ public class ModuleData extends ModuleBase implements IButtonInventory {
 	}
 
 	@Override
-	public void sendChanges(Container container, ICrafting crafter,
+	public void sendChanges(Container container, IContainerListener crafter,
 			int variableId, int localId) {
 		if(localId < data.length)
-			crafter.sendProgressBarUpdate(container, variableId, data[localId].getData());
+			crafter.sendWindowProperty(container, variableId, data[localId].getData());
 		else
-			crafter.sendProgressBarUpdate(container, variableId, data[0].getDataType().ordinal());
+			crafter.sendWindowProperty(container, variableId, data[0].getDataType().ordinal());
 	}
 
 	@Override
@@ -130,9 +132,9 @@ public class ModuleData extends ModuleBase implements IButtonInventory {
 				totalMaxData += datum.getMaxData();
 			}
 
-			List<String> list = new LinkedList<String>();
+			List<String> list = new LinkedList<>();
 			list.add(totalData + " / " + totalMaxData + " Data");
-			list.add("Type: " +  I18n.format(data[0].getDataType().toString(), new Object[0]));
+			list.add("Type: " +  I18n.format(data[0].getDataType().toString()));
 
 			this.drawTooltip(gui, list, mouseX, mouseY, zLevel, font);
 		}
@@ -146,7 +148,7 @@ public class ModuleData extends ModuleBase implements IButtonInventory {
 		buttonStore.renderBackground(gui, x, y, mouseX, mouseY, font);
 
 		for(Slot slot : slotList) {
-			gui.drawTexturedModalRect(x + slot.xDisplayPosition - 1, y + slot.yDisplayPosition - 1, icon.getxLoc(), icon.getyLoc(), icon.getxSize(), icon.getySize());
+			gui.drawTexturedModalRect(x + slot.xPos - 1, y + slot.yPos - 1, icon.getxLoc(), icon.getyLoc(), icon.getxSize(), icon.getySize());
 		}
 
 		int totalData = 0, totalMaxData = 0;

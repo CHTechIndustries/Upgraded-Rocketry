@@ -1,44 +1,46 @@
 package zmaster587.advancedRocketry.client.render.multiblocks;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.BufferBuilder;
+import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.RenderItem;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.util.ResourceLocation;
 import org.lwjgl.opengl.GL11;
-
-import zmaster587.advancedRocketry.api.Configuration;
 import zmaster587.advancedRocketry.api.stations.ISpaceObject;
-import zmaster587.advancedRocketry.api.stations.SpaceObjectManager;
-import zmaster587.advancedRocketry.dimension.DimensionProperties;
-import zmaster587.advancedRocketry.stations.SpaceObject;
-import zmaster587.advancedRocketry.tile.multiblock.TileMultiBlock;
+import zmaster587.advancedRocketry.backwardCompat.ModelFormatException;
+import zmaster587.advancedRocketry.backwardCompat.WavefrontObject;
+import zmaster587.advancedRocketry.stations.SpaceStationObject;
+import zmaster587.advancedRocketry.stations.SpaceObjectManager;
 import zmaster587.advancedRocketry.world.provider.WorldProviderSpace;
 import zmaster587.libVulpes.block.RotatableBlock;
 import zmaster587.libVulpes.render.RenderHelper;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.OpenGlHelper;
-import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.client.renderer.entity.RenderItem;
-import net.minecraft.client.renderer.entity.RenderManager;
-import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.MathHelper;
-import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.client.model.AdvancedModelLoader;
-import net.minecraftforge.client.model.IModelCustom;
-import net.minecraftforge.common.util.ForgeDirection;
+import zmaster587.libVulpes.tile.multiblock.TileMultiBlock;
 
 public class RendererWarpCore extends TileEntitySpecialRenderer {
 
-	IModelCustom model = AdvancedModelLoader.loadModel(new ResourceLocation("advancedrocketry:models/warpcore.obj"));
+	public static WavefrontObject model;
 
-	ResourceLocation texture = new ResourceLocation("advancedrocketry:textures/models/warpcore.png");
+	private ResourceLocation texture = new ResourceLocation("advancedrocketry:textures/models/warpcore.png");
 
-	private final RenderItem dummyItem = new RenderItem();
+	private final RenderItem dummyItem = Minecraft.getMinecraft().getRenderItem();
 
 	public RendererWarpCore() {
-		dummyItem.setRenderManager(RenderManager.instance);
+		try {
+			model = new WavefrontObject(new ResourceLocation("advancedrocketry:models/warpcore.obj"));
+		} catch (ModelFormatException e) {
+			e.printStackTrace();
+		}
+	
 	}
 
 	@Override
-	public void renderTileEntityAt(TileEntity tile, double x,
-			double y, double z, float f) {
+	public void render(TileEntity tile, double x,
+			double y, double z, float f, int damage, float a) {
 		TileMultiBlock multiBlockTile = (TileMultiBlock)tile;
 
 		if(!multiBlockTile.canRender())
@@ -46,16 +48,10 @@ public class RendererWarpCore extends TileEntitySpecialRenderer {
 
 		GL11.glPushMatrix();
 
-		//Initial setup
-		int bright = tile.getWorldObj().getLightBrightnessForSkyBlocks(tile.xCoord, tile.yCoord + 1, tile.zCoord,0);
-		int brightX = bright % 65536;
-		int brightY = bright / 65536;
-		OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, brightX, brightY);
-
 		//Rotate and move the model into position
 		GL11.glTranslated(x + 0.5, y, z + 0.5);
-		ForgeDirection front = RotatableBlock.getFront(tile.getBlockMetadata());
-		GL11.glRotatef((front.offsetX == 1 ? 180 : 0) + front.offsetZ*90f, 0, 1, 0);
+		EnumFacing front = RotatableBlock.getFront(tile.getWorld().getBlockState(tile.getPos())); //tile.getWorldObj().getBlockMetadata(tile.xCoord, tile.yCoord, tile.zCoord));
+		GL11.glRotatef((front.getFrontOffsetX() == 1 ? 180 : 0) + front.getFrontOffsetZ()*90f, 0, 1, 0);
 		GL11.glTranslated(1f, 0, 0f);
 
 		bindTexture(texture);
@@ -67,26 +63,29 @@ public class RendererWarpCore extends TileEntitySpecialRenderer {
 		GL11.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
 		
 		GL11.glDisable(GL11.GL_LIGHTING);
-		GL11.glColor4f(1f, 0.4f, 0.4f, 0.8f);
+		GlStateManager.color(1f, 0.4f, 0.4f, 0.8f);
 		GL11.glPushMatrix();
-		Tessellator.instance.startDrawingQuads();
-		RenderHelper.renderCubeWithUV(Tessellator.instance, -0.1f, 1, -0.1f, 0.1f, 2, 0.1f, 0, 1, 0, 1);
-		Tessellator.instance.draw();
+		
+		BufferBuilder buffer = Tessellator.getInstance().getBuffer();
+		
+		buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
+		RenderHelper.renderCubeWithUV(buffer, -0.1f, 1, -0.1f, 0.1f, 2, 0.1f, 0, 1, 0, 1);
+		Tessellator.getInstance().draw();
 		GL11.glPopMatrix();
 		GL11.glEnable(GL11.GL_LIGHTING);
-
+		GlStateManager.color(1f, 1f,1f, 1f);
 		
-		if(tile.getWorldObj().provider instanceof WorldProviderSpace) {
+		if(tile.getWorld().provider instanceof WorldProviderSpace) {
 			
-			ISpaceObject obj = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(tile.xCoord, tile.zCoord);
-			if(obj instanceof SpaceObject && ((SpaceObject)obj).getFuelAmount() > 50) {
+			ISpaceObject spaceObject = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(tile.getPos());
+			if(spaceObject instanceof SpaceStationObject && ((SpaceStationObject)spaceObject).getFuelAmount() > 50) {
 
-				double speedMult = ((DimensionProperties)obj.getProperties()).getParentPlanet() == -1 ? 1.5d : 0.1d;
+				double speedMult = 1.5;//((DimensionProperties)spaceObject.getProperties()).getParentPlanet() == SpaceObjectManager.WARPDIMID ? 1.5d : 0.1d;
 				
 				double speedRotate = speedMult*0.25d;
 				
 				
-				GL11.glColor4f(0.4f, 0.4f, 1f, 0.6f);
+				GlStateManager.color(0.4f, 0.4f, 1f, 0.6f);
 				GL11.glPushMatrix();
 				GL11.glRotated(speedRotate*System.currentTimeMillis() % 360, 0f, 1f, 0f);
 				model.renderOnly("Rotate1");
@@ -109,7 +108,7 @@ public class RendererWarpCore extends TileEntitySpecialRenderer {
 
 				speedRotate = 0.03d*speedMult;
 				
-				GL11.glColor4f(0.4f, 1f, 0.4f, 0.8f);
+				GlStateManager.color(0.4f, 1f, 0.4f, 0.8f);
 				int amt = 3;
 				float offset = 360/(float)amt;
 				for(int j = 0; j < 5; j++) {
@@ -124,6 +123,8 @@ public class RendererWarpCore extends TileEntitySpecialRenderer {
 				}
 			}
 		}
+		
+		GlStateManager.color(1f, 1f, 1f, 1f);
 		GL11.glDisable(GL11.GL_BLEND);
 		GL11.glEnable(GL11.GL_TEXTURE_2D);
 		GL11.glPopMatrix();

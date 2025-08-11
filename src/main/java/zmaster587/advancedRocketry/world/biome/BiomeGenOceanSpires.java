@@ -1,56 +1,48 @@
 package zmaster587.advancedRocketry.world.biome;
 
-import java.util.Random;
-
-import zmaster587.advancedRocketry.world.decoration.MapGenInvertedPillar;
-import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
-import net.minecraft.world.biome.BiomeGenBase;
+import net.minecraft.world.biome.Biome;
+import net.minecraft.world.chunk.ChunkPrimer;
 import net.minecraft.world.gen.MapGenBase;
 import net.minecraft.world.gen.feature.WorldGenAbstractTree;
 import net.minecraft.world.gen.feature.WorldGenShrub;
+import zmaster587.advancedRocketry.world.decoration.MapGenInvertedPillar;
 
-public class BiomeGenOceanSpires extends BiomeGenBase {
+import java.util.Random;
+
+public class BiomeGenOceanSpires extends Biome {
 
 	MapGenBase oceanSpire;
 	
-	public BiomeGenOceanSpires(int id, boolean register) {
-		super(id, register);
+	public BiomeGenOceanSpires(BiomeProperties properties) {
+		super(properties);
 		
-		this.biomeName = "OceanSpires";
-		this.rootHeight=-0.5f;
-		this.heightVariation=0.0f;
-		this.theBiomeDecorator.clayPerChunk = 0;
-		this.theBiomeDecorator.flowersPerChunk = 0;
-		this.theBiomeDecorator.mushroomsPerChunk = 0;
-		this.theBiomeDecorator.treesPerChunk = 0;
-		this.theBiomeDecorator.grassPerChunk = 7;
-		this.theBiomeDecorator.waterlilyPerChunk = 0;
-		this.theBiomeDecorator.sandPerChunk = 0;
-		this.theBiomeDecorator.sandPerChunk2 = 0;
+		this.decorator.clayPerChunk = 0;
+		this.decorator.flowersPerChunk = 0;
+		this.decorator.mushroomsPerChunk = 0;
+		this.decorator.treesPerChunk = 0;
+		this.decorator.grassPerChunk = 7;
+		this.decorator.waterlilyPerChunk = 0;
+		this.decorator.sandPatchesPerChunk = 0;
 		this.spawnableCreatureList.clear();
-		this.topBlock = Blocks.gravel;
-		this.fillerBlock = Blocks.gravel;
+		this.topBlock = GRAVEL;
+		this.fillerBlock = GRAVEL;
 		
-		oceanSpire = new MapGenInvertedPillar(4, Blocks.mossy_cobblestone, Blocks.cobblestone, Blocks.dirt);
+		oceanSpire = new MapGenInvertedPillar(4, Blocks.MOSSY_COBBLESTONE.getDefaultState(), Blocks.COBBLESTONE.getDefaultState(), Blocks.DIRT.getDefaultState());
 	}
 
 	@Override
-	public void genTerrainBlocks(World world, Random rand,
-			Block[] block, byte[] abyte, int x, 
-			int z, double noise) {
-		super.genTerrainBlocks(world, rand, block, abyte, x, z, noise);
+	public void genTerrainBlocks(World worldIn, Random rand,
+			ChunkPrimer chunkPrimerIn, int x, int z, double noiseVal) {
+		super.genTerrainBlocks(worldIn, rand, chunkPrimerIn, x, z, noiseVal);
 		
 		if(x % 16 == 0 && z % 16 == 0 )
-			oceanSpire.func_151539_a(null, world, x/16, z/16, block);
+			oceanSpire.generate(worldIn, x/16, z/16, chunkPrimerIn);
 	}
-
-    public WorldGenAbstractTree func_150567_a(Random rand) {
-        return new WorldGenShrub(3, 0);
-    }
-
-	public BiomeGenBase.TempCategory getTempCategory() {
-		return BiomeGenBase.TempCategory.OCEAN;
+	
+	@Override
+	public WorldGenAbstractTree getRandomTreeFeature(Random rand) {
+		return new WorldGenShrub(Blocks.LOG.getDefaultState(), Blocks.LEAVES.getDefaultState());
 	}
 }

@@ -1,64 +1,55 @@
 package zmaster587.advancedRocketry.world.biome;
 
-import java.util.Random;
-
-import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
-import net.minecraft.world.biome.BiomeGenBase;
+import net.minecraft.world.biome.Biome;
+import net.minecraft.world.chunk.ChunkPrimer;
 import net.minecraft.world.gen.feature.WorldGenAbstractTree;
 import net.minecraft.world.gen.feature.WorldGenShrub;
 
-public class BiomeGenMarsh extends BiomeGenBase {
+import javax.annotation.Nonnull;
+import java.util.Random;
 
-	public BiomeGenMarsh(int id, boolean b) {
-		super(id, b);
+public class BiomeGenMarsh extends Biome {
 
-		this.biomeName = "Marsh";
-		this.rootHeight=-0.2f;
-		this.heightVariation=0.0f;
-		this.theBiomeDecorator.clayPerChunk = 10;
-		this.theBiomeDecorator.flowersPerChunk = 0;
-		this.theBiomeDecorator.mushroomsPerChunk = 0;
-		this.theBiomeDecorator.treesPerChunk = 0;
-		this.theBiomeDecorator.grassPerChunk = 0;
-		this.theBiomeDecorator.waterlilyPerChunk = 10;
-		this.theBiomeDecorator.sandPerChunk = 0;
-		this.theBiomeDecorator.sandPerChunk2 = 0;
+	public BiomeGenMarsh(BiomeProperties properties) {
+		super(properties);
+		
+		this.decorator.clayPerChunk = 10;
+		this.decorator.flowersPerChunk = 0;
+		this.decorator.mushroomsPerChunk = 0;
+		this.decorator.treesPerChunk = 0;
+		this.decorator.grassPerChunk = 0;
+		this.decorator.waterlilyPerChunk = 10;
+		this.decorator.sandPatchesPerChunk = 0;
 		
 		this.spawnableCreatureList.clear();
 	}
 
 	@Override
-	public void genTerrainBlocks(World world, Random rand,
-			Block[] block, byte[] abyte, int x,
-			int z, double noise) {
-		super.genTerrainBlocks(world, rand, block, abyte, x, z, noise);
+	public void genTerrainBlocks(World worldIn, Random rand,
+			ChunkPrimer chunkPrimerIn, int x, int z, double noiseVal) {
+		super.genTerrainBlocks(worldIn, rand, chunkPrimerIn, x, z, noiseVal);
 
-		double d1 = plantNoise.func_151601_a((double)x * 0.25D, (double)z * 0.25D);
-
-		if (d1 > 0.3D)
+		double d1 = GRASS_COLOR_NOISE.getValue((double)x * 0.25D, (double)z * 0.25D);
+		x = Math.abs(x % 16);
+		z = Math.abs(z % 16);
+		if (d1 > 0.2D)
 		{
-			int index = (Math.abs(x % 16) * 16 + Math.abs(z % 16)) * 256 + 62;
-			block[index] = Blocks.grass;
-			for(int y = (int)(61); y > 1; y--) {
-				index = (Math.abs(x % 16) * 16 + Math.abs(z % 16)) * 256 + y;
-				if(block[index] == null || !block[index].isOpaqueCube())
-					block[index] = Blocks.dirt;
+			chunkPrimerIn.setBlockState(x, 62, z, Blocks.GRASS.getDefaultState());
+			for(int y = 61; y > 1; y--) {
+				
+				if(!chunkPrimerIn.getBlockState(x, y, z).isOpaqueCube())
+					chunkPrimerIn.setBlockState(x, y, z, Blocks.GRASS.getDefaultState());
 				else
 					break;
 			}
 		}
 	}
 	
-    public WorldGenAbstractTree func_150567_a(Random p_150567_1_)
-    {
-        return new WorldGenShrub(3, 0);
-    }
-
-
-	public BiomeGenBase.TempCategory getTempCategory()
-	{
-		return BiomeGenBase.TempCategory.OCEAN;
+	@Override
+	@Nonnull
+	public WorldGenAbstractTree getRandomTreeFeature(Random rand) {
+		return new WorldGenShrub(Blocks.LOG.getDefaultState(), Blocks.LEAVES.getDefaultState());
 	}
 }

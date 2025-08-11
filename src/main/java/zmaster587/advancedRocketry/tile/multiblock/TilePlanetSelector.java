@@ -1,32 +1,30 @@
 package zmaster587.advancedRocketry.tile.multiblock;
 
 import io.netty.buffer.ByteBuf;
-
-import java.util.LinkedList;
-import java.util.List;
-
-import org.apache.commons.lang3.ArrayUtils;
-
-import cpw.mods.fml.relauncher.Side;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.NetworkManager;
-import net.minecraft.network.Packet;
-import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
+import net.minecraft.network.play.server.SPacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraftforge.fml.relauncher.Side;
+import org.apache.commons.lang3.ArrayUtils;
+import zmaster587.advancedRocketry.api.Constants;
 import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.dimension.DimensionProperties;
-import zmaster587.advancedRocketry.inventory.TextureResources;
-import zmaster587.advancedRocketry.inventory.modules.IModularInventory;
-import zmaster587.advancedRocketry.inventory.modules.IProgressBar;
-import zmaster587.advancedRocketry.inventory.modules.ISelectionNotify;
-import zmaster587.advancedRocketry.inventory.modules.ModuleBase;
 import zmaster587.advancedRocketry.inventory.modules.ModulePlanetSelector;
-import zmaster587.advancedRocketry.network.PacketHandler;
-import zmaster587.advancedRocketry.network.PacketMachine;
 import zmaster587.advancedRocketry.util.ITilePlanetSystemSelectable;
+import zmaster587.libVulpes.inventory.TextureResources;
+import zmaster587.libVulpes.inventory.modules.IModularInventory;
+import zmaster587.libVulpes.inventory.modules.IProgressBar;
+import zmaster587.libVulpes.inventory.modules.ISelectionNotify;
+import zmaster587.libVulpes.inventory.modules.ModuleBase;
+import zmaster587.libVulpes.network.PacketHandler;
+import zmaster587.libVulpes.network.PacketMachine;
 import zmaster587.libVulpes.tile.TilePointer;
 import zmaster587.libVulpes.util.INetworkMachine;
+
+import java.util.LinkedList;
+import java.util.List;
 
 public class TilePlanetSelector extends TilePointer implements ISelectionNotify, IModularInventory, IProgressBar, INetworkMachine {
 
@@ -60,25 +58,25 @@ public class TilePlanetSelector extends TilePointer implements ISelectionNotify,
 	}
 
 	private void selectSystem(int id) {
-		if(id == -1)
+		if(id == Constants.INVALID_PLANET)
 			dimCache = null;
 		else
 			dimCache = DimensionManager.getInstance().getDimensionProperties(container.getSelectedSystem());
 	}
 
 	@Override
-	public List<ModuleBase> getModules(int ID) {
+	public List<ModuleBase> getModules(int ID, EntityPlayer player) {
 
-		List<ModuleBase> modules = new LinkedList<ModuleBase>();
+		List<ModuleBase> modules = new LinkedList<>();
 
-		container = new ModulePlanetSelector(worldObj.provider.dimensionId, TextureResources.starryBG, this);
+                DimensionProperties props = DimensionManager.getEffectiveDimId(player.world, player.getPosition());
+		container = new ModulePlanetSelector((props != null ? props.getStarId() : 0), TextureResources.starryBG, this, true);
 		container.setOffset(1000, 1000);
 		modules.add(container);
 
 		//Transfer discovery values
-		if(!worldObj.isRemote) {
+		if(!world.isRemote) {
 			markDirty();
-			worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
 		}
 
 		return modules;
@@ -107,13 +105,13 @@ public class TilePlanetSelector extends TilePointer implements ISelectionNotify,
 	@Override
 	public int getProgress(int id) {
 
-		if(!worldObj.isRemote) {
+		if(!world.isRemote) {
 			return 25; /*
 			if(getMasterBlock() != null) {
 
 				ItemStack stack = ((ITilePlanetSystemSelectable)getMasterBlock()).getChipWithId(container.getSelectedSystem());
 
-				if(stack != null) {
+				if(!stack.isEmpty()) {
 
 					DataType data;
 					if(id == 0)
@@ -143,27 +141,27 @@ public class TilePlanetSelector extends TilePointer implements ISelectionNotify,
 		if(dimCache == null)
 			return 50;
 		if(id == 0)
-			return dimCache.atmosphereDensity/2;
+			return dimCache.getAtmosphereDensity()/16;
 		else if(id == 1)
-			return dimCache.orbitalDist/2;
+			return dimCache.orbitalDist/16;
 		else //if(id == 2)
 			return (int) (dimCache.gravitationalMultiplier*50);
 	}
 
 	@Override
-	public Packet getDescriptionPacket() {
+	public SPacketUpdateTileEntity getUpdatePacket() {
 		NBTTagCompound comp = new NBTTagCompound();
 
 		writeToNBTHelper(comp);
 		writeAdditionalNBT(comp);
-		return new S35PacketUpdateTileEntity(this.xCoord, this.yCoord, this.zCoord, 0, comp);
+		return new SPacketUpdateTileEntity(pos, 0, comp);
 	}
 
 	@Override
-	public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity pkt) {
+	public void onDataPacket(NetworkManager net, SPacketUpdateTileEntity pkt) {
 
 		super.onDataPacket(net, pkt);
-		readAdditionalNBT(pkt.func_148857_g());
+		readAdditionalNBT(pkt.getNbtCompound());
 	}
 
 	public void writeAdditionalNBT(NBTTagCompound nbt) {
@@ -213,7 +211,6 @@ public class TilePlanetSelector extends TilePointer implements ISelectionNotify,
 
 			//Update known planets
 			markDirty();
-			worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
 		}
 	}
 

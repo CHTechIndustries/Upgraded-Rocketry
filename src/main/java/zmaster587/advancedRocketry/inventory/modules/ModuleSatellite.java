@@ -1,14 +1,15 @@
 package zmaster587.advancedRocketry.inventory.modules;
 
-import zmaster587.advancedRocketry.api.satellite.SatelliteBase;
-import zmaster587.advancedRocketry.inventory.TextureResources;
-import zmaster587.libVulpes.util.IconResource;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.inventory.Container;
-import net.minecraft.inventory.ICrafting;
+import net.minecraft.inventory.IContainerListener;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.Slot;
+import zmaster587.advancedRocketry.api.satellite.SatelliteBase;
+import zmaster587.advancedRocketry.inventory.TextureResources;
+import zmaster587.libVulpes.inventory.modules.ModuleSlotArray;
+import zmaster587.libVulpes.util.IconResource;
 
 public class ModuleSatellite extends ModuleSlotArray {
 
@@ -27,7 +28,7 @@ public class ModuleSatellite extends ModuleSlotArray {
 			FontRenderer font) {
 		
 		for(Slot slot : slotList) {
-			gui.drawTexturedModalRect(x + slot.xDisplayPosition - 1, y + slot.yDisplayPosition - 1, satelliteSlot.getxLoc(), satelliteSlot.getyLoc(), satelliteSlot.getxSize(), satelliteSlot.getySize());
+			gui.drawTexturedModalRect(x + slot.xPos - 1, y + slot.yPos - 1, satelliteSlot.getxLoc(), satelliteSlot.getyLoc(), satelliteSlot.getxSize(), satelliteSlot.getySize());
 		}
 	}
 	
@@ -40,7 +41,7 @@ public class ModuleSatellite extends ModuleSlotArray {
 	}
 
 	@Override
-	public void sendChanges(Container container, ICrafting crafter,
+	public void sendChanges(Container container, IContainerListener crafter,
 			int variableId, int localId) {
 		if(satellite != null)
 			satellite.sendChanges(container, crafter, variableId, localId);
@@ -49,12 +50,12 @@ public class ModuleSatellite extends ModuleSlotArray {
 	@Override
 	public void onChangeRecieved(int slot, int value) {
 		if(satellite != null) {
-			satellite.onChangeRecieved(slot, value);
+			satellite.onChangeReceived(slot, value);
 		}
 	}
 	
 	@Override
-	protected boolean needsUpdate(int localId) {
+	public boolean needsUpdate(int localId) {
 		if(satellite != null)
 			return satellite.isUpdateRequired(localId);
 		

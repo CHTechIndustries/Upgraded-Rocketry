@@ -1,21 +1,22 @@
 package zmaster587.advancedRocketry.inventory;
 
-import zmaster587.advancedRocketry.inventory.modules.IModularInventory;
-import zmaster587.advancedRocketry.tile.TileSpaceLaser;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumHand;
 import net.minecraft.world.World;
-import cpw.mods.fml.common.network.IGuiHandler;
+import net.minecraftforge.fml.common.network.IGuiHandler;
+import zmaster587.advancedRocketry.api.satellite.SatelliteBase;
+import zmaster587.advancedRocketry.dimension.DimensionManager;
+import zmaster587.advancedRocketry.satellite.SatelliteOreMapping;
+import zmaster587.libVulpes.inventory.modules.IModularInventory;
 
 public class GuiHandler implements IGuiHandler {
 
 	public enum guiId {
 		RocketBuilder,
 		BlastFurnace,
-		SpaceLaser,
-		MODULAR,
-		MODULARNOINV,
-		MODULARFULLSCREEN
+		OreMappingSatellite,
+		StationChip
 	}
 
 	//X coord is entity ID num if entity
@@ -25,26 +26,22 @@ public class GuiHandler implements IGuiHandler {
 
 		Object tile;
 
-		if(y > -1)
-			tile = world.getTileEntity(x, y, z);
-		else if(x == -1) {
-			ItemStack stack = player.getHeldItem();
+		if(x == -1 && y < -1) {
+			ItemStack stack = player.getHeldItem(EnumHand.MAIN_HAND);
 			
 			//If there is latency or some desync odd things can happen so check for that
-			if(stack == null || !(stack.getItem() instanceof IModularInventory)) {
+			if(stack.isEmpty() || !(stack.getItem() instanceof IModularInventory)) {
 				return null;
 			}
-			
-			tile = player.getHeldItem().getItem();
 		}
-		else
-			tile = world.getEntityByID(x);
 
-		if(ID == guiId.SpaceLaser.ordinal()) {
-			return new ContainerSpaceLaser(player.inventory, (TileSpaceLaser)tile);
-		}
-		else if(ID == guiId.MODULAR.ordinal() || ID == guiId.MODULARNOINV.ordinal() || ID == guiId.MODULARFULLSCREEN.ordinal()) {
-			return new ContainerModular(player, ((IModularInventory)tile).getModules(ID), ((IModularInventory)tile), ID == guiId.MODULAR.ordinal(), ID != guiId.MODULARFULLSCREEN.ordinal());
+		if(ID == guiId.OreMappingSatellite.ordinal()) {
+			SatelliteBase satellite = DimensionManager.getInstance().getSatellite(y);
+			
+			if(!(satellite instanceof SatelliteOreMapping) || satellite.getDimensionId() != world.provider.getDimension())
+				satellite = null;
+			
+			return new ContainerOreMappingSatellite((SatelliteOreMapping) satellite, player.inventory);
 		}
 		return null;
 	}
@@ -53,33 +50,23 @@ public class GuiHandler implements IGuiHandler {
 	public Object getClientGuiElement(int ID, EntityPlayer player, World world,
 			int x, int y, int z) {
 
-		Object tile;
-		
-		if(y > -1)
-			tile = world.getTileEntity(x, y, z);
-		else if(x == -1) {
-			ItemStack stack = player.getHeldItem();
+		if(x == -1 && y < -1) {
+			ItemStack stack = player.getHeldItem(EnumHand.MAIN_HAND);
 			
 			//If there is latency or some desync odd things can happen so check for that
-			if(stack == null || !(stack.getItem() instanceof IModularInventory)) {
+			if(stack.isEmpty() || !(stack.getItem() instanceof IModularInventory)) {
 				return null;
 			}
-			
-			tile = player.getHeldItem().getItem();
 		}
-		else
-			tile = world.getEntityByID(x);
 
-		if(ID == guiId.SpaceLaser.ordinal()) {
-			return new GuiSpaceLaser(player.inventory, (TileSpaceLaser)tile);
-		}
-		else if(ID == guiId.MODULAR.ordinal() || ID == guiId.MODULARNOINV.ordinal()) {
-			IModularInventory modularTile = ((IModularInventory)tile);
-			return new GuiModular(player, modularTile.getModules(ID), modularTile, ID == guiId.MODULAR.ordinal(), true, modularTile.getModularInventoryName());
-		}
-		else if(ID == guiId.MODULARFULLSCREEN.ordinal()) {
-			IModularInventory modularTile = ((IModularInventory)tile);
-			return new GuiModularFullScreen(player,modularTile.getModules(ID), modularTile, ID == guiId.MODULAR.ordinal(), false, modularTile.getModularInventoryName());
+		if(ID == guiId.OreMappingSatellite.ordinal()) {
+			
+			SatelliteBase satellite = DimensionManager.getInstance().getSatellite(y);
+			
+			if(!(satellite instanceof SatelliteOreMapping) || satellite.getDimensionId() != world.provider.getDimension())
+				satellite = null;
+			
+			return new GuiOreMappingSatellite((SatelliteOreMapping) satellite, player);
 		}
 		return null;
 	}

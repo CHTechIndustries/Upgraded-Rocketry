@@ -1,13 +1,13 @@
 package zmaster587.advancedRocketry.asm;
 
+import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
+import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin.MCVersion;
+import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin.TransformerExclusions;
+
 import java.util.Map;
 
-import cpw.mods.fml.relauncher.IFMLCallHook;
-import cpw.mods.fml.relauncher.IFMLLoadingPlugin;
-import cpw.mods.fml.relauncher.IFMLLoadingPlugin.*;
-
 @TransformerExclusions(value = {"zmaster587.advancedRocketry.asm.ClassTransformer"})
-@MCVersion("1.7.10")
+@MCVersion("1.12.2")
 public class AdvancedRocketryPlugin implements IFMLLoadingPlugin {
 
 	public AdvancedRocketryPlugin() {
@@ -38,7 +38,7 @@ public class AdvancedRocketryPlugin implements IFMLLoadingPlugin {
 	@Override
 	public String getAccessTransformerClass() {
 		// TODO Auto-generated method stub
-		return "";
+		return null;
 	}
 
 }

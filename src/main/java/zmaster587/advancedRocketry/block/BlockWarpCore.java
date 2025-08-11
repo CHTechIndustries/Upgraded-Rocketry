@@ -1,15 +1,19 @@
 package zmaster587.advancedRocketry.block;
 
-import zmaster587.advancedRocketry.api.Configuration;
-import zmaster587.advancedRocketry.api.stations.ISpaceObject;
-import zmaster587.advancedRocketry.api.stations.SpaceObjectManager;
-import zmaster587.advancedRocketry.block.multiblock.BlockMultiblockMachine;
-import zmaster587.advancedRocketry.stations.SpaceObject;
-import zmaster587.advancedRocketry.tile.multiblock.TileMultiBlock;
-import zmaster587.libVulpes.util.BlockPosition;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import zmaster587.advancedRocketry.api.ARConfiguration;
+import zmaster587.advancedRocketry.api.stations.ISpaceObject;
+import zmaster587.advancedRocketry.stations.SpaceObjectManager;
+import zmaster587.advancedRocketry.stations.SpaceStationObject;
+import zmaster587.libVulpes.block.multiblock.BlockMultiblockMachine;
+import zmaster587.libVulpes.tile.multiblock.TileMultiBlock;
+import zmaster587.libVulpes.util.HashedBlockPosition;
+
+import javax.annotation.Nonnull;
 
 public class BlockWarpCore extends BlockMultiblockMachine {
 
@@ -19,30 +23,27 @@ public class BlockWarpCore extends BlockMultiblockMachine {
 	}
 
 	@Override
-	public void onBlockPlacedBy(World world, int x,
-			int y, int z, EntityLivingBase player,
-			ItemStack items) {
-		super.onBlockPlacedBy(world, x, y, z,
-				player, items);
+	public void onBlockPlacedBy(World world, BlockPos pos, IBlockState state,
+			EntityLivingBase placer, @Nonnull ItemStack stack) {
+		super.onBlockPlacedBy(world, pos, state, placer, stack);
 		
-		if(!world.isRemote && world.provider.dimensionId == Configuration.spaceDimId) {
-			ISpaceObject spaceObj = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(x, z);
+		if(!world.isRemote && world.provider.getDimension() == ARConfiguration.getCurrentConfig().spaceDimId) {
+			ISpaceObject spaceObj = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(pos);
 		
-			if(spaceObj instanceof SpaceObject)
-				((SpaceObject)spaceObj).addWarpCore(new BlockPosition(x,y,z));
+			if(spaceObj instanceof SpaceStationObject)
+				((SpaceStationObject)spaceObj).addWarpCore(new HashedBlockPosition(pos));
 		}
 	}
 	
 	@Override
-	public void onBlockPreDestroy(World world, int x,
-			int y, int z, int oldMeta) {
-		super.onBlockPreDestroy(world, x, y, z,
-				oldMeta);
+	public void onBlockDestroyedByPlayer(World world, BlockPos pos,
+			IBlockState state) {
+		super.onBlockDestroyedByPlayer(world, pos, state);
 		
-		if(world.provider.dimensionId == Configuration.spaceDimId) {
-			ISpaceObject spaceObj = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(x, z);
-			if(spaceObj instanceof SpaceObject)
-				((SpaceObject)spaceObj).removeWarpCore(new BlockPosition(x,y,z));
+		if(world.provider.getDimension() == ARConfiguration.getCurrentConfig().spaceDimId) {
+			ISpaceObject spaceObj = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(pos);
+			if(spaceObj instanceof SpaceStationObject)
+				((SpaceStationObject)spaceObj).removeWarpCore(new HashedBlockPosition(pos));
 		}
 	}
 }

@@ -1,83 +1,150 @@
 package zmaster587.advancedRocketry.block;
 
-import java.util.List;
-
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.block.Block;
+import net.minecraft.block.SoundType;
+import net.minecraft.block.material.MapColor;
 import net.minecraft.block.material.Material;
+import net.minecraft.block.properties.PropertyEnum;
+import net.minecraft.block.state.BlockStateContainer;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.BlockRenderLayer;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.util.IStringSerializable;
+import net.minecraft.util.NonNullList;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.IBlockAccess;
-import net.minecraftforge.common.util.ForgeDirection;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+import zmaster587.libVulpes.block.INamedMetaBlock;
+
+import javax.annotation.Nonnull;
 
 public class BlockCrystal extends Block implements INamedMetaBlock {
-
-	private static final int colors[] =  {0xb23fff, 0x3333ff, 0x00ff00, 0xff3434, 0xffff34, 0xff9400};
-	private static final String names[] =  {"amethyst", "sapphire", "emerald", "ruby", "citrine", "wulfentite"};
-	public static final int numMetas = colors.length;
+	
+	public final static PropertyEnum<EnumCrystal> CRYSTALPROPERTY = PropertyEnum.create("type", EnumCrystal.class);
 	
     public BlockCrystal()
     {
-        super(Material.glass);
-        this.setCreativeTab(CreativeTabs.tabBlock);
-        this.setStepSound(soundTypeGlass);
+        super(Material.GLASS);
+        this.setCreativeTab(CreativeTabs.BUILDING_BLOCKS);
+        this.setSoundType(SoundType.GLASS);
+        this.setDefaultState(this.getDefaultState().withProperty(CRYSTALPROPERTY, EnumCrystal.AMETHYST));
     }
 	
-    public boolean isOpaqueCube()
+    @Override
+    @Nonnull
+    public IBlockState getStateFromMeta(int meta) {
+    	return this.getDefaultState().withProperty(CRYSTALPROPERTY, EnumCrystal.values()[meta]);
+    }
+
+    @Nonnull
+    protected BlockStateContainer createBlockState()
     {
-        return false;
+        return new BlockStateContainer(this, CRYSTALPROPERTY);
     }
     
     @Override
+    public int getMetaFromState(IBlockState state) {
+    	return state.getValue(CRYSTALPROPERTY).ordinal();
+    }
+    
+    @Override
+    public boolean isOpaqueCube(IBlockState state)
+    {
+        return false;
+    }
+    @Override
 	public String getUnlocalizedName(int itemDamage) {
-		return  "tile." + names[itemDamage];
+		return  "tile." + EnumCrystal.values()[itemDamage];
 	}
     
+    
     @SideOnly(Side.CLIENT)
-    public int getRenderBlockPass()
+    @Nonnull
+    public BlockRenderLayer getBlockLayer()
     {
-        return 1;
+        return BlockRenderLayer.TRANSLUCENT;
     }
     
 	@Override
-	public int colorMultiplier(IBlockAccess access, int x, int y, int z) {
-		int meta = access.getBlockMetadata(x, y, z);
-		if(meta < 0 || meta >= colors.length)
-			return 0;
-		return colors[access.getBlockMetadata(x, y, z)];
-	}
-    
-	@Override
-	public int getRenderColor(int meta) {
-		if(meta < 0 || meta >= colors.length)
-			return 0;
-		return colors[meta];
-	}
-
-	@Override
-	public void getSubBlocks(Item item, CreativeTabs tab,
-			List list) {
-		for(int i = 0; i < colors.length; i++) {
-			list.add(new ItemStack(item, 1, i));
+	public void getSubBlocks(CreativeTabs tab,
+			NonNullList<ItemStack> list) {
+		for(int i = 0; i < numMetas; i++) {
+			list.add(new ItemStack(this, 1, i));
 		}
 	}
 	
 	@Override
-	public int damageDropped(int meta) {
-		return meta;
+	public int damageDropped(IBlockState state) {
+		return getMetaFromState(state);
 	}
 	
-    @SideOnly(Side.CLIENT)
-    public boolean shouldSideBeRendered(IBlockAccess world, int x, int y, int z, int side)
-    {
-        Block block = world.getBlock(x, y, z);
-        int blockMeta = world.getBlockMetadata(x, y,z);
-        ForgeDirection dir = ForgeDirection.getOrientation(side).getOpposite();
-        int thisBlockMeta = world.getBlockMetadata(x + dir.offsetX,y+ dir.offsetY,z+ dir.offsetZ);
+	
+	@Override
+	@SideOnly(Side.CLIENT)
+	public boolean shouldSideBeRendered(IBlockState blockState,
+			IBlockAccess world, BlockPos pos, EnumFacing side) {
+
+        IBlockState blockState2 = world.getBlockState(pos.offset(side/*.getOpposite()*/));
        
-        return block == this && blockMeta == thisBlockMeta ? false : super.shouldSideBeRendered(world, x, y, z, side);
+        return !blockState.equals(blockState2) && super.shouldSideBeRendered(blockState, world, pos, side);
    
+	}
+	
+	public static final int numMetas = EnumCrystal.values().length;
+	
+    public enum EnumCrystal implements IStringSerializable
+    {
+        AMETHYST(0, 0xb23fff, "amethyst", MapColor.PURPLE),
+        SAPPHIRE(1, 0x3333ff, "sapphire", MapColor.BLUE),
+        EMERALD(2, 0x00ff00, "emerald", MapColor.GREEN),
+        RUBY(3, 0xff3434, "ruby", MapColor.RED),
+        CITRINE(4, 0xffff34, "citrine", MapColor.YELLOW),
+        WULFENTITE(5, 0xff9400, "wulfentite", MapColor.YELLOW);
+
+        private final int meta;
+        private final String name;
+        private final MapColor mapColor;
+        private final int color;
+
+        EnumCrystal(int meta, int color, String name, MapColor mapColorIn)
+        {
+        	this.color = color;
+            this.meta = meta;
+            this.name = name;
+            this.mapColor = mapColorIn;
+        }
+
+        public int getMetadata()
+        {
+            return this.meta;
+        }
+
+        public String getUnlocalizedName()
+        {
+            return this.name;
+        }
+
+        public int getColor() {
+        	return color;
+        }
+        
+        public MapColor getMapColor()
+        {
+            return this.mapColor;
+        }
+
+        public String toString()
+        {
+            return this.name;
+        }
+
+        @Nonnull
+        public String getName()
+        {
+            return this.name;
+        }
     }
 }

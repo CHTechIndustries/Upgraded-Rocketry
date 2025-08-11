@@ -1,16 +1,20 @@
 package zmaster587.advancedRocketry.item;
 
-import java.util.List;
-
-import net.minecraft.entity.player.EntityPlayer;
+import com.mojang.realmsclient.gui.ChatFormatting;
+import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.world.World;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+
+import javax.annotation.Nonnull;
+import java.util.List;
 
 public class ItemIdWithName extends Item {
 	
-	public void setName(ItemStack stack, String name) {
+	public void setName(@Nonnull ItemStack stack, String name) {
 
 		if(stack.hasTagCompound()) {
 			NBTTagCompound nbt = stack.getTagCompound();
@@ -19,7 +23,7 @@ public class ItemIdWithName extends Item {
 		}
 	}
 
-	public String getName(ItemStack stack) {
+	public String getName(@Nonnull ItemStack stack) {
 		if(stack.hasTagCompound()) {
 			NBTTagCompound nbt = stack.getTagCompound();
 			return nbt.getString("name");
@@ -30,10 +34,10 @@ public class ItemIdWithName extends Item {
 	
 	
 	@Override
-	public void addInformation(ItemStack stack, EntityPlayer player,
-			List list, boolean bool) {
+    @SideOnly(Side.CLIENT)
+	public void addInformation(@Nonnull ItemStack stack, World player, List<String> list, ITooltipFlag bool) {
 		if(stack.getItemDamage() == -1) {
-			list.add(EnumChatFormatting.GRAY + "Unprogrammed");
+			list.add(ChatFormatting.GRAY + "Unprogrammed");
 		}
 		else {
 			list.add(getName(stack));

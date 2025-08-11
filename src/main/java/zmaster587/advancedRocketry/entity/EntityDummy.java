@@ -1,10 +1,11 @@
 package zmaster587.advancedRocketry.entity;
 
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
 public class EntityDummy extends Entity {
 
@@ -14,28 +15,21 @@ public class EntityDummy extends Entity {
 		super(world);
 		this.noClip=true;
 		this.height=0f;
-		this.yOffset=0.2f;
 		
 	}
 
 	public EntityDummy(World world, double x, double y, double z) {
 		this(world);
-		
-		this.posX = this.lastTickPosX = x;
-		this.posY = this.lastTickPosY = y;
-		this.posZ = this.lastTickPosZ = z;
-		this.boundingBox.minY = this.boundingBox.maxY = y + .3f;
+		setPosition(x, y, z);
 	}
 	
 	@Override
 	public boolean isInvisible() {
 		return true;
 	}
-	
 	@Override
-	public void onChunkLoad() {
-		super.onChunkLoad();
-		this.setDead();
+	public boolean isInvisibleToPlayer(EntityPlayer player) {
+		return true;
 	}
 
 	/**
@@ -43,6 +37,7 @@ public class EntityDummy extends Entity {
 	 * length * 64 * renderDistanceWeight Args: distance
 	 */
 	@SideOnly(Side.CLIENT)
+	@Override
 	public boolean isInRangeToRenderDist(double p_70112_1_)
 	{
 		return false;

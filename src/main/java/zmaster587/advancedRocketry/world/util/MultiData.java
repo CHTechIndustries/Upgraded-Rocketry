@@ -1,20 +1,21 @@
 package zmaster587.advancedRocketry.world.util;
 
-import java.util.HashMap;
-
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.EnumFacing;
 import zmaster587.advancedRocketry.api.DataStorage;
 import zmaster587.advancedRocketry.api.DataStorage.DataType;
 import zmaster587.advancedRocketry.api.satellite.IDataHandler;
+
+import java.util.HashMap;
 /**
  * Object to store "data" and can track multiple different types
  *
  */
 public class MultiData implements IDataHandler {
-	HashMap<DataStorage.DataType, DataStorage> dataStorages;
+	private HashMap<DataStorage.DataType, DataStorage> dataStorages;
 
 	public MultiData() {
-		dataStorages = new HashMap<DataStorage.DataType, DataStorage>();
+		dataStorages = new HashMap<>();
 		reset();
 	}
 
@@ -30,18 +31,24 @@ public class MultiData implements IDataHandler {
 	}
 
 	@Override
-	public int extractData(int maxAmount, DataType type) {
+	public int extractData(int maxAmount, DataType type, EnumFacing dir, boolean commit) {
 
 		DataStorage storage = dataStorages.get(type);
+		
+		if(storage == null)
+			return 0;
 
-		return storage.removeData(maxAmount);
+		return storage.removeData(maxAmount, commit);
 	}
 
 	@Override
-	public int addData(int maxAmount, DataType type) {
+	public int addData(int maxAmount, DataType type, EnumFacing dir, boolean commit) {
 		DataStorage storage = dataStorages.get(type);
 
-		return storage.addData(maxAmount, type);
+		if(storage == null)
+			return 0;
+		
+		return storage.addData(maxAmount, type, commit);
 	}
 
 	
@@ -55,6 +62,10 @@ public class MultiData implements IDataHandler {
 	
 	public int getMaxData() {
 		return dataStorages.get(DataStorage.DataType.ATMOSPHEREDENSITY).getMaxData();
+	}
+	
+	public DataStorage getDataStorageForType(DataStorage.DataType dataType) {
+		return dataStorages.get(dataType);
 	}
 	
 	public void setDataAmount(int amount, DataType dataType) {

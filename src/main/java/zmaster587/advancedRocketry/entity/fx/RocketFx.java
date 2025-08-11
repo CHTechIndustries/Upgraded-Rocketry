@@ -1,72 +1,102 @@
 package zmaster587.advancedRocketry.entity.fx;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.particle.Particle;
+import net.minecraft.client.renderer.BufferBuilder;
+import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.entity.Entity;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.World;
 import org.lwjgl.opengl.GL11;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.particle.EntityFX;
-import net.minecraft.client.renderer.OpenGlHelper;
-import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.World;
-
-public class RocketFx extends EntityFX {
+public class RocketFx extends Particle {
 
 	public static final ResourceLocation icon = new ResourceLocation("advancedrocketry:textures/particle/soft.png");
 
 	
 	public RocketFx(World world, double x,
-			double y, double z, double motx, double moty, double motz) {
+			double y, double z, double motx, double moty, double motz, float scale) {
 		super(world, x, y, z, motx, moty, motz);
 		
-		this.prevPosX = this.posX = this.lastTickPosX = x;
-		this.prevPosY = this.posY = this.lastTickPosY = y;
-		this.prevPosZ = this.posZ = this.lastTickPosZ = z;
+		this.prevPosX = this.posX= x;
+		this.prevPosY = this.posY= y;
+		this.prevPosZ = this.posZ= z;
 		
         this.particleRed = 0.9F + this.rand.nextFloat()/10f;
         this.particleGreen = 0.6F + this.rand.nextFloat()/5f;
         this.particleBlue = 0.0F;
-        this.setSize(0.12F, 0.12F);
-        this.particleScale *= this.rand.nextFloat() * 0.6F + 6F;
+        this.setSize(0.12F*scale, 0.12F*scale);
+        this.particleScale *= (this.rand.nextFloat() * 0.6F + 6F)*scale;
         this.motionX = motx;
         this.motionY = moty;
         this.motionZ = motz;
         this.particleMaxAge = (int)(8.0D / (Math.random() * 0.8D + 0.6D));
 	}
-
-	@Override
-	public void renderParticle(Tessellator tess, float x1,
-			float y1, float z1, float x2,
-			float y2, float z2) {
-		
-		Minecraft.getMinecraft().getTextureManager().bindTexture(icon);
-		
-		GL11.glPushMatrix();
-		//GL11.glDisable(GL11.GL_BLEND);
-		GL11.glBlendFunc( GL11.GL_SRC_ALPHA, GL11.GL_ONE );
-		
-		
-        float f11 = (float)(this.prevPosX + (this.posX - this.prevPosX) * (double)x1 - interpPosX);
-        float f12 = (float)(this.prevPosY + (this.posY - this.prevPosY) * (double)x1 - interpPosY);
-        float f13 = (float)(this.prevPosZ + (this.posZ - this.prevPosZ) * (double)x1 - interpPosZ);
-        float f10 = 0.1F * this.particleScale;
-        
-        
-        
-        tess.setColorRGBA_F(this.particleRed, this.particleGreen, this.particleBlue, 1f);
-        
-        tess.addVertexWithUV((double)(f11 - y1 * f10 - y2 * f10), (double)(f12 - z1 * f10), (double)(f13 - x2 * f10 - z2 * f10), 1, 1);
-        tess.addVertexWithUV((double)(f11 - y1 * f10 + y2 * f10), (double)(f12 + z1 * f10), (double)(f13 - x2 * f10 + z2 * f10), 1, 0);
-        tess.addVertexWithUV((double)(f11 + y1 * f10 + y2 * f10), (double)(f12 + z1 * f10), (double)(f13 + x2 * f10 + z2 * f10), 0, 0);
-        tess.addVertexWithUV((double)(f11 + y1 * f10 - y2 * f10), (double)(f12 - z1 * f10), (double)(f13 + x2 * f10 - z2 * f10), 0, 1);
-        //GL11.glEnable(GL11.GL_BLEND);
-        
-		GL11.glPopMatrix();
+	public RocketFx(World world, double x,
+			double y, double z, double motx, double moty, double motz) {
+		this(world, x, y,z, motx, moty, motz, 1.0f);
 	}
 	
 	@Override
 	public int getFXLayer() {
-		return 2;
+		return 0;
 	}
+	
+	@Override
+	public void renderParticle(BufferBuilder worldRendererIn, Entity entityIn,
+			float partialTicks, float rotationX, float rotationZ,
+			float rotationYZ, float rotationXY, float rotationXZ) {
+        float f;
+        float f1;
+        float f2;
+        float f3;
+        float f4 = 0.1F * this.particleScale;
+
+        float f5 = (float)(this.prevPosX + (this.posX - this.prevPosX) * (double)partialTicks - interpPosX);
+        float f6 = (float)(this.prevPosY + (this.posY - this.prevPosY) * (double)partialTicks - interpPosY);
+        float f7 = (float)(this.prevPosZ + (this.posZ - this.prevPosZ) * (double)partialTicks - interpPosZ);
+        int i = this.getBrightnessForRender(partialTicks);
+        int j = i >> 16 & 65535;
+        int k = i & 65535;
+        Vec3d[] avec3d = new Vec3d[] {new Vec3d(-rotationX * f4 - rotationXY * f4, -rotationZ * f4, -rotationYZ * f4 - rotationXZ * f4), new Vec3d(-rotationX * f4 + rotationXY * f4, rotationZ * f4, -rotationYZ * f4 + rotationXZ * f4), new Vec3d(rotationX * f4 + rotationXY * f4, rotationZ * f4, rotationYZ * f4 + rotationXZ * f4), new Vec3d(rotationX * f4 - rotationXY * f4, -rotationZ * f4, rotationYZ * f4 - rotationXZ * f4)};
+
+        if (this.particleAngle != 0.0F)
+        {
+            float f8 = this.particleAngle + (this.particleAngle - this.prevParticleAngle) * partialTicks;
+            float f9 = MathHelper.cos(f8 * 0.5F);
+            float f10 = MathHelper.sin(f8 * 0.5F) * (float)cameraViewDir.x;
+            float f11 = MathHelper.sin(f8 * 0.5F) * (float)cameraViewDir.y;
+            float f12 = MathHelper.sin(f8 * 0.5F) * (float)cameraViewDir.z;
+            Vec3d vec3d = new Vec3d(f10, f11, f12);
+
+            for (int l = 0; l < 4; ++l)
+            {
+                avec3d[l] = vec3d.scale(2.0D * avec3d[l].dotProduct(vec3d)).add(avec3d[l].scale((double)(f9 * f9) - vec3d.dotProduct(vec3d))).add(vec3d.crossProduct(avec3d[l]).scale(2.0F * f9));
+            }
+        }
+
+        
+        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
+        Minecraft.getMinecraft().renderEngine.bindTexture(icon);
+        f= 0f;
+        f1 =1f;
+        f2 = 0f;
+        f3 = 1f;
+        
+        worldRendererIn.pos((double)f5 + avec3d[0].x, (double)f6 + avec3d[0].y, (double)f7 + avec3d[0].z).tex(f1, f3).color(this.particleRed, this.particleGreen, this.particleBlue, this.particleAlpha).lightmap(j, k).endVertex();
+        worldRendererIn.pos((double)f5 + avec3d[1].x, (double)f6 + avec3d[1].y, (double)f7 + avec3d[1].z).tex(f1, f2).color(this.particleRed, this.particleGreen, this.particleBlue, this.particleAlpha).lightmap(j, k).endVertex();
+        worldRendererIn.pos((double)f5 + avec3d[2].x, (double)f6 + avec3d[2].y, (double)f7 + avec3d[2].z).tex(f, f2).color(this.particleRed, this.particleGreen, this.particleBlue, this.particleAlpha).lightmap(j, k).endVertex();
+        worldRendererIn.pos((double)f5 + avec3d[3].x, (double)f6 + avec3d[3].y, (double)f7 + avec3d[3].z).tex(f, f3).color(this.particleRed, this.particleGreen, this.particleBlue, this.particleAlpha).lightmap(j, k).endVertex();
+	
+        GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+	}
+	
+    public boolean shouldDisableDepth()
+    {
+        return true;
+    }
 	
 	@Override
 	public void onUpdate() {
@@ -80,9 +110,9 @@ public class RocketFx extends EntityFX {
         
         if (this.particleAge++ >= this.particleMaxAge)
         {
-            this.setDead();
+            this.setExpired();
         }
         
-        this.setPosition(posX + this.motionX, posY + this.motionY, posZ  + this.motionX);
+        this.setPosition(posX + this.motionX, posY + this.motionY, posZ  + this.motionZ);
 	}
 }

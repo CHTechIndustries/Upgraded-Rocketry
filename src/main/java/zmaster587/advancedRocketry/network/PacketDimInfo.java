@@ -1,24 +1,37 @@
 package zmaster587.advancedRocketry.network;
 
-import java.io.IOException;
-import java.util.logging.Logger;
-
-import zmaster587.advancedRocketry.dimension.DimensionManager;
-import zmaster587.advancedRocketry.dimension.DimensionProperties;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.PacketBuffer;
+import zmaster587.advancedRocketry.dimension.DimensionManager;
+import zmaster587.advancedRocketry.dimension.DimensionProperties;
+import zmaster587.advancedRocketry.util.SpawnListEntryNBT;
+import zmaster587.libVulpes.network.BasePacket;
+
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.logging.Logger;
 
 public class PacketDimInfo extends BasePacket {
 
-	DimensionProperties dimProperties;
-	int dimNumber;
+	private DimensionProperties dimProperties;
+	private NBTTagCompound dimNBT;
+	private int dimNumber;
+	private boolean deleteDim;
+	private List<ItemStack> artifacts;
+	private String customIcon;
 
-	public PacketDimInfo() {}
+	public PacketDimInfo() {
+		artifacts = new LinkedList<>();
+		customIcon = "";
+	}
 
 	public PacketDimInfo(int dimNumber,DimensionProperties dimProperties) {
+		this();
 		this.dimProperties = dimProperties;
 		this.dimNumber = dimNumber;
 	}
@@ -32,21 +45,33 @@ public class PacketDimInfo extends BasePacket {
 		if(!flag) {
 			
 			//Try to send the nbt data of the dimension to the client, if it fails(probably due to non existent Biome ids) then remove the dimension
+			PacketBuffer packetBuffer = new PacketBuffer(out);
 			try {
 				dimProperties.writeToNBT(nbt);
-				PacketBuffer packetBuffer = new PacketBuffer(out);
 				out.writeBoolean(false);
-				//TODO: error handling
-				try {
-					packetBuffer.writeNBTTagCompoundToBuffer(nbt);
-				} catch (IOException e) {
-					e.printStackTrace();
+				packetBuffer.writeCompoundTag(nbt);
+				
+				out.writeShort(dimProperties.getRequiredArtifacts().size());
+				for(ItemStack i : dimProperties.getRequiredArtifacts()) {
+					NBTTagCompound nbt2 = new NBTTagCompound(); 
+					i.writeToNBT(nbt2);
+					packetBuffer.writeCompoundTag(nbt2);
 				}
+				
 			} catch(NullPointerException e) {
 				out.writeBoolean(true);
+				e.printStackTrace();
 				Logger.getLogger("advancedRocketry").warning("Dimension " + dimNumber + " has thrown an exception trying to write NBT, deleting!");
 				DimensionManager.getInstance().deleteDimension(dimNumber);
 			}
+			
+			if(!dimProperties.customIcon.isEmpty())
+			{
+				packetBuffer.writeShort(dimProperties.customIcon.length());
+				packetBuffer.writeString(dimProperties.customIcon);
+			}
+			else
+				packetBuffer.writeShort(0);
 
 		}
 		else
@@ -57,31 +82,30 @@ public class PacketDimInfo extends BasePacket {
 	@Override
 	public void readClient(ByteBuf in) {
 		PacketBuffer packetBuffer = new PacketBuffer(in);
-		NBTTagCompound nbt;
 		dimNumber = in.readInt();
-
-		if(in.readBoolean()) {
-			if(DimensionManager.getInstance().isDimensionCreated(dimNumber)) {
-				DimensionManager.getInstance().deleteDimension(dimNumber);
-			}
-		}
-		else {
+		deleteDim = in.readBoolean();
+		
+		if(!deleteDim) {
 			//TODO: error handling
 			try {
-				nbt = packetBuffer.readNBTTagCompoundFromBuffer();
+				dimNBT  = packetBuffer.readCompoundTag();
 
+				int number = packetBuffer.readShort();
+				for(int i = 0; i < number; i++) {
+					NBTTagCompound nbt2 = packetBuffer.readCompoundTag();
+					artifacts.add(new ItemStack(nbt2));
+				}
+				
 			} catch (IOException e) {
 				e.printStackTrace();
 				return;
 			}
 
-			if(dimNumber == 0) {
-				DimensionManager.overworldProperties.readFromNBT(nbt);
-			}
-			else if( DimensionManager.getInstance().isDimensionCreated(dimNumber) ) {
-				DimensionManager.getInstance().getDimensionProperties(dimNumber).readFromNBT(nbt);
-			} else {
-				DimensionManager.getInstance().registerDimNoUpdate(DimensionProperties.createFromNBT(dimNumber, nbt), true);
+			
+			short strLen = packetBuffer.readShort();
+			if(strLen > 0)
+			{
+				customIcon = packetBuffer.readString(strLen);
 			}
 		}
 	}
@@ -92,7 +116,42 @@ public class PacketDimInfo extends BasePacket {
 	}
 
 	@Override
-	public void executeClient(EntityPlayer thePlayer) {}
+	public void executeClient(EntityPlayer thePlayer) {
+		if(deleteDim) {
+			if(DimensionManager.getInstance().isDimensionCreated(dimNumber)) {
+				DimensionManager.getInstance().deleteDimension(dimNumber);
+			}
+		}
+		else
+		{
+			dimProperties = new DimensionProperties(dimNumber);
+			dimProperties.readFromNBT(dimNBT);
+			if(!customIcon.isEmpty())
+				dimProperties.customIcon = customIcon;
+			
+			if( DimensionManager.getInstance().isDimensionCreated(dimNumber) ) {
+				dimProperties.oreProperties = DimensionManager.getInstance().getDimensionProperties(dimNumber).oreProperties;
+				dimProperties.getRequiredArtifacts().clear();
+				dimProperties.getRequiredArtifacts().addAll(artifacts);
+				
+				List<SpawnListEntryNBT> list = new LinkedList<>(DimensionManager.getInstance().getDimensionProperties(dimNumber).getSpawnListEntries());
+				dimProperties.getSpawnListEntries().clear();
+				dimProperties.getSpawnListEntries().addAll(list);
+				
+				if(DimensionManager.getInstance().getDimensionProperties(dimNumber).customIcon != null && !DimensionManager.getInstance().getDimensionProperties(dimNumber).customIcon.isEmpty())
+					dimProperties.customIcon = DimensionManager.getInstance().getDimensionProperties(dimNumber).customIcon;
+				
+				DimensionManager.getInstance().setDimProperties(dimNumber, dimProperties);
+			} else {
+				//dimProperties = new DimensionProperties(dimNumber);
+				//dimProperties.readFromNBT(dimNBT);
+				
+				
+				DimensionManager.getInstance().registerDimNoUpdate(dimProperties, true);
+			}
+		}
+		
+	}
 
 	@Override
 	public void executeServer(EntityPlayerMP player) {}

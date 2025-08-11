@@ -1,109 +1,153 @@
 package zmaster587.advancedRocketry.api;
 
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.biome.Biome;
+import net.minecraftforge.registries.IForgeRegistry;
+
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import zmaster587.advancedRocketry.world.biome.BiomeGenCrystal;
-import zmaster587.advancedRocketry.world.biome.BiomeGenDeepSwamp;
-import zmaster587.advancedRocketry.world.biome.BiomeGenOceanSpires;
-import net.minecraft.world.biome.BiomeGenBase;
 
 /**
  * Stores information relating to the biomes and biome registry of AdvancedRocketry
  */
 public class AdvancedRocketryBiomes {
-	
+
 	public static final AdvancedRocketryBiomes instance = new AdvancedRocketryBiomes();
-	private List<BiomeGenBase> registeredBiomes;
-	private List<BiomeGenBase> registeredHighPressureBiomes;
-	private List<BiomeGenBase> registeredSingleBiome;
+	private List<Biome> registeredBiomes;
+	private List<Biome> registeredHighPressureBiomes;
+	private List<Biome> registeredSingleBiome;
 	private static List<Integer> blackListedBiomeIds;
-	
-	public static BiomeGenBase moonBiome;
-	public static BiomeGenBase hotDryBiome;
-	public static BiomeGenBase alienForest;
-	public static BiomeGenBase spaceBiome;
-	public static BiomeGenBase stormLandsBiome;
-	public static BiomeGenBase crystalChasms;
-	public static BiomeGenBase swampDeepBiome;
-	public static BiomeGenBase marsh;
-	public static BiomeGenBase oceanSpires;
-	
+
+	public static Biome moonBiome;
+	public static Biome hotDryBiome;
+	public static Biome alienForest;
+	public static Biome spaceBiome;
+	public static Biome stormLandsBiome;
+	public static Biome crystalChasms;
+	public static Biome swampDeepBiome;
+	public static Biome marsh;
+	public static Biome oceanSpires;
+	public static Biome moonBiomeDark;
+	public static Biome volcanic;
+	public static Biome volcanicBarren;
+
 	private AdvancedRocketryBiomes() {
-		registeredBiomes = new ArrayList<BiomeGenBase>();
-		registeredHighPressureBiomes = new LinkedList<BiomeGenBase>();
-		blackListedBiomeIds = new ArrayList<Integer>();
-		registeredSingleBiome = new ArrayList<BiomeGenBase>();
-		
-		registerBlackListBiome(BiomeGenBase.sky);
-		registerBlackListBiome(BiomeGenBase.hell);
-		registerBlackListBiome(BiomeGenBase.river);
+		registeredBiomes = new ArrayList<>();
+		registeredHighPressureBiomes = new LinkedList<>();
+		blackListedBiomeIds = new ArrayList<>();
+		registeredSingleBiome = new ArrayList<>();
 	}
-	
+
 	/**
 	 * TODO: support id's higher than 255.  
 	 * Any biome registered through vanilla forge does not need to be registered here
-	 * @param biome BiomeGenBase to register with AdvancedRocketry's Biome registry
+	 * @param biome Biome to register with AdvancedRocketry's Biome registry
+	 * @param iForgeRegistry 
 	 */
-	public void registerBiome(BiomeGenBase biome) {
+	public void registerBiome(Biome biome, IForgeRegistry<Biome> iForgeRegistry) {
 		registeredBiomes.add(biome);
+		iForgeRegistry.register(biome);
 	}
-	
-	
+
+
 	/**
 	 * Registers biomes you don't want to spawn on any planet unless registered with highpressure or similar feature
 	 */
-	public void registerBlackListBiome(BiomeGenBase biome) {
-		blackListedBiomeIds.add(biome.biomeID);
+	public void registerBlackListBiome(Biome biome) {
+		blackListedBiomeIds.add(Biome.getIdForBiome(biome));
 	}
-	
+
 	/**
 	 * Gets a list of the blacklisted Biome Ids
 	 */
 	public List<Integer> getBlackListedBiomes() {
 		return blackListedBiomeIds;
 	}
-	
+
 	/**
 	 * Registers a biome as high pressure for use with the planet generators (It will only spawn on planets with high pressure)
 	 * @param biome
 	 */
-	public void registerHighPressureBiome(BiomeGenBase biome) {
+	public void registerHighPressureBiome(Biome biome) {
 		registeredHighPressureBiomes.add(biome);
 		registerBlackListBiome(biome);
 	}
-	
-	public List<BiomeGenBase> getHighPressureBiomes() {
+
+	public List<Biome> getHighPressureBiomes() {
 		return registeredHighPressureBiomes;	
 	}
-	
+
 	/**
-	 * Registers a biome to have a chance to spawn as the only biome on a planet
+	 * Registers a biome to have a chance to spawn as the only biome on a planet, will not register the biome if it is in the blacklist already
 	 * @param biome
 	 */
-	public void registerSingleBiome(BiomeGenBase biome) {
-		registeredSingleBiome.add(biome);
-		registerBlackListBiome(biome);
+	public void registerSingleBiome(Biome biome) {
+		if(!blackListedBiomeIds.contains(Biome.getIdForBiome(biome)))
+			registeredSingleBiome.add(biome);
 	}
 	
-	public List<BiomeGenBase> getSingleBiome() {
+	public void blackListVanillaBiomes() {
+		//Good grief... this is long, better than making users do it though..
+		for(int i = 0; i < 40; i++)
+			blackListedBiomeIds.add(i);
+		
+		blackListedBiomeIds.add(127);
+		blackListedBiomeIds.add(129);
+		blackListedBiomeIds.add(130);
+		blackListedBiomeIds.add(131);
+		blackListedBiomeIds.add(132);
+		blackListedBiomeIds.add(133);
+		blackListedBiomeIds.add(134);
+		blackListedBiomeIds.add(140);
+		blackListedBiomeIds.add(149);
+		blackListedBiomeIds.add(151);
+		blackListedBiomeIds.add(155);
+		blackListedBiomeIds.add(156);
+		blackListedBiomeIds.add(157);
+		blackListedBiomeIds.add(158);
+		blackListedBiomeIds.add(160);
+		blackListedBiomeIds.add(161);
+		blackListedBiomeIds.add(162);
+		blackListedBiomeIds.add(163);
+		blackListedBiomeIds.add(164);
+		blackListedBiomeIds.add(165);
+		blackListedBiomeIds.add(166);
+		blackListedBiomeIds.add(167);
+	}
+
+	public List<Biome> getSingleBiome() {
 		return registeredSingleBiome;	
 	}
-	
+
 	/**
 	 * Gets Biomes from Advanced Rocketry's biomes registry.  If it does not exist attepts to retrieve from vanilla forge
 	 * @param id biome id
-	 * @return BiomeGenBase retrieved from the biome ID
+	 * @return Biome retrieved from the biome ID
 	 */
-	public BiomeGenBase getBiomeById(int id) {
-		
-		for(BiomeGenBase biome : registeredBiomes) {
-			if( biome.biomeID == id)
+	public Biome getBiomeById(int id) {
+
+		for(Biome biome : registeredBiomes) {
+			if( Biome.getIdForBiome(biome) == id)
 				return biome;
 		}
-		
-		return BiomeGenBase.getBiome(id);
+
+		return Biome.getBiome(id);
 	}
-	
+
+	@Nullable
+	public static Biome getBiome(String string) {
+		Biome biome = Biome.REGISTRY.getObject(new ResourceLocation(string));
+		
+		//Fallback to ID
+		if( biome == null)
+		{
+			biome = Biome.getBiome(Integer.parseInt(string));
+		}
+		
+		return biome;
+	}
+
 }

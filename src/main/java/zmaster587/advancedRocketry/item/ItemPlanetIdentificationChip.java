@@ -1,17 +1,23 @@
 package zmaster587.advancedRocketry.item;
 
 import com.mojang.realmsclient.gui.ChatFormatting;
-
-import zmaster587.advancedRocketry.dimension.DimensionManager;
-import zmaster587.advancedRocketry.dimension.DimensionProperties;
-import net.minecraft.item.Item;
+import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.world.World;
+import zmaster587.advancedRocketry.api.Constants;
+import zmaster587.advancedRocketry.dimension.DimensionManager;
+import zmaster587.advancedRocketry.dimension.DimensionProperties;
+import zmaster587.libVulpes.LibVulpes;
 
-public class ItemPlanetIdentificationChip extends ItemMultiData {
+import javax.annotation.Nonnull;
+import java.util.List;
+
+public class ItemPlanetIdentificationChip extends ItemIdWithName {
 
 	private static final String dimensionNameIdentifier = "DimensionName";
 	private static final String dimensionIdIdentifier = "dimId";
+	private static final String uuidIdentifier = "UUID";
 
 	public ItemPlanetIdentificationChip() {
 	}
@@ -25,7 +31,7 @@ public class ItemPlanetIdentificationChip extends ItemMultiData {
 	 * @param stack itemStack of this item-type
 	 * @return the DimensionProperties of the dimId stored on the item or null if invalid
 	 */
-	public DimensionProperties getDimension(ItemStack stack) {
+	public DimensionProperties getDimension(@Nonnull ItemStack stack) {
 		if(stack.hasTagCompound()) {
 			return DimensionManager.getInstance().getDimensionProperties(stack.getTagCompound().getInteger(dimensionIdIdentifier));
 		}
@@ -36,7 +42,7 @@ public class ItemPlanetIdentificationChip extends ItemMultiData {
 	 * @param stack ItemStack to check against
 	 * @return true of the dimension stored on the stack exists and is valid
 	 */
-	public boolean hasValidDimension(ItemStack stack) {
+	public boolean hasValidDimension(@Nonnull ItemStack stack) {
 
 		if(stack.hasTagCompound()) {
 			int dimId = stack.getTagCompound().getInteger(dimensionIdIdentifier);
@@ -50,7 +56,7 @@ public class ItemPlanetIdentificationChip extends ItemMultiData {
 	 * Removes any Information and reset the stack to a default state
 	 * @param stack stack to erase
 	 */
-	public void erase(ItemStack stack) {
+	public void erase(@Nonnull ItemStack stack) {
 		stack.setTagCompound(null);
 	}
 
@@ -59,10 +65,10 @@ public class ItemPlanetIdentificationChip extends ItemMultiData {
 	 * @param stack itemStack to operate on
 	 * @param dimensionId dimension Id number
 	 */
-	public void setDimensionId(ItemStack stack, int dimensionId) {
+	public void setDimensionId(@Nonnull ItemStack stack, int dimensionId) {
 
 		NBTTagCompound nbt;
-		if(dimensionId == -1) {
+		if(dimensionId == Constants.INVALID_PLANET) {
 			nbt = new NBTTagCompound();
 			nbt.setInteger(dimensionIdIdentifier, dimensionId);
 			return;
@@ -86,12 +92,12 @@ public class ItemPlanetIdentificationChip extends ItemMultiData {
 
 	/**
 	 * @param stack stack to get the dimId from
-	 * @return id of the dimension stored or -1 if invalid
+	 * @return id of the dimension stored or Constants.INVALID_PLANET if invalid
 	 */
-	public int getDimensionId(ItemStack stack) {
+	public int getDimensionId(@Nonnull ItemStack stack) {
 		if(stack.hasTagCompound())
 			return stack.getTagCompound().getInteger(dimensionIdIdentifier);
-		return -1;
+		return Constants.INVALID_PLANET;
 	}
 
 	/**
@@ -99,29 +105,57 @@ public class ItemPlanetIdentificationChip extends ItemMultiData {
 	 * @param stack stack to get the DimensionProperties object from
 	 * @return DimensionProperties Object of the relevent dimension or null if invalid
 	 */
-	public DimensionProperties getDimensionProperties(ItemStack stack) {
+	public DimensionProperties getDimensionProperties(@Nonnull ItemStack stack) {
 		if(stack.hasTagCompound())
 			return DimensionManager.getInstance().getDimensionProperties(stack.getTagCompound().getInteger(dimensionIdIdentifier));
 		return null;
 	}
 
+	public Long getUUID(@Nonnull ItemStack stack) {
+		if(stack.hasTagCompound())
+			return stack.getTagCompound().getLong(uuidIdentifier);
+		return null;
+	}
+
+	public void setUUID(@Nonnull ItemStack stack, long uuid) {
+		NBTTagCompound nbt;
+		if(stack.hasTagCompound())
+			nbt = stack.getTagCompound();
+		else
+			nbt = new NBTTagCompound();
+
+		nbt.setLong(uuidIdentifier,uuid);
+		stack.setTagCompound(nbt);
+	}
+
 	@Override
-	public void addInformation(ItemStack stack, net.minecraft.entity.player.EntityPlayer player, java.util.List list, boolean bool) {
+	public void addInformation(@Nonnull ItemStack stack, World player, List<String> list,
+                               ITooltipFlag bool){
 
 		if(!stack.hasTagCompound()) {
-			list.add("Unprogrammed");
+			list.add(LibVulpes.proxy.getLocalizedString("msg.unprogrammed"));
 		}
 		else if(!hasValidDimension(stack)) {
-			list.add(ChatFormatting.RED + "Programming Failed");
+			list.add(ChatFormatting.RED + LibVulpes.proxy.getLocalizedString("msg.programfail"));
 		}
 		else {
 			if(stack.getItemDamage()  == 0) {
+				DimensionProperties props = DimensionManager.getInstance().getDimensionProperties(getDimensionId(stack));
+
 				String unknown = ChatFormatting.YELLOW + "???";
 				String dimName = stack.getTagCompound().getString(dimensionNameIdentifier);
 
-				list.add("Planet Name: " + ChatFormatting.DARK_GREEN  + dimName);
+				list.add(LibVulpes.proxy.getLocalizedString("msg.itemplanetidchip.planetname") + ChatFormatting.DARK_GREEN  + dimName);
 
-				super.addInformation(stack, player, list, bool);
+				if( !props.getRequiredArtifacts().isEmpty()) {
+					list.add(LibVulpes.proxy.getLocalizedString("msg.itemplanetidchip.artifacts"));
+					for(ItemStack stack2 : props.getRequiredArtifacts())
+					{
+						list.add(ChatFormatting.DARK_PURPLE + "    " + stack2.getDisplayName());
+					}
+				}
+
+				//super.addInformation(stack, player, list, bool);
 
 				//list.add("Mass: " + unknown);
 				//list.add("Atmosphere Density: " + unknown);
@@ -129,7 +163,7 @@ public class ItemPlanetIdentificationChip extends ItemMultiData {
 
 			}
 			else { //Space station
-				list.add("Station Id: " + ChatFormatting.DARK_GREEN + stack.getTagCompound().getString(dimensionNameIdentifier));
+				list.add(LibVulpes.proxy.getLocalizedString("msg.itemplanetidchip.stationid") + ChatFormatting.DARK_GREEN + stack.getTagCompound().getString(dimensionNameIdentifier));
 			}
 		}
 	}

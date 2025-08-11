@@ -1,31 +1,15 @@
 package zmaster587.advancedRocketry.asm;
 
-import java.util.AbstractMap.SimpleEntry;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-
+import net.minecraft.launchwrapper.IClassTransformer;
+import net.minecraft.launchwrapper.Launch;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.FieldInsnNode;
-import org.objectweb.asm.tree.FieldNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.InsnNode;
-import org.objectweb.asm.tree.JumpInsnNode;
-import org.objectweb.asm.tree.LabelNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.TypeInsnNode;
-import org.objectweb.asm.tree.VarInsnNode;
-
-import cpw.mods.fml.common.ObfuscationReflectionHelper;
+import org.objectweb.asm.tree.*;
 import zmaster587.advancedRocketry.AdvancedRocketry;
-import net.minecraft.launchwrapper.IClassTransformer;
-import net.minecraft.launchwrapper.Launch;
+
+import java.util.AbstractMap.SimpleEntry;
+import java.util.HashMap;
 
 public class ClassTransformer implements IClassTransformer {
 
@@ -38,10 +22,23 @@ public class ClassTransformer implements IClassTransformer {
 	private static final String CLASS_KEY_ENTITY_PLAYER_MP = "net.minecraft.client.entity.EntityPlayerMP";
 	private static final String CLASS_KEY_ENTITY_PLAYER = "net.minecraft.entity.player.EntityPlayer";
 	private static final String CLASS_KEY_ENTITY_ITEM = "net.minecraft.entity.EntityItem";
+	private static final String CLASS_KEY_ENTITY_FALLING_BLOCK = "net.minecraft.entity.item.EntityFallingBlock";
+	private static final String CLASS_KEY_ENTITY_MINECART = "net.minecraft.entity.item.EntityMinecart";
+	private static final String CLASS_KEY_ENTITY_TNT = "net.minecraft.entity.item.EntityTNTPrimed";
 	private static final String CLASS_KEY_NETHANDLERPLAYSERVER = "net.minecraft.network.NetHandlerPlayServer";
 	private static final String CLASS_KEY_C03PACKETPLAYER = "net.minecraft.network.play.client.C03PacketPlayer";
 	private static final String CLASS_KEY_WORLD = "net.minecraft.world.World";
 	private static final String CLASS_KEY_BLOCK = "net.minecraft.block.Block";
+	private static final String CLASS_KEY_BLOCKPOS = "net.minecraft.util.math.BlockPos";
+	private static final String CLASS_KEY_IBLOCKSTATE = "net.minecraft.block.state.IBlockState";
+	private static final String CLASS_KEY_RENDER_GLOBAL = "net.minecraft.client.renderer.RenderGlobal";
+	private static final String CLASS_KEY_ICAMERA = "net.minecraft.client.renderer.culling.ICamera";
+	private static final String CLASS_KEY_BLOCK_BED = "net.minecraft.block.BlockBed";
+	private static final String CLASS_KEY_WORLDPROVIDER = "net.minecraft.world.WorldProvider";
+	private static final String CLASS_KEY_ENUMHAND = "net.minecraft.util.EnumHand";
+	private static final String CLASS_KEY_ITEMSTACK = "net.minecraft.item.ItemStack";
+	private static final String CLASS_KEY_ENUMFACING = "net.minecraft.util.EnumFacing";
+
 	private static final String METHOD_KEY_PROCESSPLAYER = "processPlayer";
 	private static final String METHOD_KEY_JUMP = "jump";
 	private static final String METHOD_KEY_MOVEENTITY = "moveEntity";
@@ -51,10 +48,12 @@ public class ClassTransformer implements IClassTransformer {
 	private static final String METHOD_KEY_ONUPDATE = "net.minecraft.client.entity.Entity.onUpdate";
 	private static final String METHOD_KEY_GETLOOKVEC = "net.minecraft.entity.EntityLivingBase.getLookVec";
 	private static final String METHOD_KEY_DORENDER  = "net.minecraft.client.renderer.entity.RenderLivingEntity.doRender";
-	private static final String METHOD_KEY_MOVEENTITYWITHHEADING = "net.minecraft.entity.EntityLivingBase.moveEntityWithHeading";
+	//	private static final String METHOD_KEY_TRAVEL = "net.minecraft.entity.EntityLivingBase.travel";
 	private static final String METHOD_KEY_MOVEFLYING = "net.minecraft.entity.Entity.moveFlying";
-	private static final String METHOD_KEY_SETBLOCK = CLASS_KEY_WORLD + ".setBlock";
+	private static final String METHOD_KEY_SETBLOCKSTATE = CLASS_KEY_WORLD + ".setBlockState";
 	private static final String METHOD_KEY_SETBLOCKMETADATAWITHNOTIFY = CLASS_KEY_WORLD + ".setBlockMetadataWithNotify";
+	private static final String METHOD_KEY_SETUPTERRAIN = "setupTerrain";
+	private static final String METHOD_KEY_ONBLOCKACTIVATED = CLASS_KEY_BLOCK_BED  + "onBlockActivated";
 
 	private static final String FIELD_YAW = "net.minecraft.client.renderer.EntityRenderer.rotationYaw";
 	private static final String FIELD_PITCH = "net.minecraft.client.renderer.EntityRenderer.rotationPitch";
@@ -63,7 +62,10 @@ public class ClassTransformer implements IClassTransformer {
 	private static final String FIELD_PLAYERENTITY = "net.minecraft.network.NetHandlerPlayServer.playerEntity";
 	private static final String FIELD_HASMOVED = "net.minecraft.network.NetHandlerPlayServer.hasMoved";
 	private static final String FIELD_RIDINGENTITY = "net.minecraft.entity.Entity.ridingEntity";
-	private static final HashMap<String, SimpleEntry<String, String>> entryMap = new HashMap<String, SimpleEntry<String, String>>();
+	private static final String FIELD_PROVIDER = CLASS_KEY_WORLD + "provider";
+
+	private static final HashMap<String, SimpleEntry<String, String>> entryMap = new HashMap<>();
+
 
 
 	private boolean obf;
@@ -86,40 +88,56 @@ public class ClassTransformer implements IClassTransformer {
 
 		obf = !(boolean)Launch.blackboard.get("fml.deobfuscatedEnvironment");
 		//TODO: obf names
-		entryMap.put(CLASS_KEY_ENTITYRENDERER, new SimpleEntry<String, String>("net/minecraft/client/renderer/EntityRenderer", "blt"));
-		entryMap.put(CLASS_KEY_ENTITYLIVEINGBASE, new SimpleEntry<String, String>("net/minecraft/entity/EntityLivingBase", "sv"));
-		entryMap.put(CLASS_KEY_ENTITYLIVINGRENDERER, new SimpleEntry<String, String>("net/minecraft/client/renderer/entity/RendererLivingEntity", ""));
-		entryMap.put(CLASS_KEY_ENTITY, new SimpleEntry<String, String>("net/minecraft/entity/Entity","sa"));
-		entryMap.put(CLASS_KEY_ENTITY_PLAYER_SP, new SimpleEntry<String, String>("net/minecraft/client/entity/EntityPlayerSP",""));
-		entryMap.put(CLASS_KEY_ENTITY_PLAYER_MP, new SimpleEntry<String, String>("net/minecraft/entity/player/EntityPlayerMP",""));
-		entryMap.put(CLASS_KEY_ENTITY_PLAYER, new SimpleEntry<String, String>("net/minecraft/entity/player/EntityPlayer","yz"));
-		entryMap.put(CLASS_KEY_ENTITY_ITEM, new SimpleEntry<String, String>("net/minecraft/entity/item/EntityItem","xk"));
-		entryMap.put(CLASS_KEY_NETHANDLERPLAYSERVER, new SimpleEntry<String, String>("net/minecraft/network/NetHandlerPlayServer",""));
-		entryMap.put(CLASS_KEY_C03PACKETPLAYER, new SimpleEntry<String, String>("net/minecraft/network/play/client/C03PacketPlayer",""));
-		entryMap.put(CLASS_KEY_WORLD, new SimpleEntry<String, String>("net/minecraft/world/World","ahb"));
-		entryMap.put(CLASS_KEY_BLOCK, new SimpleEntry<String, String>("net/minecraft/block/Block","aji"));
+		//entryMap.put(CLASS_KEY_ENTITYRENDERER, new SimpleEntry<String, String>("net/minecraft/client/renderer/EntityRenderer", "blt"));
+		entryMap.put(CLASS_KEY_ENTITYLIVEINGBASE, new SimpleEntry<>("net/minecraft/entity/EntityLivingBase", "vp"));
+		//entryMap.put(CLASS_KEY_ENTITYLIVINGRENDERER, new SimpleEntry<String, String>("net/minecraft/client/renderer/entity/RendererLivingEntity", ""));
+		entryMap.put(CLASS_KEY_ENTITY, new SimpleEntry<>("net/minecraft/entity/Entity", "vg"));
+		entryMap.put(CLASS_KEY_ENTITY_FALLING_BLOCK, new SimpleEntry<>("net/minecraft/entity/item/EntityFallingBlock", "ack"));
+		entryMap.put(CLASS_KEY_ENTITY_MINECART, new SimpleEntry<>("net/minecraft/entity/item/EntityMinecart", "afe"));
+		entryMap.put(CLASS_KEY_ENTITY_TNT, new SimpleEntry<>("net/minecraft/entity/item/EntityTNTPrimed", "acm"));
+		//entryMap.put(CLASS_KEY_ENTITY_PLAYER_SP, new SimpleEntry<String, String>("net/minecraft/client/entity/EntityPlayerSP",""));
+		entryMap.put(CLASS_KEY_ENTITY_PLAYER_MP, new SimpleEntry<>("net/minecraft/entity/player/EntityPlayerMP", "oq"));
+		entryMap.put(CLASS_KEY_ENTITY_PLAYER, new SimpleEntry<>("net/minecraft/entity/player/EntityPlayer", "aed"));
+		entryMap.put(CLASS_KEY_ENTITY_ITEM, new SimpleEntry<>("net/minecraft/entity/item/EntityItem", "acl"));
+		//entryMap.put(CLASS_KEY_NETHANDLERPLAYSERVER, new SimpleEntry<String, String>("net/minecraft/network/NetHandlerPlayServer",""));
+		//entryMap.put(CLASS_KEY_C03PACKETPLAYER, new SimpleEntry<String, String>("net/minecraft/network/play/client/C03PacketPlayer",""));
+		entryMap.put(CLASS_KEY_WORLD, new SimpleEntry<>("net/minecraft/world/World", "amu"));
+		entryMap.put(CLASS_KEY_BLOCK, new SimpleEntry<>("net/minecraft/block/Block", "aow"));
+		entryMap.put(CLASS_KEY_BLOCKPOS, new SimpleEntry<>("net/minecraft/util/math/BlockPos", "et"));
+		entryMap.put(CLASS_KEY_IBLOCKSTATE, new SimpleEntry<>("net/minecraft/block/state/IBlockState", "awt"));
+		entryMap.put(CLASS_KEY_RENDER_GLOBAL, new SimpleEntry<>("net/minecraft/client/renderer/RenderGlobal", "buy"));
+		entryMap.put(CLASS_KEY_ICAMERA, new SimpleEntry<>("net/minecraft/client/renderer/culling/ICamera", "bxy"));
+		entryMap.put(CLASS_KEY_BLOCK_BED, new SimpleEntry<>("net/minecraft/block/BlockBed", "aou"));
+		entryMap.put(CLASS_KEY_WORLDPROVIDER, new SimpleEntry<>("net/minecraft/world/WorldProvider", "aym"));
+		entryMap.put(CLASS_KEY_ENUMHAND, new SimpleEntry<>("net/minecraft/util/EnumHand", "ub"));
+		entryMap.put(CLASS_KEY_ITEMSTACK, new SimpleEntry<>("net/minecraft/item/ItemStack", "aip"));
+		entryMap.put(CLASS_KEY_ENUMFACING, new SimpleEntry<>("net/minecraft/util/EnumFacing", "fa"));
 
-		entryMap.put(METHOD_KEY_PROCESSPLAYER, new SimpleEntry<String, String>("processPlayer",""));
-		entryMap.put(METHOD_KEY_MOVEENTITY, new SimpleEntry<String, String>("moveEntity",""));
-		entryMap.put(METHOD_KEY_SETPOSITION, new SimpleEntry<String, String>("setPosition",""));
-		entryMap.put(METHOD_KEY_GETLOOKVEC, new SimpleEntry<String, String>("getLook", ""));
-		entryMap.put(METHOD_KEY_DORENDER, new SimpleEntry<String, String>("doRender",""));
-		entryMap.put(METHOD_KEY_MOVEENTITYWITHHEADING, new SimpleEntry<String, String>("moveEntityWithHeading","e"));
-		entryMap.put(METHOD_KEY_MOVEFLYING, new SimpleEntry<String, String>("moveFlying",""));
-		entryMap.put(METHOD_KEY_ONLIVINGUPDATE, new SimpleEntry<String, String>("onLivingUpdate","e"));
-		entryMap.put(METHOD_KEY_ONUPDATE, new SimpleEntry<String, String>("onUpdate","h"));
-		entryMap.put(METHOD_KEY_MOUNTENTITY, new SimpleEntry<String, String>("mountEntity", "a"));
-		entryMap.put(METHOD_KEY_JUMP, new SimpleEntry<String, String>("jump",""));
-		entryMap.put(METHOD_KEY_SETBLOCK, new SimpleEntry<String, String>("setBlock", "d"));
-		entryMap.put(METHOD_KEY_SETBLOCKMETADATAWITHNOTIFY, new SimpleEntry<String, String>("setBlockMetadataWithNotify", "a"));
 
-		entryMap.put(FIELD_YAW, new SimpleEntry<String, String>("rotationYaw", "blt"));
-		entryMap.put(FIELD_PITCH, new SimpleEntry <String, String>("rotationPitch", "blt"));
-		entryMap.put(FIELD_PREV_YAW, new SimpleEntry<String, String>("prevRotationYaw", "blt"));
-		entryMap.put(FIELD_PREV_PITCH, new SimpleEntry<String, String>("prevRotationPitch", "blt"));
-		entryMap.put(FIELD_PLAYERENTITY, new SimpleEntry<String, String>("playerEntity", ""));
-		entryMap.put(FIELD_HASMOVED, new SimpleEntry<String, String>("hasMoved", ""));
-		entryMap.put(FIELD_RIDINGENTITY, new SimpleEntry<String,String>("ridingEntity", "m"));
+		//entryMap.put(METHOD_KEY_PROCESSPLAYER, new SimpleEntry<String, String>("processPlayer",""));
+		//entryMap.put(METHOD_KEY_MOVEENTITY, new SimpleEntry<String, String>("moveEntity",""));
+		//entryMap.put(METHOD_KEY_SETPOSITION, new SimpleEntry<String, String>("setPosition",""));
+		//entryMap.put(METHOD_KEY_GETLOOKVEC, new SimpleEntry<String, String>("getLook", ""));
+		//entryMap.put(METHOD_KEY_DORENDER, new SimpleEntry<String, String>("doRender",""));
+		//entryMap.put(METHOD_KEY_TRAVEL, new SimpleEntry<String, String>("travel","g"));
+		//entryMap.put(METHOD_KEY_MOVEFLYING, new SimpleEntry<String, String>("moveFlying",""));
+		//entryMap.put(METHOD_KEY_ONLIVINGUPDATE, new SimpleEntry<String, String>("onLivingUpdate","e"));
+		entryMap.put(METHOD_KEY_ONUPDATE, new SimpleEntry<>("onUpdate", "B_"));
+		//entryMap.put(METHOD_KEY_MOUNTENTITY, new SimpleEntry<String, String>("mountEntity", "a"));
+		//entryMap.put(METHOD_KEY_JUMP, new SimpleEntry<String, String>("jump",""));
+		entryMap.put(METHOD_KEY_SETBLOCKSTATE, new SimpleEntry<>("setBlockState", "a"));
+		//entryMap.put(METHOD_KEY_SETBLOCKMETADATAWITHNOTIFY, new SimpleEntry<String, String>("setBlockMetadataWithNotify", "a"));
+		entryMap.put(METHOD_KEY_SETUPTERRAIN, new SimpleEntry<>("setupTerrain", "a"));
+		entryMap.put(METHOD_KEY_ONBLOCKACTIVATED, new SimpleEntry<>("onBlockActivated", "a"));
+
+		//entryMap.put(FIELD_YAW, new SimpleEntry<String, String>("rotationYaw", "blt"));
+		//entryMap.put(FIELD_PITCH, new SimpleEntry <String, String>("rotationPitch", "blt"));
+		//entryMap.put(FIELD_PREV_YAW, new SimpleEntry<String, String>("prevRotationYaw", "blt"));
+		//entryMap.put(FIELD_PREV_PITCH, new SimpleEntry<String, String>("prevRotationPitch", "blt"));
+		//entryMap.put(FIELD_PLAYERENTITY, new SimpleEntry<String, String>("playerEntity", ""));
+		//entryMap.put(FIELD_HASMOVED, new SimpleEntry<String, String>("hasMoved", ""));
+		//entryMap.put(FIELD_RIDINGENTITY, new SimpleEntry<String,String>("ridingEntity", "m"));
+		entryMap.put(FIELD_PROVIDER, new SimpleEntry<>("provider", "s"));
 	}
 
 	@Override
@@ -130,6 +148,7 @@ public class ClassTransformer implements IClassTransformer {
 		//Vanilla deobf
 		String changedName = name.replace('.','/');
 
+		//Old stuff for directional gravity in 1.7.10 or 1.6.4
 		//Need to override setPosition to fix bounding boxes
 
 		/*if(changedName.equals(getName(CLASS_KEY_NETHANDLERPLAYSERVER))) {
@@ -559,159 +578,183 @@ public class ClassTransformer implements IClassTransformer {
 			return finishInjection(cn);
 		}*/
 
-		/*
-		 * from  net.minecraft.entity.player.EntityPlayer
-		 *  
-		 * public void mountEntity(Entity p_70078_1_)
-		 * {
-		 *     if (this.ridingEntity != null && p_70078_1_ == null)
-		 *     {
-		 *         if (!this.worldObj.isRemote)
-		 *         {
-		 *             this.dismountEntity(this.ridingEntity);
-		 *         }
-		 * 
-		 *         if (this.ridingEntity != null)
-		 *         {
-		 *         	//Begin insert
-		 *         	if(this.ridingEntity instanceof IDismountHandler)
-		 *         			this.ridingEntity.onDismount(this)
-		 *         			return;
-		 *         	//End Insert
-		 *             	this.ridingEntity.riddenByEntity = null;
-		 *         }
-		 * 
-		 *         this.ridingEntity = null;
-		 *     }
-		 *     else
-		 *     {
-		 *         super.mountEntity(p_70078_1_);
-		 *     }
-		 * }
-		 * */
 
-		if(changedName.equals(getName(CLASS_KEY_ENTITY_PLAYER))) {
+		//was causing problems on startup, no idea what it does anymore,
+		//I need to apply better documentation practices
+		if(changedName.equals(getName(CLASS_KEY_RENDER_GLOBAL)) && net.minecraftforge.common.ForgeVersion.getVersion().compareTo("14.23.2.2642") < 0) {
 			ClassNode cn = startInjection(bytes);
-			MethodNode mountEntityMethod = getMethod(cn, getName(METHOD_KEY_MOUNTENTITY), "(L"+ getName(CLASS_KEY_ENTITY) + ";)V");
-
-			if(mountEntityMethod != null) {
+			MethodNode setupTerrain = getMethod(cn, getName(METHOD_KEY_SETUPTERRAIN), "(L"+ getName(CLASS_KEY_ENTITY) + ";DL" + getName(CLASS_KEY_ICAMERA) + ";IZ)V");
+			if(setupTerrain != null) {
 				final InsnList nodeAdd = new InsnList();
-				AbstractInsnNode pos = null;
 
-				for(int i = mountEntityMethod.instructions.size() - 1; i >= 0; i--) {
-					AbstractInsnNode ain = mountEntityMethod.instructions.get(i);
-					if(ain.getOpcode() == Opcodes.IFNULL) {
-						pos = ain;
+				AbstractInsnNode pos1 = null;
+				AbstractInsnNode pos3;
+				AbstractInsnNode pos2 = null;
+
+				int ifnull = 3;
+				int aload = 3;
+				int indexPos1 = 0;
+
+				for(int i = setupTerrain.instructions.size() - 1; i >= 0; i--) {
+					AbstractInsnNode ain = setupTerrain.instructions.get(i);
+					if(ain.getOpcode() == Opcodes.IFNULL && --ifnull == 0) {
+						pos1 = ain.getNext();
+						indexPos1 = i+1;
 						break;
 					}
 				}
 
-				LabelNode jumpLabel = new LabelNode();
-				nodeAdd.add(new VarInsnNode(Opcodes.ALOAD, 0));
-				nodeAdd.add(new FieldInsnNode(Opcodes.GETFIELD, getName(CLASS_KEY_ENTITY), getName(FIELD_RIDINGENTITY), "L" + getName(CLASS_KEY_ENTITY) + ";"));
-				nodeAdd.add(new TypeInsnNode(Opcodes.INSTANCEOF, "zmaster587/libVulpes/api/IDismountHandler"));
-				nodeAdd.add(new JumpInsnNode(Opcodes.IFEQ, jumpLabel));
+				for(int i = indexPos1; i < setupTerrain.instructions.size(); i++) {
+					AbstractInsnNode ain = setupTerrain.instructions.get(i);
+					if(ain.getOpcode() == Opcodes.ALOAD && --aload == 0) {
+						pos2 = setupTerrain.instructions.get(i-1);
+						break;
+					}
+				}
 
+				while(pos1 != pos2)
+				{
+					pos3 = pos1;
+					pos1 = pos1.getNext();
+					setupTerrain.instructions.remove(pos3);
+				}
 
-				nodeAdd.add(new VarInsnNode(Opcodes.ALOAD, 0));
-				nodeAdd.add(new FieldInsnNode(Opcodes.GETFIELD, getName(CLASS_KEY_ENTITY), getName(FIELD_RIDINGENTITY), "L" + getName(CLASS_KEY_ENTITY) + ";"));
-				nodeAdd.add(new VarInsnNode(Opcodes.ALOAD, 0));
-				nodeAdd.add(new MethodInsnNode(Opcodes.INVOKEINTERFACE, "zmaster587/libVulpes/api/IDismountHandler", "handleDismount", "(L" + getName(CLASS_KEY_ENTITY) + ";)V", true));
-				nodeAdd.add(new InsnNode(Opcodes.RETURN));
-				nodeAdd.add(jumpLabel);
+				//Lack of robustness, this could go really wrong. To future me: told you so!
+				//pos2 = setupTerrain.instructions.get(914);
 
-				mountEntityMethod.instructions.insert(pos, nodeAdd);
+				//nodeAdd.add(new VarInsnNode(Opcodes.ILOAD, 25));
+				//nodeAdd.add(new JumpInsnNode(Opcodes.GOTO, pos2));
+				//nodeAdd.add(new VarInsnNode(Opcodes.ILOAD, 27));
+				//nodeAdd.add(new JumpInsnNode(Opcodes.IFEQ, pos2));
+
+				//setupTerrain.instructions.insert(pos1, nodeAdd);
+
 			}
 			else
-				AdvancedRocketry.logger.severe("ASM injection into EntityPlayer.mountEntity FAILED!");
+				AdvancedRocketry.logger.fatal("ASM injection into RenderGlobal.setupTerrain FAILED!");
 
 			return finishInjection(cn);
 		}
 
-		if(changedName.equals(getName(CLASS_KEY_ENTITY_ITEM))) {
+		//Inserts a hook to register inventories with rockets so they can be accessed from the UI
+		//By default in most cases inventories check for distance and rockets have their own coordinate system.
+		if(changedName.equals(getName(CLASS_KEY_ENTITY_PLAYER_MP))) {
+			ClassNode cn = startInjection(bytes);
+			MethodNode onUpdate = getMethod(cn, getName(METHOD_KEY_ONUPDATE), "()V");
+
+			if(onUpdate != null) {
+				final InsnList nodeAdd = new InsnList();
+				LabelNode label = new LabelNode();
+				AbstractInsnNode pos;
+				AbstractInsnNode ain = null;
+				int numSpec = 1;
+				int numAload = 7;
+
+				for(int i = 0; i < onUpdate.instructions.size(); i++) {
+					ain = onUpdate.instructions.get(i);
+					if(ain.getOpcode() == Opcodes.INVOKEVIRTUAL && numSpec-- == 0) {
+
+						while( i < onUpdate.instructions.size() ) {
+							pos = onUpdate.instructions.get(i++);
+							if( pos.getOpcode()  == Opcodes.ALOAD && numAload-- == 0 ) {
+								label = (LabelNode)pos.getPrevious().getPrevious().getPrevious();
+								break;
+							}
+						}
+						break;
+					}
+				}
+
+
+				nodeAdd.add(new VarInsnNode(Opcodes.ALOAD, 0));
+				nodeAdd.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "zmaster587/advancedRocketry/util/RocketInventoryHelper", "allowAccess", "(Ljava/lang/Object;)Z", false));
+				nodeAdd.add(new JumpInsnNode(Opcodes.IFEQ, label));
+
+				onUpdate.instructions.insert(ain, nodeAdd);
+
+				//onUpdate.instructions.insertBefore(pos, label);
+
+			}
+			else
+				AdvancedRocketry.logger.fatal("ASM injection into EntityPlayerMP.onupdate FAILED!");
+			return finishInjection(cn);
+		}
+
+		//Inserts a hook to register inventories with rockets so they can be accessed from the UI
+		//By default in most cases inventories check for distance and rockets have their own coordinate system.
+		if(changedName.equals(getName(CLASS_KEY_ENTITY_PLAYER))) {
+			ClassNode cn = startInjection(bytes);
+			MethodNode onUpdate = getMethod(cn, getName(METHOD_KEY_ONUPDATE), "()V");
+			if(onUpdate != null) {
+				final InsnList nodeAdd = new InsnList();
+				LabelNode label = new LabelNode();
+				AbstractInsnNode pos;
+				AbstractInsnNode ain = null;
+				int numSpec = 1;
+				int numAload = 7;
+
+				for(int i = 0; i < onUpdate.instructions.size(); i++) {
+					ain = onUpdate.instructions.get(i);
+					if(ain.getOpcode() == Opcodes.INVOKESPECIAL && numSpec-- == 0) {
+
+						while( i < onUpdate.instructions.size() ) {
+							pos = onUpdate.instructions.get(i++);
+							if( pos.getOpcode()  == Opcodes.ALOAD && numAload-- == 0 ) {
+								label = (LabelNode)pos.getPrevious().getPrevious().getPrevious();
+								break;
+							}
+
+						}
+						break;
+					}
+				}
+
+
+				nodeAdd.add(new VarInsnNode(Opcodes.ALOAD, 0));
+				//nodeAdd.add(new TypeInsnNode(Opcodes.CHECKCAST, "java/lang/Object"));
+				nodeAdd.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "zmaster587/advancedRocketry/util/RocketInventoryHelper", "allowAccess", "(Ljava/lang/Object;)Z", false));
+				nodeAdd.add(new JumpInsnNode(Opcodes.IFEQ, label));
+
+				onUpdate.instructions.insert(ain, nodeAdd);
+
+				//onUpdate.instructions.insertBefore(pos, label);
+
+			}
+			else
+				AdvancedRocketry.logger.fatal("ASM injection into EntityPlayer.onupdate FAILED!");
+
+
+			return finishInjection(cn);
+		}
+
+		//Allows things OTHER than living things to be affected by gravity
+		//Why isn't this handled by the onEntityUpdate call by default?
+		//Regardless, NONE of minecart || TNT || sand actually every _call_ their super, so we need to ASM all three
+		if(changedName.equals(getName(CLASS_KEY_ENTITY)) || changedName.equals(getName(CLASS_KEY_ENTITY_FALLING_BLOCK)) || changedName.equals(getName(CLASS_KEY_ENTITY_MINECART)) || changedName.equals(getName(CLASS_KEY_ENTITY_TNT))) {
 			ClassNode cn = startInjection(bytes);
 
 			MethodNode onUpdate = getMethod(cn, getName(METHOD_KEY_ONUPDATE), "()V");
 
 			if(onUpdate != null) {
 				final InsnList nodeAdd = new InsnList();
-				AbstractInsnNode pos = null;
-				List<AbstractInsnNode> removeNodes = new LinkedList<AbstractInsnNode>();
-				int numALoadsInARow = 0;
-				int firstALoadIndex = 0;
+				AbstractInsnNode pos;
+				int lastReturnIndex = 0;
 				AbstractInsnNode ain;
 
-				for(int i = onUpdate.instructions.size() - 1; i >= 0; i--) {
+				for(int i = 0; i <  onUpdate.instructions.size() ; i++) {
 					ain = onUpdate.instructions.get(i);
 					if(ain.getOpcode() == Opcodes.ALOAD) {
-						if(numALoadsInARow == 0)
-							firstALoadIndex = i;
-						numALoadsInARow++;
-						if(numALoadsInARow == 3) {
-							pos = ain;
-							break;
-						}
-					}
-					else
-						numALoadsInARow = 0;
-				}
-				int i = firstALoadIndex;
-				while((ain = onUpdate.instructions.get(--i)).getOpcode() != Opcodes.PUTFIELD);
-
-
-				while((ain = onUpdate.instructions.get(i--)).getOpcode() != Opcodes.ALOAD) {
-					removeNodes.add(ain);
-				}
-				removeNodes.add(ain);
-
-				pos = onUpdate.instructions.get(i);
-
-				for(AbstractInsnNode node : removeNodes)
-					onUpdate.instructions.remove(node);
-
-				nodeAdd.add(new VarInsnNode(Opcodes.ALOAD, 0));
-				nodeAdd.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "zmaster587/advancedRocketry/util/GravityHandler", "applyGravity", "(L" + getName(CLASS_KEY_ENTITY) + ";)V", false));
-				onUpdate.instructions.insert(pos, nodeAdd);
-			}
-
-			return finishInjection(cn);
-		}
-
-		if(changedName.equals(getName(CLASS_KEY_ENTITYLIVEINGBASE))) {
-			ClassNode cn = startInjection(bytes);
-
-			MethodNode moveEntityWithHeading = getMethod(cn, getName(METHOD_KEY_MOVEENTITYWITHHEADING), "(FF)V");
-
-			if(moveEntityWithHeading != null) {
-				final InsnList nodeAdd = new InsnList();
-				AbstractInsnNode pos = null;
-				List<AbstractInsnNode> removeNodes = new LinkedList<AbstractInsnNode>();
-
-				for(int i = moveEntityWithHeading.instructions.size() - 1; i >= 0; i--) {
-					AbstractInsnNode ain = moveEntityWithHeading.instructions.get(i);
-					if(ain.getOpcode() == Opcodes.GOTO) {
-						pos = ain;
-
-
-						while(moveEntityWithHeading.instructions.get(++i).getOpcode() != Opcodes.ALOAD);
-
-						pos = moveEntityWithHeading.instructions.get(i-1);
-						ain = moveEntityWithHeading.instructions.get(i);
-						do {
-							moveEntityWithHeading.instructions.remove(ain);
-							removeNodes.add(ain);
-							ain = moveEntityWithHeading.instructions.get(i);
-						} while(ain.getOpcode() != Opcodes.PUTFIELD);
-
-						moveEntityWithHeading.instructions.remove(ain);
+						lastReturnIndex = i;
 
 						break;
 					}
 				}
 
+				pos = onUpdate.instructions.get(lastReturnIndex);
+
 				nodeAdd.add(new VarInsnNode(Opcodes.ALOAD, 0));
 				nodeAdd.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "zmaster587/advancedRocketry/util/GravityHandler", "applyGravity", "(L" + getName(CLASS_KEY_ENTITY) + ";)V", false));
-				moveEntityWithHeading.instructions.insert(pos, nodeAdd);
+				onUpdate.instructions.insertBefore(pos, nodeAdd);
 			}
 
 			return finishInjection(cn);
@@ -720,18 +763,18 @@ public class ClassTransformer implements IClassTransformer {
 		//On block change insert a call to the atmosphere handler
 		if(changedName.equals(getName(CLASS_KEY_WORLD))) {
 			ClassNode cn = startInjection(bytes);
-			MethodNode setBlockMethod = getMethod(cn, getName(METHOD_KEY_SETBLOCK), "(IIIL" + getName(CLASS_KEY_BLOCK) +";II)Z");
-			MethodNode setBlockMetaMethod = getMethod(cn, getName(METHOD_KEY_SETBLOCKMETADATAWITHNOTIFY), "(IIIII)Z");
+			MethodNode setBlockStateMethod = getMethod(cn, getName(METHOD_KEY_SETBLOCKSTATE), "(L" + getName(CLASS_KEY_BLOCKPOS) + ";L" + getName(CLASS_KEY_IBLOCKSTATE) +";I)Z");
+			//MethodNode setBlockMetaMethod = getMethod(cn, getName(METHOD_KEY_SETBLOCKMETADATAWITHNOTIFY), "(IIIII)Z");
 
-			if(setBlockMethod != null) {
+			if(setBlockStateMethod != null) {
 
 				final InsnList nodeAdd = new InsnList();
 				AbstractInsnNode pos = null;
-				int fmulNum = 2;
+				//int fmulNum = 2;
 
-				for (int i = setBlockMethod.instructions.size()-1; i >= 0 ; i--) {
-					AbstractInsnNode ain = setBlockMethod.instructions.get(i);
-					if (ain.getOpcode() == Opcodes.IRETURN && --fmulNum == 0) {
+				for (int i = setBlockStateMethod.instructions.size()-1; i >= 0 ; i--) {
+					AbstractInsnNode ain = setBlockStateMethod.instructions.get(i);
+					if (ain.getOpcode() == Opcodes.IRETURN) {
 						pos = ain;
 						break;
 					}
@@ -739,41 +782,13 @@ public class ClassTransformer implements IClassTransformer {
 
 
 				nodeAdd.add(new VarInsnNode(Opcodes.ALOAD, 0));
-				nodeAdd.add(new VarInsnNode(Opcodes.ILOAD, 1));
-				nodeAdd.add(new VarInsnNode(Opcodes.ILOAD, 2));
-				nodeAdd.add(new VarInsnNode(Opcodes.ILOAD, 3));
-				nodeAdd.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "zmaster587/advancedRocketry/atmosphere/AtmosphereHandler", "onBlockChange", "(L" + getName(CLASS_KEY_WORLD) + ";III)V", false));
+				nodeAdd.add(new VarInsnNode(Opcodes.ALOAD, 1));
+				nodeAdd.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "zmaster587/advancedRocketry/atmosphere/AtmosphereHandler", "onBlockChange", "(L" + getName(CLASS_KEY_WORLD) + ";L" + getName(CLASS_KEY_BLOCKPOS) + ";)V", false));
 
-				setBlockMethod.instructions.insertBefore(pos, nodeAdd);
+				setBlockStateMethod.instructions.insertBefore(pos, nodeAdd);
 			}
 			else
-				AdvancedRocketry.logger.severe("ASM injection into World.setBlock FAILED!");
-
-			if(setBlockMetaMethod != null) {
-
-				final InsnList nodeAdd = new InsnList();
-				AbstractInsnNode pos = null;
-				int fmulNum = 2;
-
-				for (int i = setBlockMetaMethod.instructions.size()-1; i >= 0 ; i--) {
-					AbstractInsnNode ain = setBlockMetaMethod.instructions.get(i);
-					if (ain.getOpcode() == Opcodes.IRETURN && --fmulNum == 0) {
-						pos = ain;
-						break;
-					}
-				}
-
-
-				nodeAdd.add(new VarInsnNode(Opcodes.ALOAD, 0)); //this
-				nodeAdd.add(new VarInsnNode(Opcodes.ILOAD, 1)); //x
-				nodeAdd.add(new VarInsnNode(Opcodes.ILOAD, 2)); //y
-				nodeAdd.add(new VarInsnNode(Opcodes.ILOAD, 3)); //z
-				nodeAdd.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "zmaster587/advancedRocketry/atmosphere/AtmosphereHandler", "onBlockMetaChange", "(L" + getName(CLASS_KEY_WORLD) + ";III)V", false));
-
-				setBlockMetaMethod.instructions.insertBefore(pos, nodeAdd);
-			}			
-			else
-				AdvancedRocketry.logger.severe("ASM injection into World.setBlockMeta FAILED!");
+				AdvancedRocketry.logger.fatal("ASM injection into World.setBlock FAILED!");
 
 			return finishInjection(cn);
 		}

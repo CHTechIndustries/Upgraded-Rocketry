@@ -1,43 +1,60 @@
 package zmaster587.advancedRocketry.item;
 
-import java.util.List;
-
+import com.mojang.realmsclient.gui.ChatFormatting;
+import net.minecraft.client.util.ITooltipFlag;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.world.World;
 import zmaster587.advancedRocketry.api.SatelliteRegistry;
 import zmaster587.advancedRocketry.api.satellite.SatelliteBase;
 import zmaster587.advancedRocketry.api.satellite.SatelliteProperties;
+import zmaster587.advancedRocketry.dimension.DimensionManager;
+import zmaster587.libVulpes.LibVulpes;
+import zmaster587.libVulpes.util.EmbeddedInventory;
 import zmaster587.libVulpes.util.ZUtils;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.EnumChatFormatting;
+
+import javax.annotation.Nonnull;
+import java.util.List;
 
 public class ItemSatellite extends ItemIdWithName {
 
-	public SatelliteProperties getSatellite(ItemStack stack) {
+	public EmbeddedInventory readInvFromNBT(@Nonnull ItemStack stackIn) {
+		EmbeddedInventory inv = new EmbeddedInventory(7);
+		if(!stackIn.hasTagCompound() || !stackIn.getTagCompound().hasKey("inv"))
+			return inv;
 
-		if(stack.hasTagCompound()) {
-			NBTTagCompound nbt = stack.getTagCompound();
-
-			//TODO: check
-			SatelliteProperties satellite = new SatelliteProperties();
-			satellite.readFromNBT(nbt);
-
-			return satellite;
-		}
-		return null;
+		inv.readFromNBT(stackIn.getTagCompound().getCompoundTag("inv"));
+		return inv;
 	}
 
-	public void setSatellite(ItemStack stack, SatelliteProperties satellite) {
+	public void writeInvToNBT(@Nonnull ItemStack stackIn, EmbeddedInventory inv) {
+		NBTTagCompound nbt = new NBTTagCompound();
+		if(!stackIn.hasTagCompound())
+			stackIn.setTagCompound(nbt);
+		else
+			nbt = stackIn.getTagCompound();
 
-		SatelliteBase satellite2 = SatelliteRegistry.getSatallite(satellite.getSatelliteType());
-		if(satellite2 != null) {
-			NBTTagCompound nbt = new NBTTagCompound();
+		NBTTagCompound tag = new NBTTagCompound(); 
+		inv.writeToNBT(tag);
+		nbt.setTag("inv", tag);
+	}
 
-			satellite.writeToNBT(nbt);
+	public void setSatellite(@Nonnull ItemStack stack, SatelliteProperties properties) {
+
+		SatelliteBase testSatellite = SatelliteRegistry.getNewSatellite(properties.getSatelliteType());
+		if(testSatellite != null) {
+			//Check to see if we have some NBT already, if so, add to it
+			NBTTagCompound nbt;
+			if(stack.hasTagCompound())
+				nbt = stack.getTagCompound();
+			else
+				nbt = new NBTTagCompound();
+
+			//Stick the properties into the NBT of the stack
+			properties.writeToNBT(nbt);
 			stack.setTagCompound(nbt);
 
-			setName(stack, satellite2.getName());
+			setName(stack, testSatellite.getName());
 		}
 		else
 			stack.setTagCompound(null);
@@ -46,32 +63,38 @@ public class ItemSatellite extends ItemIdWithName {
 
 
 	@Override
-	public void addInformation(ItemStack stack, EntityPlayer player,
-			List list, boolean bool) {
+	public void addInformation(@Nonnull ItemStack stack, World player, List<String> list, ITooltipFlag bool) {
+		if (stack.getItem() instanceof ItemSatellite && SatelliteRegistry.getSatelliteProperties(stack) != null) {
+			SatelliteProperties properties = SatelliteRegistry.getSatelliteProperties(stack);
 
-		SatelliteProperties properties = getSatellite(stack);
-
-		if(properties != null) {
 			int dataStorage, powerGeneration, powerStorage;
 
 			list.add(getName(stack));
 			list.add("ID: " + properties.getId());
 
-			if( (powerStorage = properties.getPowerStorage()) > 0)
-				list.add("Power Storage: " + powerStorage);
-			else
-				list.add(EnumChatFormatting.RED + "No Power Storage");
+			if (SatelliteProperties.Property.BATTERY.isOfType(properties.getPropertyFlag())) {
+				if ((powerStorage = properties.getPowerStorage()) > 0)
+					list.add(LibVulpes.proxy.getLocalizedString("msg.itemsatellite.pwr") + powerStorage);
+				else
+					list.add(ChatFormatting.RED + LibVulpes.proxy.getLocalizedString("msg.itemsatellite.nopwr"));
+			}
 
-			if( ( powerGeneration=properties.getPowerGeneration() ) > 0)
-				list.add("Power Generation: " + powerGeneration);
-			else
-				list.add(EnumChatFormatting.RED + "No Power Generation!");
+			if (SatelliteProperties.Property.POWER_GEN.isOfType(properties.getPropertyFlag())) {
+				if ((powerGeneration = properties.getPowerGeneration()) > 0)
+					list.add(LibVulpes.proxy.getLocalizedString("msg.itemsatellite.pwrgen") + powerGeneration);
+				else
+					list.add(ChatFormatting.RED + LibVulpes.proxy.getLocalizedString("msg.itemsatellite.nopwrgen"));
+			}
 
-			if( (dataStorage = properties.getMaxDataStorage()) > 0 ) 
-				list.add("Data Storage: " + ZUtils.formatNumber(dataStorage));
-			else
-				list.add(EnumChatFormatting.YELLOW + "No Data Storage!");
-
+			if (SatelliteProperties.Property.DATA.isOfType(properties.getPropertyFlag())) {
+				if ((dataStorage = properties.getMaxDataStorage()) > 0)
+					list.add(LibVulpes.proxy.getLocalizedString("msg.itemsatellite.data") + ZUtils.formatNumber(dataStorage));
+				else
+					list.add(ChatFormatting.YELLOW + LibVulpes.proxy.getLocalizedString("msg.itemsatellite.nodata"));
+			}
+		} else {
+			list.add(ChatFormatting.RED + LibVulpes.proxy.getLocalizedString("msg.itemsatellite.empty"));
 		}
+
 	}
 }

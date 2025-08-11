@@ -1,20 +1,21 @@
 package zmaster587.advancedRocketry.network;
 
 import io.netty.buffer.ByteBuf;
-
-import java.io.IOException;
-
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.PacketBuffer;
 import zmaster587.advancedRocketry.api.dimension.solar.StellarBody;
 import zmaster587.advancedRocketry.dimension.DimensionManager;
-import zmaster587.advancedRocketry.dimension.DimensionProperties;
+import zmaster587.libVulpes.network.BasePacket;
+
+import java.io.IOException;
 
 public class PacketStellarInfo extends BasePacket {
 	StellarBody star;
 	int starId;
+	NBTTagCompound nbt;
+	boolean removeStar;
 
 	public PacketStellarInfo() {}
 
@@ -30,52 +31,29 @@ public class PacketStellarInfo extends BasePacket {
 		out.writeBoolean(star == null);
 
 
-		star.writeToNBT(nbt);
-
-		PacketBuffer packetBuffer = new PacketBuffer(out);
-		//TODO: error handling
-		try {
-			packetBuffer.writeNBTTagCompoundToBuffer(nbt);
-		} catch (IOException e) {
-			e.printStackTrace();
+		if((star != null)) {
+			star.writeToNBT(nbt);
+			PacketBuffer packetBuffer = new PacketBuffer(out);
+			packetBuffer.writeCompoundTag(nbt);
 		}
-
 
 	}
 
 	@Override
 	public void readClient(ByteBuf in) {
 		PacketBuffer packetBuffer = new PacketBuffer(in);
-		NBTTagCompound nbt;
+
 		starId = in.readInt();
+		removeStar = in.readBoolean();
 
-		if(in.readBoolean())
-			if(DimensionManager.getInstance().isDimensionCreated(starId)) {
-				DimensionManager.getInstance().removeStar(starId);
+		if(!removeStar) {
+			try {
+				nbt = packetBuffer.readCompoundTag();
+			} catch (IOException e) {
+				e.printStackTrace();
+				nbt = null;
 			}
-			else {
-				//TODO: error handling
-				try {
-					nbt = packetBuffer.readNBTTagCompoundFromBuffer();
-
-				} catch (IOException e) {
-					e.printStackTrace();
-					return;
-				}
-
-				StellarBody star;
-
-				if(starId == 0) {
-					DimensionManager.getSol().readFromNBT(nbt);
-				}
-				else if((star = DimensionManager.getInstance().getStar(starId)) != null) {
-					star.readFromNBT(nbt);
-				} else {
-					star = new StellarBody();
-					star.readFromNBT(nbt);
-					DimensionManager.getInstance().addStar(star);
-				}
-			}
+		}
 	}
 
 	@Override
@@ -84,7 +62,24 @@ public class PacketStellarInfo extends BasePacket {
 	}
 
 	@Override
-	public void executeClient(EntityPlayer thePlayer) {}
+	public void executeClient(EntityPlayer thePlayer) {
+		StellarBody star;
+		
+		if(removeStar) {
+			if(DimensionManager.getInstance().isDimensionCreated(starId)) {
+				DimensionManager.getInstance().removeStar(starId);
+			}
+		}
+		else if(nbt != null) {
+			if((star = DimensionManager.getInstance().getStar(starId)) != null) {
+				star.readFromNBT(nbt);
+			} else {
+				star = new StellarBody();
+				star.readFromNBT(nbt);
+				DimensionManager.getInstance().addStar(star);
+			}
+		}
+	}
 
 	@Override
 	public void executeServer(EntityPlayerMP player) {}

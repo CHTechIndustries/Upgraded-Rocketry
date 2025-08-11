@@ -1,52 +1,31 @@
 package zmaster587.advancedRocketry.block;
 
-import net.minecraft.client.renderer.texture.IIconRegister;
-import net.minecraft.init.Blocks;
-import net.minecraft.util.IIcon;
-import zmaster587.advancedRocketry.api.IRocketEngine;
-import zmaster587.advancedRocketry.tile.TileModelRender;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
-import net.minecraft.tileentity.TileEntity;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import zmaster587.advancedRocketry.api.IRocketEngine;
+import zmaster587.libVulpes.block.BlockFullyRotatable;
 
-public class BlockRocketMotor extends Block implements IRocketEngine {
+import javax.annotation.Nonnull;
+
+public class BlockRocketMotor extends BlockFullyRotatable implements IRocketEngine {
 
 	public BlockRocketMotor(Material mat) {
 		super(mat);	
+		this.setDefaultState(this.getDefaultState().withProperty(FACING, EnumFacing.DOWN));
 	}
 	
-	//Futureproofing (ISBRHs being removed in 1.8) sadly now need a tile Entity just to render decent shapes
-	//Nope, ask the master of rendering fry in MinecraftForge you can use ISmartModel - Dark
-	@Override
-	public TileEntity createTileEntity(World world, int metadata) {
-		return new TileModelRender(TileModelRender.models.ROCKET.ordinal());
-	}
-	
-	@Override
-	public boolean hasTileEntity(int metadata) {
-		return true;
-	}
-	
-	@Override
-	@SideOnly(Side.CLIENT)
-	public boolean renderAsNormalBlock()
-	{
+	 @Override
+	public boolean isOpaqueCube(IBlockState state) {
 		return false;
 	}
 
 	@Override
-	public boolean canRenderInPass(int pass) {
-		return false;
-	}
-	
-	@Override
-	public boolean isOpaqueCube() {return false;}
-
-	@Override
-	public int getThrust(World world, int x, int y, int z) {
+	public int getThrust(World world, BlockPos pos) {
 		return 10;
 	}
 
@@ -54,18 +33,9 @@ public class BlockRocketMotor extends Block implements IRocketEngine {
 	public int getFuelConsumptionRate(World world, int x, int y, int z) {
 		return 1;
 	}
-
-	@SideOnly(Side.CLIENT)
 	@Override
-	public void registerBlockIcons(IIconRegister reg)
-	{
-		//Not needed
-	}
-
-	@SideOnly(Side.CLIENT)
-	@Override
-	public IIcon getIcon(int side, int meta)
-	{
-		return Blocks.iron_block.getIcon(side, meta);
+	public void onBlockPlacedBy(World world, BlockPos pos, IBlockState state, EntityLivingBase placer, @Nonnull ItemStack stack) {
+		
+		world.setBlockState(pos, state.withProperty(FACING, EnumFacing.DOWN));
 	}
 }

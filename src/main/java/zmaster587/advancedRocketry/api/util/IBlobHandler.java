@@ -1,8 +1,8 @@
 package zmaster587.advancedRocketry.api.util;
 
 import net.minecraft.world.World;
-import zmaster587.advancedRocketry.util.AreaBlob;
-import zmaster587.libVulpes.util.BlockPosition;
+import zmaster587.advancedRocketry.api.AreaBlob;
+import zmaster587.libVulpes.util.HashedBlockPosition;
 
 public interface IBlobHandler {
 	/* *
@@ -21,30 +21,33 @@ public interface IBlobHandler {
 	/**
 	 * @return true if a blob is allowed to form otherwise false
 	 */
-	public boolean canFormBlob();
+	boolean canFormBlob();
 	
 	
+	//Screw you too for changing it back
 	/**
-	 * Due to Minecraft's obf code we need a different method name than getWorldObj()
+	 * Due to Minecraft's obf code we need a different method name than getWorld()
 	 * @return
 	 */
-	public World getWorld();
+	World getWorldObj();
 	
 	/**
 	 * Called when two blobs of the same type overlap
 	 * @param blockPosition Position at which the overlap occurs
-	 * @param other areaBlob to Overlap
+	 * @param blob areaBlob to overlap
 	 * @return true if the two blobs are allowed to overlap, false if not
 	 */
-	public boolean canBlobsOverlap(BlockPosition blockPosition, AreaBlob blob);
+	boolean canBlobsOverlap(HashedBlockPosition blockPosition, AreaBlob blob);
 	
 	/**
 	 * @return the maximum distance an object can maintain a blob
 	 */
-	public int getMaxBlobRadius();
+	int getMaxBlobRadius();
 	
 	/**
 	 * @return the position to use as root
 	 */
-	public BlockPosition getRootPosition();
+	HashedBlockPosition getRootPosition();
+	
+	int getTraceDistance();
 }

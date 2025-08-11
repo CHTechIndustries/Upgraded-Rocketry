@@ -1,13 +1,12 @@
 package zmaster587.advancedRocketry.client.render;
 
+import org.lwjgl.BufferUtils;
+import org.lwjgl.opengl.GL11;
+import zmaster587.advancedRocketry.AdvancedRocketry;
+
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-
-import org.lwjgl.BufferUtils;
-import org.lwjgl.opengl.GL11;
-
-import zmaster587.advancedRocketry.AdvancedRocketry;
 
 public class ClientDynamicTexture {
 
@@ -48,7 +47,7 @@ public class ClientDynamicTexture {
 	 */
 	public void setPixel(int x, int y, int color) {
 		
-		ByteBuffer buffer = BufferUtils.createByteBuffer(image.getHeight() * image.getWidth() * BYTES_PER_PIXEL);;
+		ByteBuffer buffer = BufferUtils.createByteBuffer(image.getHeight() * image.getWidth() * BYTES_PER_PIXEL);
 		
 		GL11.glBindTexture(GL11.GL_TEXTURE_2D, getTextureId());
 		GL11.glGetTexImage(GL11.GL_TEXTURE_2D,0 , GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, buffer);
@@ -61,7 +60,7 @@ public class ClientDynamicTexture {
 	 * @return IntBuffer containing the pixels for the image
 	 */
 	public IntBuffer getByteBuffer() {
-		ByteBuffer buffer = BufferUtils.createByteBuffer(image.getHeight() * image.getWidth() * BYTES_PER_PIXEL);;
+		ByteBuffer buffer = BufferUtils.createByteBuffer(image.getHeight() * image.getWidth() * BYTES_PER_PIXEL);
 		
 		//GL11.glBindTexture(GL11.GL_TEXTURE_2D, getTextureId());
 		//GL11.glGetTexImage(GL11.GL_TEXTURE_2D,0 , GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, buffer);
@@ -90,7 +89,8 @@ public class ClientDynamicTexture {
 		try {
 			GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0, image.getWidth(), image.getHeight(), GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, buffer);
 		} catch(IllegalArgumentException e) {
-			AdvancedRocketry.logger.warning("Planet image generation FX failed!");
+			e.printStackTrace();
+			AdvancedRocketry.logger.warn("Planet image generation FX failed!");
 		}
 	}
 	

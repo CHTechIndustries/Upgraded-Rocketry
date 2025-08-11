@@ -1,15 +1,15 @@
 package zmaster587.advancedRocketry.world.type;
 
-import zmaster587.advancedRocketry.world.ChunkManagerPlanet;
-import zmaster587.advancedRocketry.world.ChunkProviderPlanet;
-import zmaster587.advancedRocketry.world.GenLayerBiomePlanet;
-import zmaster587.advancedRocketry.world.gen.GenLayerEdgeExtendedBiomes;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldType;
-import net.minecraft.world.biome.WorldChunkManager;
-import net.minecraft.world.chunk.IChunkProvider;
+import net.minecraft.world.biome.BiomeProvider;
+import net.minecraft.world.gen.ChunkGeneratorSettings;
+import net.minecraft.world.gen.IChunkGenerator;
 import net.minecraft.world.gen.layer.GenLayer;
 import net.minecraft.world.gen.layer.GenLayerZoom;
+import zmaster587.advancedRocketry.api.ARConfiguration;
+import zmaster587.advancedRocketry.world.ChunkProviderPlanet;
+import zmaster587.advancedRocketry.world.GenLayerBiomePlanet;
 
 public class WorldTypePlanetGen extends WorldType {
 
@@ -18,18 +18,20 @@ public class WorldTypePlanetGen extends WorldType {
 	}
 
 	@Override
-	public WorldChunkManager getChunkManager(World world)
+	public BiomeProvider getBiomeProvider(World world)
 	{
-		return new ChunkManagerPlanet(world); //new WorldChunkManager(world);//
+		return null;//new ChunkManagerPlanet(world); //new WorldChunkManager(world);//
 	}
 
 	@Override
-	public IChunkProvider getChunkGenerator(World world, String generatorOptions) {
-		return new ChunkProviderPlanet(world, world.getSeed(), false);
+	public IChunkGenerator getChunkGenerator(World world, String generatorOptions) {
+		return new ChunkProviderPlanet(world, world.getSeed(), ARConfiguration.getCurrentConfig().generateVanillaStructures, generatorOptions);
 	}
 	
+	
+	
 	@Override
-	public boolean getCanBeCreated() {
+	public boolean canBeCreated() {
 		return false;
 	}
 	
@@ -41,13 +43,14 @@ public class WorldTypePlanetGen extends WorldType {
 	 * @return A GenLayer that will return ints representing the Biomes to be generated, see GenLayerBiome
 	 */
 	@Override
-	public GenLayer getBiomeLayer(long worldSeed, GenLayer parentLayer)
+	public GenLayer getBiomeLayer(long worldSeed, GenLayer parentLayer, ChunkGeneratorSettings chunkProviderSettings)
 	{
 		//return super.getBiomeLayer(worldSeed, parentLayer);
 		GenLayer ret = new GenLayerBiomePlanet(200L, parentLayer, this);
 
 		ret = GenLayerZoom.magnify(1000L, ret, 2);
-		ret = new GenLayerEdgeExtendedBiomes(1000L, ret);
+		//REKT with random ocean
+		//ret = new GenLayerEdge(1000L, ret, Mode.SPECIAL);
 		return ret;
 	}
 

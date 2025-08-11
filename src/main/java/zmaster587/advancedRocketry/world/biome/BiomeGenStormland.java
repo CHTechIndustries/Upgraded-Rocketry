@@ -1,52 +1,49 @@
 package zmaster587.advancedRocketry.world.biome;
 
-import java.util.Random;
-
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
+import net.minecraft.entity.monster.EntityCreeper;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+import net.minecraft.world.biome.Biome;
+import net.minecraft.world.gen.feature.WorldGenAbstractTree;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 import zmaster587.advancedRocketry.api.AdvancedRocketryBlocks;
 import zmaster587.advancedRocketry.world.gen.WorldGenCharredTree;
-import zmaster587.advancedRocketry.world.gen.WorldGenFlowerLike;
-import net.minecraft.entity.monster.EntityCreeper;
-import net.minecraft.world.World;
-import net.minecraft.world.biome.BiomeGenBase;
-import net.minecraft.world.gen.feature.WorldGenAbstractTree;
+import zmaster587.advancedRocketry.world.gen.WorldGenElectricMushroom;
 
-public class BiomeGenStormland extends BiomeGenBase {
+import java.util.Random;
+
+public class BiomeGenStormland extends Biome {
 
 	WorldGenAbstractTree charTree = new WorldGenCharredTree(false, 6);
 	
-	public BiomeGenStormland(int biomeId, boolean register) {
-		super(biomeId, register);
-		rootHeight=1f;
-		heightVariation=0.1f;
-		rainfall = 0.9f;
-		temperature = 0.9f;
+	public BiomeGenStormland(BiomeProperties properties) {
+		super(properties);
+		
 		spawnableMonsterList.clear();
-		this.spawnableMonsterList.add(new BiomeGenBase.SpawnListEntry(EntityCreeper.class, 5, 1, 1));
+		this.spawnableMonsterList.add(new Biome.SpawnListEntry(EntityCreeper.class, 5, 1, 1));
 		this.spawnableCreatureList.clear();
-		this.theBiomeDecorator.generateLakes=false;
-		this.theBiomeDecorator.flowersPerChunk=0;
-		this.theBiomeDecorator.grassPerChunk=0;
-		this.theBiomeDecorator.treesPerChunk=6;
-		this.biomeName="Stormland";
+		this.decorator.generateFalls=false;
+		this.decorator.flowersPerChunk=0;
+		this.decorator.grassPerChunk=0;
+		this.decorator.treesPerChunk=6;
 	}
 
 	@Override
-	public void decorate(World world, Random rand, int chunkX,
-			int chunkZ) {
-		super.decorate(world, rand, chunkX, chunkZ);
+	public void decorate(World worldIn, Random rand, BlockPos pos) {
+		super.decorate(worldIn, rand, pos);
 		
-        int x = chunkX + rand.nextInt(16);
+        int x = pos.getX() + rand.nextInt(16);
         int y = rand.nextInt(28) + 80;
-        int z = chunkZ + rand.nextInt(16);
-		(new WorldGenFlowerLike(AdvancedRocketryBlocks.blockElectricMushroom)).generate(world, rand, x, y, z);
+        int z = pos.getZ() + rand.nextInt(16);
+		(new WorldGenElectricMushroom(AdvancedRocketryBlocks.blockElectricMushroom)).generate(worldIn, rand, new BlockPos(x, y, z));
 	}
+	
 	
 	
 	@Override
 	public float getSpawningChance() {
-		return 1.0f;
+		return 0f; //Nothing spawns
 	}
 	
 	
@@ -58,15 +55,12 @@ public class BiomeGenStormland extends BiomeGenBase {
 	}
 	
 	@Override
-	public WorldGenAbstractTree func_150567_a(Random p_150567_1_)
-	{
+	public WorldGenAbstractTree getRandomTreeFeature(Random rand) {
 		return charTree;
 	}
 	
-	
 	@Override
-	public int getBiomeGrassColor(int p_150558_1_, int p_150558_2_,
-			int p_150558_3_) {
-		return 0x202020;
+	public int getModdedBiomeGrassColor(int original) {
+		return super.getModdedBiomeGrassColor(0x202020);
 	}
 }

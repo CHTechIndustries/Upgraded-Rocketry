@@ -1,43 +1,46 @@
 package zmaster587.advancedRocketry.tile.multiblock;
 
-import net.minecraft.block.Block;
-import net.minecraft.init.Blocks;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.AxisAlignedBB;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
-import net.minecraftforge.oredict.OreDictionary;
+import zmaster587.advancedRocketry.api.ARConfiguration;
 import zmaster587.advancedRocketry.api.AdvancedRocketryBlocks;
-import zmaster587.advancedRocketry.api.Configuration;
-import zmaster587.advancedRocketry.api.material.MaterialRegistry;
 import zmaster587.advancedRocketry.api.stations.ISpaceObject;
-import zmaster587.advancedRocketry.api.stations.SpaceObjectManager;
-import zmaster587.advancedRocketry.stations.SpaceObject;
+import zmaster587.advancedRocketry.stations.SpaceObjectManager;
+import zmaster587.advancedRocketry.stations.SpaceStationObject;
+import zmaster587.libVulpes.api.LibVulpesBlocks;
 import zmaster587.libVulpes.block.BlockMeta;
+import zmaster587.libVulpes.tile.multiblock.TileMultiBlock;
+import zmaster587.libVulpes.util.ZUtils;
+
+import javax.annotation.Nonnull;
 
 public class TileWarpCore extends TileMultiBlock {
-	private SpaceObject station;
+	private SpaceStationObject station;
 
 	public static final Object[][][] structure = { 
-		{{"blockTitanium", "blockTitanium", "blockTitanium"},
-			{"blockTitanium", 'I', "blockTitanium"},
-			{"blockTitanium", "blockTitanium", "blockTitanium"}},
+		{{"blockWarpCoreRim", "blockWarpCoreRim", "blockWarpCoreRim"},
+			{"blockWarpCoreRim", 'I', "blockWarpCoreRim"},
+			{"blockWarpCoreRim", "blockWarpCoreRim", "blockWarpCoreRim"}},
 
-			{{null, new BlockMeta(AdvancedRocketryBlocks.blockStructureBlock), null},
-				{new BlockMeta(AdvancedRocketryBlocks.blockStructureBlock), new BlockMeta(Blocks.gold_block), new BlockMeta(AdvancedRocketryBlocks.blockStructureBlock)},
-				{null, new BlockMeta(AdvancedRocketryBlocks.blockStructureBlock), null}},
+			{{null, new BlockMeta(LibVulpesBlocks.blockStructureBlock), null},
+				{new BlockMeta(LibVulpesBlocks.blockStructureBlock), "blockWarpCoreCore", new BlockMeta(LibVulpesBlocks.blockStructureBlock)},
+				{null, new BlockMeta(LibVulpesBlocks.blockStructureBlock), null}},
 
-				{{"blockTitanium", 'c', "blockTitanium"}, 
-					{"blockTitanium", new BlockMeta(Blocks.gold_block), "blockTitanium"},
-					{"blockTitanium", "blockTitanium", "blockTitanium"}},
+				{{"blockWarpCoreRim", 'c', "blockWarpCoreRim"},
+					{"blockWarpCoreRim", "blockWarpCoreCore", "blockWarpCoreRim"},
+					{"blockWarpCoreRim", "blockWarpCoreRim", "blockWarpCoreRim"}},
 
 	};
 
-	private SpaceObject getSpaceObject() {
-		if(station == null && worldObj.provider.dimensionId == Configuration.spaceDimId) {
-			ISpaceObject object = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(xCoord, zCoord);
-			if(object instanceof SpaceObject)
-				station = (SpaceObject) object;
+	private SpaceStationObject getSpaceObject() {
+		if(station == null && world.provider.getDimension() == ARConfiguration.getCurrentConfig().spaceDimId) {
+			ISpaceObject spaceObject = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(pos);
+			if(spaceObject instanceof SpaceStationObject)
+				station = (SpaceStationObject) spaceObject;
 		}
 		return station;
 	}
@@ -48,34 +51,33 @@ public class TileWarpCore extends TileMultiBlock {
 	}
 
 	@Override
-	public boolean shouldHideBlock(World world, int x, int y, int z, Block tile) {
-		return x == xCoord && y == yCoord && z == zCoord;
+	public boolean shouldHideBlock(World world, BlockPos pos, IBlockState tile) {
+		return pos.compareTo(this.pos) == 0;
 	}
+	
 	
 	@Override
 	public void onInventoryUpdated() {
 		//Needs completion
 		if(itemInPorts.isEmpty() /*&& !worldObj.isRemote*/) {
-			attemptCompleteStructure();
+			attemptCompleteStructure(world.getBlockState(pos));
 		}
 		
-		if(getSpaceObject() == null || getSpaceObject().getFuelAmount() == getSpaceObject().getMaxFuelAmount())
+		if(getSpaceObject() == null || (getSpaceObject().getMaxFuelAmount() - getSpaceObject().getFuelAmount()) < ARConfiguration.getCurrentConfig().fuelPointsPerDilithium)
 			return;
 		for(IInventory inv : itemInPorts) {
 			for(int i = 0; i < inv.getSizeInventory(); i++) {
-				ItemStack stack = inv.getStackInSlot(i);
+				ItemStack stack = inv.getStackInSlot(i).copy();
+				stack.setCount(1);
 				int amt = 0;
-				if(stack != null && OreDictionary.itemMatches(MaterialRegistry.getItemStackFromMaterialAndType(MaterialRegistry.Materials.DILITHIUM, MaterialRegistry.AllowedProducts.CRYSTAL), stack, false)) {
-					int stackSize = stack.stackSize;
-					if(!worldObj.isRemote)
-						amt = getSpaceObject().addFuel(Configuration.fuelPointsPerDilithium*stack.stackSize);
-					else
-						amt = Math.min(getSpaceObject().getFuelAmount() + 10*stack.stackSize, getSpaceObject().getMaxFuelAmount()) - getSpaceObject().getFuelAmount();//
-					inv.decrStackSize(i, amt/10);
+				if(!stack.isEmpty() && ZUtils.isItemInOreDict(stack, "gemDilithium")) {
+					if(!world.isRemote)
+						amt = getSpaceObject().addFuel(ARConfiguration.getCurrentConfig().fuelPointsPerDilithium);
+					inv.decrStackSize(i, amt/ARConfiguration.getCurrentConfig().fuelPointsPerDilithium);
 					inv.markDirty();
 					
 					//If full
-					if(stackSize/10 != amt)
+					if(getSpaceObject().getMaxFuelAmount() - getSpaceObject().getFuelAmount() < ARConfiguration.getCurrentConfig().fuelPointsPerDilithium)
 						return;
 				}
 			}
@@ -84,12 +86,14 @@ public class TileWarpCore extends TileMultiBlock {
 
 	@Override
 	public String getMachineName() {
-		return "tile.warpCore.name";
+		return AdvancedRocketryBlocks.blockWarpCore.getLocalizedName();
 	}
 	
 	@Override
+	@Nonnull
 	public AxisAlignedBB getRenderBoundingBox() {
-		return AxisAlignedBB.getBoundingBox(xCoord -2,yCoord -2, zCoord -2, xCoord + 2, yCoord + 2, zCoord + 2);
+		
+		return new AxisAlignedBB(pos.add(-2,-2,-2),pos.add(2,2,2));
 	}
 
 }

@@ -1,13 +1,15 @@
 package zmaster587.advancedRocketry.util;
 
-import java.util.List;
-
 import net.minecraft.item.ItemStack;
 
+import javax.annotation.Nonnull;
+import java.util.List;
+
 public interface ITilePlanetSystemSelectable {
-	public ItemStack getChipWithId(int id);
+	@Nonnull
+	ItemStack getChipWithId(int id);
 	
-	public void setSelectedPlanetId(int id);
+	void setSelectedPlanetId(int id);
 	
-	public List<Integer> getVisiblePlanets();
+	List<Integer> getVisiblePlanets();
 }

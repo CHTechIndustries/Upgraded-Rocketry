@@ -1,38 +1,40 @@
 package zmaster587.advancedRocketry.client.render.multiblocks;
 
-import java.util.List;
-
-import org.lwjgl.opengl.GL11;
-
-import zmaster587.advancedRocketry.tile.multiblock.TileMultiblockMachine;
-import zmaster587.libVulpes.block.RotatableBlock;
-import net.minecraft.client.renderer.OpenGlHelper;
-import net.minecraft.client.renderer.entity.RenderItem;
-import net.minecraft.client.renderer.entity.RenderManager;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.EnumFacing;
 import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.client.model.AdvancedModelLoader;
-import net.minecraftforge.client.model.IModelCustom;
-import net.minecraftforge.common.util.ForgeDirection;
+import org.lwjgl.opengl.GL11;
+import zmaster587.advancedRocketry.backwardCompat.ModelFormatException;
+import zmaster587.advancedRocketry.backwardCompat.WavefrontObject;
+import zmaster587.libVulpes.block.RotatableBlock;
+import zmaster587.libVulpes.tile.multiblock.TileMultiblockMachine;
+
+import java.util.List;
 
 public class RendererCrystallizer extends TileEntitySpecialRenderer {
 
-	IModelCustom model = AdvancedModelLoader.loadModel(new ResourceLocation("advancedrocketry:models/crystallizer.obj"));
+	WavefrontObject model;
 
-	ResourceLocation texture = new ResourceLocation("advancedrocketry:textures/models/crystallizer.png");
+	ResourceLocation texture = new ResourceLocation("advancedrocketry:textures/models/crystalliser.png");
 
-	private final RenderItem dummyItem = new RenderItem();
 
 	public RendererCrystallizer() {
-		dummyItem.setRenderManager(RenderManager.instance);
+
+		try {
+			model =  new WavefrontObject(new ResourceLocation("advancedrocketry:models/crystalliser.obj"));
+		} catch (ModelFormatException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	@Override
-	public void renderTileEntityAt(TileEntity tile, double x,
-			double y, double z, float f) {
+	public void render(TileEntity tile, double x,
+			double y, double z, float f,  int destroyStage, float a) {
 		TileMultiblockMachine multiBlockTile = (TileMultiblockMachine)tile;
 
 		if(!multiBlockTile.canRender())
@@ -40,16 +42,10 @@ public class RendererCrystallizer extends TileEntitySpecialRenderer {
 
 		GL11.glPushMatrix();
 
-		//Initial setup
-		int bright = tile.getWorldObj().getLightBrightnessForSkyBlocks(tile.xCoord, tile.yCoord + 1, tile.zCoord,0);
-		int brightX = bright % 65536;
-		int brightY = bright / 65536;
-		OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, brightX, brightY);
-
 		//Rotate and move the model into position
 		GL11.glTranslated(x+.5f, y, z + 0.5f);
-		ForgeDirection front = RotatableBlock.getFront(tile.getBlockMetadata());
-		GL11.glRotatef((front.offsetX == 1 ? 180 : 0) + front.offsetZ*90f, 0, 1, 0);
+		EnumFacing front = RotatableBlock.getFront(tile.getWorld().getBlockState(tile.getPos())); //tile.getWorldObj().getBlockMetadata(tile.xCoord, tile.yCoord, tile.zCoord));
+		GL11.glRotatef((front.getFrontOffsetX() == 1 ? 180 : 0) + front.getFrontOffsetZ()*90f, 0, 1, 0);
 		GL11.glTranslated(-.5f, 0, -1.5f);
 
 		if(multiBlockTile.isRunning()) {
@@ -58,67 +54,66 @@ public class RendererCrystallizer extends TileEntitySpecialRenderer {
 
 			bindTexture(texture);
 			model.renderPart("Hull");
-			
-				List<ItemStack> outputList = multiBlockTile.getOutputs();
-				if(outputList != null && !outputList.isEmpty()) {
-					ItemStack stack = outputList.get(0);
-					EntityItem entity = new EntityItem(tile.getWorldObj());
 
-					entity.setEntityItemStack(stack);
-					entity.hoverStart = 0;
+			List<ItemStack> outputList = multiBlockTile.getOutputs();
+			if(outputList != null && !outputList.isEmpty()) {
+				ItemStack stack = outputList.get(0);
+				EntityItem entity = new EntityItem(tile.getWorld());
 
-					int rotation = (int)(tile.getWorldObj().getTotalWorldTime() % 360);
-					GL11.glPushMatrix();
-					GL11.glTranslatef(0, 1, 0);
-					
-					GL11.glPushMatrix();
-					GL11.glTranslated(1, 0.2, 0.7);
-					GL11.glRotatef(rotation, 0, 1, 0);
-					GL11.glScalef(progress, progress, progress);
-					dummyItem.doRender(entity, 0,0,0,  0.0F, 0.0F);
-					GL11.glPopMatrix();
-					
-					GL11.glPushMatrix();
-					GL11.glTranslated(1, 0.2, 1.5);
-					GL11.glRotatef(rotation, 0, 1, 0);
-					GL11.glScalef(progress, progress, progress);
-					dummyItem.doRender(entity, 0,0,0,  0.0F, 0.0F);
-					GL11.glPopMatrix();
+				entity.setItem(stack);
+				entity.hoverStart = 0;
 
-					GL11.glPushMatrix();
-					GL11.glTranslated(1, 0.2, 2.3);
-					GL11.glRotatef(rotation, 0, 1, 0);
-					GL11.glScalef(progress, progress, progress);
-					dummyItem.doRender(entity, 0,0,0,  0.0F, 0.0F);
-					GL11.glPopMatrix();
-					
-					GL11.glPopMatrix();
-					
-				}
+				int rotation = (int)(tile.getWorld().getTotalWorldTime() % 360);
+				GL11.glPushMatrix();
+				GL11.glTranslatef(0, 1, 0);
 
-			GL11.glPushMatrix();
-			GL11.glEnable(GL11.GL_BLEND);
-			GL11.glBlendFunc( GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA );
-			
-			ItemStack stack = multiBlockTile.getOutputs().get(0);
-			
-			int color = stack.getItem().getColorFromItemStack(stack, 0);
-			
-			float divisor = 1/255f;
-			
-			GL11.glColor4f((color & 0xFF)*divisor*.5f, ((color & 0xFF00) >>> 8)*divisor*.5f,  ((color & 0xFF0000) >>> 16)*divisor*.5f, 0xE4*divisor);
-			GL11.glDisable(GL11.GL_TEXTURE_2D);
-			GL11.glTranslatef(0, 1.1f, 0);
-			
-			//Fill before emptying
-			if(progress < 0.05)
-				GL11.glScaled(1, 20*progress, 1);
-			else
-				GL11.glScaled(1, (1.1-(progress*1.111)), 1);
-			
-			GL11.glTranslatef(0, -1.1f, 0);
-			model.renderPart("Liquid");
+				GL11.glPushMatrix();
+				GL11.glTranslated(1, 0.2, 0.7);
+				GL11.glRotatef(rotation, 0, 1, 0);
+				GL11.glScalef(progress, progress, progress);
+				zmaster587.libVulpes.render.RenderHelper.renderItem(multiBlockTile, stack, Minecraft.getMinecraft().getRenderItem());
+				GL11.glPopMatrix();
 
+				GL11.glPushMatrix();
+				GL11.glTranslated(1, 0.2, 1.5);
+				GL11.glRotatef(rotation, 0, 1, 0);
+				GL11.glScalef(progress, progress, progress);
+				zmaster587.libVulpes.render.RenderHelper.renderItem(multiBlockTile, stack, Minecraft.getMinecraft().getRenderItem());
+				GL11.glPopMatrix();
+
+				GL11.glPushMatrix();
+				GL11.glTranslated(1, 0.2, 2.3);
+				GL11.glRotatef(rotation, 0, 1, 0);
+				GL11.glScalef(progress, progress, progress);
+				zmaster587.libVulpes.render.RenderHelper.renderItem(multiBlockTile, stack, Minecraft.getMinecraft().getRenderItem());
+				GL11.glPopMatrix();
+
+				GL11.glPopMatrix();
+
+
+
+				GL11.glPushMatrix();
+				GL11.glEnable(GL11.GL_BLEND);
+				GL11.glBlendFunc( GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA );
+
+				int color = Minecraft.getMinecraft().getItemColors().getColorFromItemstack(stack, 0);
+
+				float divisor = 1/255f;
+
+				GL11.glColor4f((color & 0xFF)*divisor*.5f, ((color & 0xFF00) >>> 8)*divisor*.5f,  ((color & 0xFF0000) >>> 16)*divisor*.5f, 0xE4*divisor);
+				GL11.glDisable(GL11.GL_TEXTURE_2D);
+				GL11.glTranslatef(0, 1.1f, 0);
+
+				//Fill before emptying
+				if(progress < 0.05)
+					GL11.glScaled(1, 20*progress, 1);
+				else
+					GL11.glScaled(1, (1.1-(progress*1.111)), 1);
+
+				GL11.glTranslatef(0, -1.1f, 0);
+				model.renderPart("Liquid");
+			}
+			
 			GL11.glEnable(GL11.GL_TEXTURE_2D);
 			GL11.glDisable(GL11.GL_BLEND);
 			GL11.glPopMatrix();
@@ -130,5 +125,4 @@ public class RendererCrystallizer extends TileEntitySpecialRenderer {
 		}
 		GL11.glPopMatrix();
 	}
-
 }

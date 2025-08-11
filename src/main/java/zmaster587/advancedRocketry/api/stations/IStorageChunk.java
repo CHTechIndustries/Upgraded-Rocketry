@@ -1,6 +1,10 @@
 package zmaster587.advancedRocketry.api.stations;
 
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.EnumFacing;
 import net.minecraft.world.World;
+
+import java.util.List;
 
 public interface IStorageChunk {
 	/**
@@ -10,9 +14,13 @@ public interface IStorageChunk {
 	 * @param yCoord
 	 * @param zCoord
 	 */
-	public void pasteInWorld(World world, int xCoord, int yCoord ,int zCoord);
+	void pasteInWorld(World world, int xCoord, int yCoord, int zCoord);
 	
-	public int getSizeX();
-	public int getSizeY();
-	public int getSizeZ();
+	int getSizeX();
+	int getSizeY();
+	int getSizeZ();
+
+	List<TileEntity> getTileEntityList();
+
+	void rotateBy(EnumFacing dir);
 }
