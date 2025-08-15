@@ -5,7 +5,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.entity.MoverType;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.World;
 import net.minecraftforge.common.ForgeChunkManager;
@@ -16,18 +19,21 @@ import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import zmaster587.advancedRocketry.AdvancedRocketry;
-import zmaster587.advancedRocketry.api.Configuration;
+import zmaster587.advancedRocketry.api.ARConfiguration;
 import zmaster587.advancedRocketry.api.IInfrastructure;
 import zmaster587.advancedRocketry.api.RocketEvent;
 import zmaster587.advancedRocketry.api.RocketEvent.RocketLaunchEvent;
+import zmaster587.advancedRocketry.api.RocketEvent.RocketPreLaunchEvent;
 import zmaster587.advancedRocketry.api.StatsRocket;
 import zmaster587.advancedRocketry.api.atmosphere.AtmosphereRegister;
 import zmaster587.advancedRocketry.api.stations.ISpaceObject;
+import zmaster587.advancedRocketry.client.SoundRocketEngine;
 import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.dimension.DimensionProperties;
 import zmaster587.advancedRocketry.mission.MissionGasCollection;
 import zmaster587.advancedRocketry.network.PacketSatellite;
 import zmaster587.advancedRocketry.stations.SpaceObjectManager;
+import zmaster587.advancedRocketry.util.AudioRegistry;
 import zmaster587.advancedRocketry.util.StorageChunk;
 import zmaster587.libVulpes.LibVulpes;
 import zmaster587.libVulpes.inventory.modules.ModuleBase;
@@ -39,6 +45,7 @@ import zmaster587.libVulpes.util.HashedBlockPosition;
 import zmaster587.libVulpes.util.Vector3F;
 
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 
 public class EntityStationDeployedRocket extends EntityRocket {
@@ -77,6 +84,22 @@ public class EntityStationDeployedRocket extends EntityRocket {
 			ForgeChunkManager.releaseTicket(ticket);
 	}
 
+	/**
+	 * Called immediately before launch
+	 */
+	@Override
+	public void prepareLaunch() {
+		
+		RocketPreLaunchEvent event = new RocketEvent.RocketPreLaunchEvent(this);
+		MinecraftForge.EVENT_BUS.post(event);
+
+		if(!event.isCanceled()) {
+			if(world.isRemote)
+				PacketHandler.sendToServer(new PacketEntity(this, (byte)EntityRocket.PacketType.LAUNCH.ordinal()));
+			launch();
+		}
+	}
+	
 	@Override
 	public void launch() {
 
@@ -88,11 +111,11 @@ public class EntityStationDeployedRocket extends EntityRocket {
 			setInFlight(true);
 			return;
 		}
-		if(getFuelAmount() < getFuelCapacity())
+		if(getFuelAmount(getRocketFuelType()) < getFuelCapacity(getRocketFuelType()))
 			return;
 
 		ISpaceObject spaceObj;
-		if( world.provider.getDimension() == Configuration.spaceDimId && (spaceObj = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(getPosition())) != null && ((DimensionProperties)spaceObj.getProperties().getParentProperties()).isGasGiant() ) { //Abort if destination is invalid
+		if( world.provider.getDimension() == ARConfiguration.getCurrentConfig().spaceDimId && (spaceObj = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(getPosition())) != null && spaceObj.getProperties().getParentProperties().isGasGiant() ) { //Abort if destination is invalid
 
 
 			setInFlight(true);
@@ -118,6 +141,18 @@ public class EntityStationDeployedRocket extends EntityRocket {
 	public void onUpdate() {
 		lastWorldTickTicked = world.getTotalWorldTime();
 
+		if(this.ticksExisted == 20) {
+			//problems with loading on other world then where the infrastructure was set?
+			for (HashedBlockPosition temp : new LinkedList<>(infrastructureCoords)) {
+				TileEntity tile = this.world.getTileEntity(new BlockPos(temp.x, temp.y, temp.z));
+				if (tile instanceof IInfrastructure) {
+					this.linkInfrastructure((IInfrastructure) tile);
+				}
+			}
+
+			if(world.isRemote)
+				LibVulpes.proxy.playSound(new SoundRocketEngine( AudioRegistry.combustionRocket, SoundCategory.NEUTRAL,this));
+		}
 
 		if(isInFlight()) {
 
@@ -250,7 +285,7 @@ public class EntityStationDeployedRocket extends EntityRocket {
 		Iterator<ModuleBase> itr = modules.iterator();
 		while(itr.hasNext()) {
 			ModuleBase module = itr.next();
-			if(module instanceof ModuleButton && ((ModuleButton)module).getText().equalsIgnoreCase("Select Dst")) {
+			if(module instanceof ModuleButton && ((ModuleButton)module).buttonId == 1) {
 				itr.remove();
 				break;
 			}
@@ -322,23 +357,33 @@ public class EntityStationDeployedRocket extends EntityRocket {
 			return;
 
 		//Check again to make sure we are around a gas giant
-		ISpaceObject spaceObj = null;
+		ISpaceObject spaceObj;
 		setInOrbit(true);
-		if( world.provider.getDimension() == Configuration.spaceDimId && ((spaceObj = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(this.getPosition())) != null && ((DimensionProperties)spaceObj.getProperties().getParentProperties()).isGasGiant() )) { //Abort if destination is invalid
+		if( world.provider.getDimension() == ARConfiguration.getCurrentConfig().spaceDimId && ((spaceObj = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(this.getPosition())) != null && spaceObj.getProperties().getParentProperties().isGasGiant() )) { //Abort if destination is invalid
 			this.setPosition(forwardDirection.getFrontOffsetX()*64d + this.launchLocation.x + (storage.getSizeX() % 2 == 0 ? 0 : 0.5d), posY, forwardDirection.getFrontOffsetZ()*64d + this.launchLocation.z + (storage.getSizeZ() % 2 == 0 ? 0 : 0.5d));	
 		}
 		else {
 			setInOrbit(true);
 			return;
 		}
+
+
+		DimensionProperties properties = (DimensionProperties)spaceObj.getProperties().getParentProperties();
+		
+		//Make sure gas id is valid, or abort
+		if(gasId >= properties.getHarvestableGasses().size() || gasId < 0)
+		{
+			setInOrbit(true);
+			return;
+		}
+		
 		//one intake with a 1 bucket tank should take 100 seconds
 		float intakePower = (Integer)stats.getStatTag("intakePower");
-		MissionGasCollection miningMission = new MissionGasCollection(intakePower == 0 ? 360 : (long)(2*((int)stats.getStatTag("liquidCapacity")/intakePower)), this, connectedInfrastructure, AtmosphereRegister.getInstance().getHarvestableGasses().get(gasId));
-		DimensionProperties properties = (DimensionProperties)spaceObj.getProperties().getParentProperties();
-
+		
+		MissionGasCollection miningMission = new MissionGasCollection(intakePower == 0 ? 360 : (long)(2*((int)stats.getStatTag("liquidCapacity")/intakePower)), this, connectedInfrastructure, properties.getHarvestableGasses().get(gasId));
 
 		miningMission.setDimensionId(properties.getId());
-		properties.addSatallite(miningMission);
+		properties.addSatellite(miningMission);
 
 		if(!world.isRemote)
 			PacketHandler.sendToAll(new PacketSatellite(miningMission));
@@ -413,9 +458,8 @@ public class EntityStationDeployedRocket extends EntityRocket {
 
 
 	@Override
-	public void writeMissionPersistantNBT(NBTTagCompound nbt) {
-		// TODO Auto-generated method stub
-		super.writeMissionPersistantNBT(nbt);
+	public void writeMissionPersistentNBT(NBTTagCompound nbt) {
+		super.writeMissionPersistentNBT(nbt);
 		nbt.setInteger("fwd", forwardDirection.ordinal());
 
 		nbt.setInteger("launchX", launchLocation.x);
@@ -426,8 +470,8 @@ public class EntityStationDeployedRocket extends EntityRocket {
 	}
 
 	@Override
-	public void readMissionPersistantNBT(NBTTagCompound nbt) {
-		super.readMissionPersistantNBT(nbt);
+	public void readMissionPersistentNBT(NBTTagCompound nbt) {
+		super.readMissionPersistentNBT(nbt);
 		forwardDirection = EnumFacing.values()[nbt.getInteger("fwd")];
 
 		launchLocation.x = nbt.getInteger("launchX");

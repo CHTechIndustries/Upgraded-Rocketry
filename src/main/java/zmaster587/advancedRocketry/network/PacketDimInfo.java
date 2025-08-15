@@ -8,6 +8,7 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.PacketBuffer;
 import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.dimension.DimensionProperties;
+import zmaster587.advancedRocketry.util.SpawnListEntryNBT;
 import zmaster587.libVulpes.network.BasePacket;
 
 import java.io.IOException;
@@ -17,14 +18,16 @@ import java.util.logging.Logger;
 
 public class PacketDimInfo extends BasePacket {
 
-	DimensionProperties dimProperties;
-	NBTTagCompound dimNBT;
-	int dimNumber;
-	boolean deleteDim;
-	List<ItemStack> artifacts;
+	private DimensionProperties dimProperties;
+	private NBTTagCompound dimNBT;
+	private int dimNumber;
+	private boolean deleteDim;
+	private List<ItemStack> artifacts;
+	private String customIcon;
 
 	public PacketDimInfo() {
-		artifacts = new LinkedList<ItemStack>();
+		artifacts = new LinkedList<>();
+		customIcon = "";
 	}
 
 	public PacketDimInfo(int dimNumber,DimensionProperties dimProperties) {
@@ -79,16 +82,13 @@ public class PacketDimInfo extends BasePacket {
 	@Override
 	public void readClient(ByteBuf in) {
 		PacketBuffer packetBuffer = new PacketBuffer(in);
-		NBTTagCompound nbt;
 		dimNumber = in.readInt();
-		
-
 		deleteDim = in.readBoolean();
 		
 		if(!deleteDim) {
 			//TODO: error handling
 			try {
-				dimNBT = nbt = packetBuffer.readCompoundTag();
+				dimNBT  = packetBuffer.readCompoundTag();
 
 				int number = packetBuffer.readShort();
 				for(int i = 0; i < number; i++) {
@@ -100,13 +100,12 @@ public class PacketDimInfo extends BasePacket {
 				e.printStackTrace();
 				return;
 			}
-			dimProperties = new DimensionProperties(dimNumber);
-			dimProperties.readFromNBT(nbt);
+
 			
 			short strLen = packetBuffer.readShort();
 			if(strLen > 0)
 			{
-				dimProperties.customIcon = packetBuffer.readString(strLen);
+				customIcon = packetBuffer.readString(strLen);
 			}
 		}
 	}
@@ -123,18 +122,31 @@ public class PacketDimInfo extends BasePacket {
 				DimensionManager.getInstance().deleteDimension(dimNumber);
 			}
 		}
-		else if(dimProperties != null)
+		else
 		{
+			dimProperties = new DimensionProperties(dimNumber);
+			dimProperties.readFromNBT(dimNBT);
+			if(!customIcon.isEmpty())
+				dimProperties.customIcon = customIcon;
+			
 			if( DimensionManager.getInstance().isDimensionCreated(dimNumber) ) {
 				dimProperties.oreProperties = DimensionManager.getInstance().getDimensionProperties(dimNumber).oreProperties;
 				dimProperties.getRequiredArtifacts().clear();
 				dimProperties.getRequiredArtifacts().addAll(artifacts);
-				dimProperties.customIcon = DimensionManager.getInstance().getDimensionProperties(dimNumber).customIcon;
+				
+				List<SpawnListEntryNBT> list = new LinkedList<>(DimensionManager.getInstance().getDimensionProperties(dimNumber).getSpawnListEntries());
+				dimProperties.getSpawnListEntries().clear();
+				dimProperties.getSpawnListEntries().addAll(list);
+				
+				if(DimensionManager.getInstance().getDimensionProperties(dimNumber).customIcon != null && !DimensionManager.getInstance().getDimensionProperties(dimNumber).customIcon.isEmpty())
+					dimProperties.customIcon = DimensionManager.getInstance().getDimensionProperties(dimNumber).customIcon;
 				
 				DimensionManager.getInstance().setDimProperties(dimNumber, dimProperties);
 			} else {
-				dimProperties = new DimensionProperties(dimNumber);
-				dimProperties.readFromNBT(dimNBT);
+				//dimProperties = new DimensionProperties(dimNumber);
+				//dimProperties.readFromNBT(dimNBT);
+				
+				
 				DimensionManager.getInstance().registerDimNoUpdate(dimProperties, true);
 			}
 		}

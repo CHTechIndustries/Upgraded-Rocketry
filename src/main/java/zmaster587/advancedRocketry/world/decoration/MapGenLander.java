@@ -15,9 +15,9 @@ public class MapGenLander {
 	@SubscribeEvent
 	public void populateChunkPostEvent(PopulateChunkEvent.Post event) {
 		World worldIn = event.getWorld();
-		BlockPos position = new BlockPos(16*event.getChunkX() + 3,0, 16*event.getChunkZ() + 11);
+		BlockPos position = new BlockPos(16*event.getChunkX() + 11, 0, 16*event.getChunkZ() + 3);
 
-		if(DimensionManager.getInstance().getDimensionProperties(worldIn.provider.getDimension()).getName().equals("Luna") && position.getX() == 67 && position.getZ() == 2347) {
+		if(DimensionManager.getInstance().getDimensionProperties(worldIn.provider.getDimension()).getName().equals("Luna") && position.getZ() == 67 && position.getX() == 2347) {
 
 			position = worldIn.getHeight(position).down();
 			
@@ -70,8 +70,8 @@ public class MapGenLander {
 
 			position = worldIn.getHeight(position.add(10,0,15));
 
-			for(int x = 0; x <= 4; x++ ) 
-				worldIn.setBlockState(position.add(0,x,0), Blocks.IRON_BARS.getDefaultState());
+			for(int y = 0; y <= 4; y++ )
+				worldIn.setBlockState(position.add(0,y,0), Blocks.IRON_BARS.getDefaultState());
 
 			worldIn.setBlockState(position.add(1,4,0), Blocks.IRON_BARS.getDefaultState());
 			worldIn.setBlockState(position.add(2,4,0), Blocks.IRON_BARS.getDefaultState());

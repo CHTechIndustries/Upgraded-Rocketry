@@ -16,14 +16,16 @@ import org.lwjgl.opengl.GL11;
 import zmaster587.advancedRocketry.entity.EntityLaserNode;
 import zmaster587.libVulpes.render.RenderHelper;
 
+import javax.annotation.Nullable;
+
 public class RenderLaser extends Render implements IRenderFactory<EntityLaserNode> {
 
 	private static final ResourceLocation flare = new ResourceLocation("advancedrocketry", "textures/entity/Flare.png");
 
-	float color[];
-	float flareColor[];
+	float[] color;
+	float[] flareColor;
 	//float flareColo
-	double size;
+	private double size;
 	
 	public RenderLaser(double size, float[] flarecolor, float[] color) {
 		super(Minecraft.getMinecraft().getRenderManager());
@@ -33,17 +35,17 @@ public class RenderLaser extends Render implements IRenderFactory<EntityLaserNod
 	}
 	
 	@Override
-	public void doRender(Entity entity, double x, double y, double z,
+	public void doRender(@Nullable Entity entity, double x, double y, double z,
 			float f, float f1) {
 
 		GL11.glPushMatrix();
 		GL11.glTranslated(x, y, z);
 		BufferBuilder buffer = Tessellator.getInstance().getBuffer();
-		GL11.glDisable(GL11.GL_LIGHTING);
-		GL11.glDisable(GL11.GL_FOG);
-		GL11.glEnable(GL11.GL_BLEND);
-		GL11.glDepthMask(false);
-		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+		GlStateManager.disableLighting();
+		GlStateManager.disableFog();
+		GlStateManager.enableBlend();
+		GlStateManager.depthMask(false);
+		GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 
 		Minecraft.getMinecraft().renderEngine.bindTexture(flare);
 		//bindTexture(flare);
@@ -58,8 +60,8 @@ public class RenderLaser extends Render implements IRenderFactory<EntityLaserNod
 
 		buffer.finishDrawing();
 
-		GL11.glDisable(GL11.GL_TEXTURE_2D);
-		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
+		GlStateManager.disableTexture2D();
+		GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
 
 		buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION);
 		GlStateManager.color(color[0], color[1], color[2], color[3]);//0.9F, 0.2F, 0.3F, 0.5F);
@@ -70,24 +72,24 @@ public class RenderLaser extends Render implements IRenderFactory<EntityLaserNod
 				buffer.pos(- x , -y + 200,  - z).endVertex();
 				buffer.pos(- x, -y + 200, - z).endVertex();
 				buffer.pos(- (radius* Math.cos(i)) + 0.5F, 0,- (radius* Math.sin(i)) + 0.5F).endVertex();
-				buffer.pos(+ (radius* Math.sin(i)) + 0.5F, 0, (radius* Math.cos(i)) + 0.5F).endVertex();
+				buffer.pos((radius* Math.sin(i)) + 0.5F, 0, (radius* Math.cos(i)) + 0.5F).endVertex();
 			}
 
 			for(double i = 0; i < 2*Math.PI; i += Math.PI) {
 				buffer.pos(- x, -y + 200,- z).endVertex();
 				buffer.pos(- x, -y + 200, - z).endVertex();
-				buffer.pos(+ (radius* Math.sin(i)) + 0.5F, 0, -(radius* Math.cos(i)) + 0.5F).endVertex();
+				buffer.pos((radius* Math.sin(i)) + 0.5F, 0, -(radius* Math.cos(i)) + 0.5F).endVertex();
 				buffer.pos(- (radius* Math.cos(i)) + 0.5F, 0,(radius* Math.sin(i)) + 0.5F).endVertex();
 			}
 		}
 
 		Tessellator.getInstance().draw();
 
-		GL11.glDisable(GL11.GL_BLEND);
-		GL11.glEnable(GL11.GL_LIGHTING);
-		GL11.glEnable(GL11.GL_TEXTURE_2D);
-		GL11.glEnable(GL11.GL_FOG);
-		GL11.glDepthMask(true);
+		GlStateManager.disableBlend();
+		GlStateManager.enableLighting();
+		GlStateManager.enableTexture2D();
+		GlStateManager.enableFog();
+		GlStateManager.depthMask(true);
 		GL11.glPopMatrix();
 		GlStateManager.color(1, 1, 1,1);
 
@@ -99,12 +101,12 @@ public class RenderLaser extends Render implements IRenderFactory<EntityLaserNod
 		GL11.glPushMatrix();
 		GL11.glTranslated(x, y, z);
 		BufferBuilder buffer = Tessellator.getInstance().getBuffer();
-		GL11.glDisable(GL11.GL_LIGHTING);
-		GL11.glDisable(GL11.GL_FOG);
-		GL11.glEnable(GL11.GL_BLEND);
-		GL11.glDepthMask(false);
-		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-
+		GlStateManager.disableLighting();
+		GlStateManager.disableFog();
+		GlStateManager.enableBlend();
+		GlStateManager.depthMask(false);
+		GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+		OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 0, 0);
 		Minecraft.getMinecraft().renderEngine.bindTexture(flare);
 		//bindTexture(flare);
 
@@ -118,9 +120,8 @@ public class RenderLaser extends Render implements IRenderFactory<EntityLaserNod
 
 		Tessellator.getInstance().draw();
 
-		GL11.glDisable(GL11.GL_TEXTURE_2D);
-		OpenGlHelper.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE, 0, 0);
-		//GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
+		GlStateManager.disableTexture2D();
+		OpenGlHelper.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE, 0, 0);
 
 		buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION);
 		GlStateManager.color(color[0], color[1], color[2], color[3]);//0.9F, 0.2F, 0.3F, 0.5F);
@@ -131,24 +132,24 @@ public class RenderLaser extends Render implements IRenderFactory<EntityLaserNod
 				buffer.pos(- x , -y + 200,  - z).endVertex();
 				buffer.pos(- x, -y + 200, - z).endVertex();
 				buffer.pos(- (radius* Math.cos(i)) + 0.5F, 0,- (radius* Math.sin(i)) + 0.5F).endVertex();
-				buffer.pos(+ (radius* Math.sin(i)) + 0.5F, 0, (radius* Math.cos(i)) + 0.5F).endVertex();
+				buffer.pos((radius* Math.sin(i)) + 0.5F, 0, (radius* Math.cos(i)) + 0.5F).endVertex();
 			}
 
 			for(double i = 0; i < 2*Math.PI; i += Math.PI) {
 				buffer.pos(- x, -y + 200,- z).endVertex();
 				buffer.pos(- x, -y + 200, - z).endVertex();
-				buffer.pos(+ (radius* Math.sin(i)) + 0.5F, 0, -(radius* Math.cos(i)) + 0.5F).endVertex();
+				buffer.pos((radius* Math.sin(i)) + 0.5F, 0, -(radius* Math.cos(i)) + 0.5F).endVertex();
 				buffer.pos(- (radius* Math.cos(i)) + 0.5F, 0,(radius* Math.sin(i)) + 0.5F).endVertex();
 			}
 		}
 
 		Tessellator.getInstance().draw();
 
-		GL11.glDisable(GL11.GL_BLEND);
-		GL11.glEnable(GL11.GL_LIGHTING);
-		GL11.glEnable(GL11.GL_TEXTURE_2D);
-		GL11.glEnable(GL11.GL_FOG);
-		GL11.glDepthMask(true);
+		GlStateManager.disableBlend();
+		GlStateManager.enableLighting();
+		GlStateManager.enableTexture2D();
+		GlStateManager.enableFog();
+		GlStateManager.depthMask(true);
 		GL11.glPopMatrix();
 		
 		GlStateManager.color(1f, 1f, 1f,1f);
@@ -164,7 +165,7 @@ public class RenderLaser extends Render implements IRenderFactory<EntityLaserNod
 	}
 	
 	@Override
-	protected ResourceLocation getEntityTexture(Entity entity) {
+	protected ResourceLocation getEntityTexture(@Nullable Entity entity) {
 		return null;
 	}
 

@@ -5,6 +5,8 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.util.math.MathHelper;
 import net.minecraftforge.common.util.Constants.NBT;
 import zmaster587.advancedRocketry.api.dimension.IDimensionProperties;
+import zmaster587.advancedRocketry.dimension.DimensionProperties;
+import zmaster587.advancedRocketry.util.SpacePosition;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,19 +19,22 @@ public class StellarBody {
 	private HashMap<Integer,IDimensionProperties> planets;
 	int numPlanets;
 	int discoveredPlanets;
-	float color[];
+	float[] color;
 	int id;
 	float size;
 	String name;
 	short posX, posZ;
 	public List<StellarBody> subStars;
 	float starSeperation;
+	private boolean isBlackHole;
+	StellarBody parentStar;
 
 	public StellarBody() {
-		planets = new HashMap<Integer,IDimensionProperties>();
+		planets = new HashMap<>();
 		size = 1f;
-		subStars = new LinkedList<StellarBody>();
+		subStars = new LinkedList<>();
 		starSeperation = 5f;
+		isBlackHole = false;
 	}
 	
 	public List<StellarBody> getSubStars() {
@@ -37,8 +42,19 @@ public class StellarBody {
 	}
 
 	public void addSubStar(StellarBody star) {
-		star.setName(name);
+		if(star.name == null)
+			star.setName(name + "-" + (subStars.size() + 1));
+		star.setId(this.id);
 		subStars.add(star);
+		star.parentStar = this;
+	}
+	
+	public boolean isBlackHole() {
+		return isBlackHole;
+	}
+	
+	public void setBlackHole(boolean isBlackHole) {
+		this.isBlackHole = isBlackHole;
 	}
 	
 	public int getDisplayRadius() {
@@ -46,11 +62,11 @@ public class StellarBody {
 	}
 	
 	//Returns the distance between the star and sub stars
-	public float getStarSeperation() {
+	public float getStarSeparation() {
 		return starSeperation;
 	}
 	
-	public void setStarSeperation(float seperation) {
+	public void setStarSeparation(float seperation) {
 		this.starSeperation = seperation;
 	}
 	
@@ -108,6 +124,8 @@ public class StellarBody {
 	 * @return the number of planets orbiting this star
 	 */
 	public int getNumPlanets() {
+		if(parentStar != null)
+			return parentStar.getNumPlanets();
 		return numPlanets;
 	}
 
@@ -151,7 +169,7 @@ public class StellarBody {
 
 
 		//Define
-		float color[] = new float[3];
+		float[] color = new float[3];
 		float temperature = ((getTemperature() * .477f) + 10f); //0 -> 10 100 -> 57.7
 
 		//Find red
@@ -172,9 +190,8 @@ public class StellarBody {
 		else {
 			color[1] = temperature - 60;
 			color[1] = 288f * (float)Math.pow(color[1], -0.07551);
-
+			color[1] = MathHelper.clamp(color[1]/255f, 0f, 1f);
 		}
-		color[1] = MathHelper.clamp(color[1]/255f, 0f, 1f);
 
 
 		//Calculate Blue
@@ -204,7 +221,7 @@ public class StellarBody {
 	 * @return List of {@link DimensionProperties} of planets orbiting this star
 	 */
 	public List<IDimensionProperties> getPlanets() {
-		return new ArrayList<IDimensionProperties>(planets.values());
+		return new ArrayList<>(planets.values());
 	}
 
 	public void writeToNBT(NBTTagCompound nbt) {
@@ -215,6 +232,7 @@ public class StellarBody {
 		nbt.setShort("posZ", posZ);
 		nbt.setFloat("size", size);
 		nbt.setFloat("seperation", starSeperation);
+		nbt.setBoolean("isBlackHole", isBlackHole);
 		
 		NBTTagList list = new NBTTagList();
 		
@@ -234,6 +252,7 @@ public class StellarBody {
 		name = nbt.getString("name");
 		posX = nbt.getShort("posX");
 		posZ = nbt.getShort("posZ");
+		isBlackHole = nbt.getBoolean("isBlackHole");
 		
 		if(nbt.hasKey("size"))
 			size = nbt.getFloat("size");
@@ -249,7 +268,13 @@ public class StellarBody {
 				StellarBody star = new StellarBody();
 				star.readFromNBT(list.getCompoundTagAt(i));
 				subStars.add(star);
+				star.parentStar = this;
 			}
 		}
+	}
+	
+	public SpacePosition getSpacePosition() {
+		//TODO
+		return new SpacePosition();
 	}
 }

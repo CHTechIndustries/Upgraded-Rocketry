@@ -10,7 +10,7 @@ import net.minecraft.util.EnumFacing;
 import zmaster587.advancedRocketry.api.stations.ISpaceObject;
 import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.event.PlanetEventHandler;
-import zmaster587.advancedRocketry.stations.SpaceObject;
+import zmaster587.advancedRocketry.stations.SpaceStationObject;
 import zmaster587.advancedRocketry.stations.SpaceObjectManager;
 import zmaster587.libVulpes.network.BasePacket;
 
@@ -21,6 +21,12 @@ public class PacketStationUpdate extends BasePacket {
 	ISpaceObject spaceObject;
 	int stationNumber;
 	Type type;
+	
+	int destOrbitingBody;
+	int fuel;
+	double rx,ry,rz,drx,dry,drz;
+	float orbitalDistance;
+	NBTTagCompound nbt;
 
 	public enum Type {
 		DEST_ORBIT_UPDATE,
@@ -35,7 +41,7 @@ public class PacketStationUpdate extends BasePacket {
 	public PacketStationUpdate() {}
 
 	public PacketStationUpdate(ISpaceObject dimProperties, Type type) {
-		this.spaceObject = (SpaceObject)dimProperties;
+		this.spaceObject = dimProperties;
 		this.stationNumber = dimProperties.getId();
 		this.type = type;
 	}
@@ -53,8 +59,8 @@ public class PacketStationUpdate extends BasePacket {
 			out.writeInt(spaceObject.getOrbitingPlanetId());
 			break;
 		case FUEL_UPDATE:
-			if(spaceObject instanceof SpaceObject)
-				out.writeInt(((SpaceObject)spaceObject).getFuelAmount());
+			if(spaceObject instanceof SpaceStationObject)
+				out.writeInt(((SpaceStationObject)spaceObject).getFuelAmount());
 			break;
 		case ROTANGLE_UPDATE:
 			out.writeDouble(spaceObject.getRotation(EnumFacing.EAST));
@@ -85,47 +91,41 @@ public class PacketStationUpdate extends BasePacket {
 	@Override
 	public void readClient(ByteBuf in) {
 		stationNumber = in.readInt();
-		spaceObject = SpaceObjectManager.getSpaceManager().getSpaceStation(stationNumber);
 		type = Type.values()[in.readInt()];
 
 
 		switch(type) {
-		case DEST_ORBIT_UPDATE:
-			spaceObject.setDestOrbitingBody(in.readInt());
-			break;
-		case ORBIT_UPDATE:
-			spaceObject.setOrbitingBody(in.readInt());
-			break;
-		case FUEL_UPDATE:
-			if(spaceObject instanceof SpaceObject)
-				((SpaceObject)spaceObject).setFuelAmount(in.readInt());
-			break;
-		case ROTANGLE_UPDATE:
-			spaceObject.setRotation(in.readDouble(), EnumFacing.EAST);
-			spaceObject.setRotation(in.readDouble(), EnumFacing.UP);
-			spaceObject.setRotation(in.readDouble(), EnumFacing.NORTH);
-			spaceObject.setDeltaRotation(in.readDouble(), EnumFacing.EAST);
-			spaceObject.setDeltaRotation(in.readDouble(), EnumFacing.UP);
-			spaceObject.setDeltaRotation(in.readDouble(), EnumFacing.NORTH);
-			break;
-		case SIGNAL_WHITE_BURST:
-			PlanetEventHandler.runBurst(Minecraft.getMinecraft().world.getTotalWorldTime() + 20, 20);
-			break;
-		case ALTITUDE_UPDATE:
-			spaceObject.setOrbitalDistance(in.readFloat());
-			break;
-		case DIM_PROPERTY_UPDATE:
-			PacketBuffer packetBuffer = new PacketBuffer(in);
-			NBTTagCompound nbt;
-			try {
-				nbt = packetBuffer.readCompoundTag();
+			case DEST_ORBIT_UPDATE:
+			case ORBIT_UPDATE:
+					destOrbitingBody = in.readInt();
+				break;
+			case FUEL_UPDATE:
+				fuel = in.readInt();
+				break;
+			case ROTANGLE_UPDATE:
+				rx = in.readDouble();
+				ry = in.readDouble();
+				rz = in.readDouble();
+				drx = in.readDouble();
+				dry = in.readDouble();
+				drz = in.readDouble();
+				break;
+			case SIGNAL_WHITE_BURST:
+				break;
+			case ALTITUDE_UPDATE:
+				orbitalDistance = in.readFloat();
+				break;
+			case DIM_PROPERTY_UPDATE:
+				PacketBuffer packetBuffer = new PacketBuffer(in);
+				try {
+					nbt = packetBuffer.readCompoundTag();
 
-			} catch (IOException e) {
-				e.printStackTrace();
-				return;
-			}
-			spaceObject.getProperties().readFromNBT(nbt);
-			break;
+				} catch (IOException e) {
+					e.printStackTrace();
+					nbt = null;
+					return;
+				}
+				break;
 		}	
 	}
 
@@ -135,7 +135,40 @@ public class PacketStationUpdate extends BasePacket {
 	}
 
 	@Override
-	public void executeClient(EntityPlayer thePlayer) {}
+	public void executeClient(EntityPlayer thePlayer) {
+		spaceObject = SpaceObjectManager.getSpaceManager().getSpaceStation(stationNumber);
+		
+		switch(type) {
+		case DEST_ORBIT_UPDATE:
+			spaceObject.setDestOrbitingBody(destOrbitingBody );
+			break;
+		case ORBIT_UPDATE:
+			spaceObject.setOrbitingBody(destOrbitingBody);
+			break;
+		case FUEL_UPDATE:
+			if(spaceObject instanceof SpaceStationObject)
+				((SpaceStationObject)spaceObject).setFuelAmount(fuel);
+			break;
+		case ROTANGLE_UPDATE:
+			spaceObject.setRotation(rx, EnumFacing.EAST);
+			spaceObject.setRotation(ry, EnumFacing.UP);
+			spaceObject.setRotation(rz, EnumFacing.NORTH);
+			spaceObject.setDeltaRotation(drx, EnumFacing.EAST);
+			spaceObject.setDeltaRotation(dry, EnumFacing.UP);
+			spaceObject.setDeltaRotation(drz, EnumFacing.NORTH);
+			break;
+		case SIGNAL_WHITE_BURST:
+			PlanetEventHandler.runBurst(Minecraft.getMinecraft().world.getTotalWorldTime() + 20, 20);
+			break;
+		case ALTITUDE_UPDATE:
+			spaceObject.setOrbitalDistance(orbitalDistance);
+			break;
+		case DIM_PROPERTY_UPDATE:
+			if(nbt != null)
+				spaceObject.getProperties().readFromNBT(nbt);
+			break;
+		}	
+	}
 
 	@Override
 	public void executeServer(EntityPlayerMP player) {}
