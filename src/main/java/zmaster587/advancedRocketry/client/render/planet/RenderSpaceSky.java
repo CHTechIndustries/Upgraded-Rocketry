@@ -3,6 +3,8 @@ package zmaster587.advancedRocketry.client.render.planet;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.GlStateManager.DestFactor;
+import net.minecraft.client.renderer.GlStateManager.SourceFactor;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.util.EnumFacing;
@@ -38,115 +40,103 @@ public class RenderSpaceSky extends RenderPlanetarySky {
 	}
 	
 	@Override
-	public void renderPlanet2(BufferBuilder buffer, DimensionProperties properties, float size, float alphaMultiplier, double shadowAngle, boolean hasRing, float[] shadowColorMultiplier, float alphaMultiplier2) {
+	public void renderPlanet2(BufferBuilder buffer, DimensionProperties properties, float size, float alphaMultiplier, double shadowAngle, boolean hasRing) {
 		//ResourceLocation icon, int locationX, int locationY, double zLevel, float planetOrbitalDistance, float alphaMultiplier, double angle, boolean hasAtmosphere, float[] atmColor, float[] ringColor, boolean isGasgiant, boolean hasRings, boolean hasDecorators) {
 
-		ISpaceObject spaceObject = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(mc.player.getPosition());
+		ISpaceObject object = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(mc.player.getPosition());
 
-		if(spaceObject == null)
+		if(object == null)
 			return;
-		float planetOrbitalDistance = spaceObject.getOrbitalDistance();
-
-		if(properties.isStar()) {
-			if (properties.getStar().isBlackHole()) {
-				size = 10;
-				GL11.glDepthMask(true);
-				GL11.glEnable(GL11.GL_ALPHA_TEST);
-				GL11.glAlphaFunc(GL11.GL_GREATER, 0.01f);
-				float f10;
-
-				mc.renderEngine.bindTexture(TextureResources.locationBlackHole);
+		float planetOrbitalDistance = object.getOrbitalDistance();
+		
+		if(properties.isStar())
+		{
+			size = 10;
+			GL11.glDepthMask(true);
+			GL11.glEnable(GL11.GL_ALPHA_TEST);
+			GL11.glAlphaFunc(GL11.GL_GREATER, 0.01f);
+			float f10;
+			
+			mc.renderEngine.bindTexture(TextureResources.locationBlackHole);
+			GL11.glPushMatrix();
+			GL11.glRotatef(180, 0, 0, 1);
+			GL11.glPushMatrix();
+			GL11.glTranslatef(0, 100, 0);
+			float phase = -(System.currentTimeMillis() % 3600)/3600f;
+			float scale = 1+(float)Math.sin(phase*3.14)*0.1f;
+			phase*=360f;
+			GL11.glRotatef(phase, 0, 1, 0);
+			
+			GL11.glScaled(scale,scale,scale);
+			
+			//Set sun color and distance
+			GlStateManager.color((float)1, (float).5 , (float).4 ,1f);
+			buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);	
+			f10 = size*2f*AstronomicalBodyHelper.getBodySizeMultiplier(planetOrbitalDistance);
+			//multiplier = 2;
+			buffer.pos((double)(-f10), 0.0D, (double)(-f10)).tex(0.0D, 0.0D).endVertex();
+			buffer.pos((double)f10, 0.0D, (double)(-f10)).tex(1.0D, 0.0D).endVertex();
+			buffer.pos((double)f10, 0.0D, (double)f10).tex(1.0D, 1.0D).endVertex();
+			buffer.pos((double)(-f10), 0.0D, (double)f10).tex(0.0D, 1.0D).endVertex();
+			Tessellator.getInstance().draw();
+			GL11.glPopMatrix();
+			
+			GL11.glDepthMask(false);
+			for(int i = 0; i < 3; i++)
+			{
+				float speedMult = (i)*1.01f + 1;
+				//Render accretion disk
+				mc.renderEngine.bindTexture(TextureResources.locationAccretionDisk);
 				GL11.glPushMatrix();
-				GL11.glRotatef(180, 0, 0, 1);
-				GL11.glPushMatrix();
-				GL11.glTranslatef(0, 100, 0);
-				float phase = -(System.currentTimeMillis() % 3600) / 3600f;
-				float scale = 1 + (float) Math.sin(phase * 3.14) * 0.1f;
-				phase *= 360f;
-				GL11.glRotatef(phase, 0, 1, 0);
-
-				GL11.glScaled(scale, scale, scale);
-
-				//Set sun color and distance
-				GlStateManager.color((float) 1, (float) .5, (float) .4, 1f);
-				buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-				f10 = size * 2f * AstronomicalBodyHelper.getBodySizeMultiplier(planetOrbitalDistance);
-				//multiplier = 2;
-				buffer.pos(-f10, 0.0D, -f10).tex(0.0D, 0.0D).endVertex();
-				buffer.pos(f10, 0.0D, -f10).tex(1.0D, 0.0D).endVertex();
-				buffer.pos(f10, 0.0D, f10).tex(1.0D, 1.0D).endVertex();
-				buffer.pos(-f10, 0.0D, f10).tex(0.0D, 1.0D).endVertex();
+				GL11.glTranslatef(0, 100+i*50, 0);
+				GL11.glRotatef(60, 1, 0, 0);
+				GL11.glRotatef((System.currentTimeMillis() % (int)(360*360*speedMult))/(360f*speedMult), 0, 1, 0);
+				
+				GlStateManager.color((float)1, (float).5 , (float).4 ,1f);
+				buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);	
+				f10 = size*40f*AstronomicalBodyHelper.getBodySizeMultiplier(planetOrbitalDistance);
+				buffer.pos((double)(-f10), 0.0D, (double)(-f10)).tex(0.0D, 0.0D).endVertex();
+				buffer.pos((double)f10, 0.0D, (double)(-f10)).tex(1.0D, 0.0D).endVertex();
+				buffer.pos((double)f10, 0.0D, (double)f10).tex(1.0D, 1.0D).endVertex();
+				buffer.pos((double)(-f10), 0.0D, (double)f10).tex(0.0D, 1.0D).endVertex();
 				Tessellator.getInstance().draw();
 				GL11.glPopMatrix();
-
-				GL11.glDepthMask(false);
-				for (int i = 0; i < 3; i++) {
-					float speedMult = (i) * 1.01f + 1;
-					//Render accretion disk
-					mc.renderEngine.bindTexture(TextureResources.locationAccretionDisk);
-					GL11.glPushMatrix();
-					GL11.glTranslatef(0, 100 + i * 50, 0);
-					GL11.glRotatef(60, 1, 0, 0);
-					GL11.glRotatef((System.currentTimeMillis() % (int) (360 * 360 * speedMult)) / (360f * speedMult), 0, 1, 0);
-
-					GlStateManager.color((float) 1, (float) .5, (float) .4, 1f);
-					buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-					f10 = size * 40f * AstronomicalBodyHelper.getBodySizeMultiplier(planetOrbitalDistance);
-					buffer.pos(-f10, 0.0D, -f10).tex(0.0D, 0.0D).endVertex();
-					buffer.pos(f10, 0.0D, -f10).tex(1.0D, 0.0D).endVertex();
-					buffer.pos(f10, 0.0D, f10).tex(1.0D, 1.0D).endVertex();
-					buffer.pos(-f10, 0.0D, f10).tex(0.0D, 1.0D).endVertex();
-					Tessellator.getInstance().draw();
-					GL11.glPopMatrix();
-
-					GL11.glPushMatrix();
-
-					GL11.glTranslatef(0, 99.9f + i * 50, 0);
-					GL11.glRotatef(60, 1, 0, 0);
-					GL11.glRotatef((System.currentTimeMillis() % (int) (360 * 200 * speedMult)) / (200f * speedMult), 0, 1, 0);
-
-					GlStateManager.color((float) 0.8, (float) .7, (float) .4, 1f);
-					buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-					f10 = size * 30f * AstronomicalBodyHelper.getBodySizeMultiplier(planetOrbitalDistance);
-					//multiplier = 2;
-					buffer.pos(-f10, 0.0D, -f10).tex(0.0D, 0.0D).endVertex();
-					buffer.pos(f10, 0.0D, -f10).tex(1.0D, 0.0D).endVertex();
-					buffer.pos(f10, 0.0D, f10).tex(1.0D, 1.0D).endVertex();
-					buffer.pos(-f10, 0.0D, f10).tex(0.0D, 1.0D).endVertex();
-					Tessellator.getInstance().draw();
-					GL11.glPopMatrix();
-
-					GL11.glPushMatrix();
-
-					GL11.glTranslatef(0, 99.8f + i * 50, 0);
-					GL11.glRotatef(60, 1, 0, 0);
-					GL11.glRotatef((System.currentTimeMillis() % (int) (36000 * speedMult)) / (100f * speedMult), 0, 1, 0);
-
-					GlStateManager.color((float) 0.2, (float) .4, (float) 1, 1f);
-					buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-					f10 = size * 15f * AstronomicalBodyHelper.getBodySizeMultiplier(planetOrbitalDistance);
-					//multiplier = 2;
-					buffer.pos(-f10, 0.0D, -f10).tex(0.0D, 0.0D).endVertex();
-					buffer.pos(f10, 0.0D, -f10).tex(1.0D, 0.0D).endVertex();
-					buffer.pos(f10, 0.0D, f10).tex(1.0D, 1.0D).endVertex();
-					buffer.pos(-f10, 0.0D, f10).tex(0.0D, 1.0D).endVertex();
-					Tessellator.getInstance().draw();
-					GL11.glPopMatrix();
-				}
-				GL11.glPopMatrix();
-			} else {
-				mc.renderEngine.bindTexture(TextureResources.locationSunPng);
-				//Set sun color and distance
-				GlStateManager.color(properties.getStar().getColor()[0], properties.getStar().getColor()[1], properties.getStar().getColor()[2], 1);
-				buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-				float f10 = properties.getStar().getSize() * 15f * AstronomicalBodyHelper.getBodySizeMultiplier(planetOrbitalDistance);
+				
+				GL11.glPushMatrix();
+				
+				GL11.glTranslatef(0, 99.9f+i*50, 0);
+				GL11.glRotatef(60, 1, 0, 0);
+				GL11.glRotatef((System.currentTimeMillis() % (int)(360*200*speedMult))/(200f*speedMult), 0, 1, 0);
+				
+				GlStateManager.color((float)0.8, (float).7 , (float).4 ,1f);
+				buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);	
+				f10 = size*30f*AstronomicalBodyHelper.getBodySizeMultiplier(planetOrbitalDistance);
 				//multiplier = 2;
-				buffer.pos(-f10, 100.0D, -f10).tex(0.0D, 0.0D).endVertex();
-				buffer.pos(f10, 100.0D, -f10).tex(1.0D, 0.0D).endVertex();
-				buffer.pos(f10, 100.0D, f10).tex(1.0D, 1.0D).endVertex();
-				buffer.pos(-f10, 100.0D, f10).tex(0.0D, 1.0D).endVertex();
+				buffer.pos((double)(-f10), 0.0D, (double)(-f10)).tex(0.0D, 0.0D).endVertex();
+				buffer.pos((double)f10, 0.0D, (double)(-f10)).tex(1.0D, 0.0D).endVertex();
+				buffer.pos((double)f10, 0.0D, (double)f10).tex(1.0D, 1.0D).endVertex();
+				buffer.pos((double)(-f10), 0.0D, (double)f10).tex(0.0D, 1.0D).endVertex();
 				Tessellator.getInstance().draw();
+				GL11.glPopMatrix();
+				
+				GL11.glPushMatrix();
+				
+				GL11.glTranslatef(0, 99.8f+i*50, 0);
+				GL11.glRotatef(60, 1, 0, 0);
+				GL11.glRotatef((System.currentTimeMillis() % (int)(36000*speedMult))/(100f*speedMult), 0, 1, 0);
+				
+				GlStateManager.color((float)0.2, (float).4 , (float)1 ,1f);
+				buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);	
+				f10 = size*15f*AstronomicalBodyHelper.getBodySizeMultiplier(planetOrbitalDistance);
+				//multiplier = 2;
+				buffer.pos((double)(-f10), 0.0D, (double)(-f10)).tex(0.0D, 0.0D).endVertex();
+				buffer.pos((double)f10, 0.0D, (double)(-f10)).tex(1.0D, 0.0D).endVertex();
+				buffer.pos((double)f10, 0.0D, (double)f10).tex(1.0D, 1.0D).endVertex();
+				buffer.pos((double)(-f10), 0.0D, (double)f10).tex(0.0D, 1.0D).endVertex();
+				Tessellator.getInstance().draw();
+				GL11.glPopMatrix();
 			}
+			GL11.glPopMatrix();
 			return;
 		}
 		
@@ -186,10 +176,10 @@ public class RenderSpaceSky extends RenderPlanetarySky {
 		GlStateManager.color(1f, 1f, 1f, alphaMultiplier);
 
 		buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-		buffer.pos(-f10, -10.0D, f10).tex(f16, f17).endVertex();
-		buffer.pos(f10, -10.0D, f10).tex(f14, f17).endVertex();
-		buffer.pos(f10, -10.0D, -f10).tex(f14, f15).endVertex();
-		buffer.pos(-f10, -10.0D, -f10).tex(f16, f15).endVertex();
+		buffer.pos((double)(-f10), -10.0D, (double)f10).tex((double)f16, (double)f17).endVertex();
+		buffer.pos((double)f10, -10.0D, (double)f10).tex((double)f14, (double)f17).endVertex();
+		buffer.pos((double)f10, -10.0D, (double)(-f10)).tex((double)f14, (double)f15).endVertex();
+		buffer.pos((double)(-f10), -10.0D, (double)(-f10)).tex((double)f16, (double)f15).endVertex();
 
 		Tessellator.getInstance().draw();
 		GL11.glPopAttrib();
@@ -203,7 +193,6 @@ public class RenderSpaceSky extends RenderPlanetarySky {
 
 				buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
 				mc.renderEngine.bindTexture(DimensionProperties.getAtmosphereLEOResource());
-				GlStateManager.color(atmColor[0], atmColor[1], atmColor[2], 0.5f);
 
 				double dist = -5D - 4*(planetOrbitalDistance)/200D;
 				double scalingMult = 1D - 0.9*(planetOrbitalDistance)/200D;
@@ -211,6 +200,8 @@ public class RenderSpaceSky extends RenderPlanetarySky {
 				int maxAmt = 6;
 				float lng = (float) (Minecraft.getSystemTime()/100000d % 1);
 				for(int i = 0; i < maxAmt; i++) {
+					GlStateManager.color(0.05f*(maxAmt-i/6f), .4f*(i/6f), 1f, 0.4f);
+
 					//IDK it looks pretty
 					Xoffset = lng*(i-(maxAmt/4f));
 					float Yoffset = -lng*i;
@@ -234,7 +225,7 @@ public class RenderSpaceSky extends RenderPlanetarySky {
 				GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 
 				buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-				GlStateManager.color(atmColor[0], atmColor[1], atmColor[2], 0.08f);
+				GlStateManager.color(0.5f,0.5f,1, 0.08f);
 
 
 				for(int i = 0; i < 5 ; i++) {
@@ -311,12 +302,12 @@ public class RenderSpaceSky extends RenderPlanetarySky {
 	protected void rotateAroundAxis() {
 		Vector3F<Float> axis = getRotateAxis();
 		//GL11.glRotatef(90f, axis.x, axis.y, axis.z);
-		ISpaceObject spaceObject = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(mc.player.getPosition());
-		if(spaceObject != null) {
-			GL11.glRotated(spaceObject.getRotation(EnumFacing.UP)*360, 0, 1, 0);
-			GL11.glRotated(spaceObject.getRotation(EnumFacing.EAST)*360, 1, 0, 0);
+		ISpaceObject obj = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(mc.player.getPosition());
+		if(obj != null) {
+			GL11.glRotated(obj.getRotation(EnumFacing.UP)*360, 0, 1, 0);
+			GL11.glRotated(obj.getRotation(EnumFacing.EAST)*360, 1, 0, 0);
 		}
-		//GL11.glRotated(360, spaceObject.getRotation(EnumFacing.EAST), spaceObject.getRotation(EnumFacing.UP), spaceObject.getRotation(EnumFacing.NORTH));
+		//GL11.glRotated(360, obj.getRotation(EnumFacing.EAST), obj.getRotation(EnumFacing.UP), obj.getRotation(EnumFacing.NORTH));
 
 	}
 
