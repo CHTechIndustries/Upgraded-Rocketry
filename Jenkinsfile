@@ -4,7 +4,7 @@
     stages {
         stage('Build') {
             steps {
-                sh './gradlew build curseforge236542 publish --refresh-dependencies' 
+                sh './gradlew clean build --refresh-dependencies' 
                 archiveArtifacts artifacts: '**build/libs/*.jar', fingerprint: true 
             }
         }
