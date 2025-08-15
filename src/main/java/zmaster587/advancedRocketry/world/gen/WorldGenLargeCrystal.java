@@ -24,14 +24,19 @@ public class WorldGenLargeCrystal extends Feature<NoFeatureConfig> {
 		this.block = AdvancedRocketryBlocks.blockCrystal.getDefaultState();
 	}
 
+	/*@Override
+	public boolean generate(ISeedReader reader, ChunkGenerator generator, Random rand, BlockPos pos, NoFeatureConfig config) {
+		return false;
+	}*/
+
 	@Override
-	public boolean func_241855_a(ISeedReader world, ChunkGenerator chunkGen, Random rand,
+	public boolean generate(ISeedReader world, ChunkGenerator chunkGen, Random rand,
 			BlockPos pos, NoFeatureConfig config) {
 		
 		if(rand.nextInt() % 18 != 0)
 			return false;
 
-		BlockState state = world.getBiome(pos).func_242440_e().func_242502_e().getUnder();
+		BlockState state = world.getBiome(pos).getGenerationSettings().getSurfaceBuilderConfig().getUnder();
 		Block fillerBlock = state.getBlock();
 
 		int height = rand.nextInt(40) + 10;

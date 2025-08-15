@@ -143,7 +143,7 @@ public class BlockFuelTank extends Block implements IFuelTank{
 		MIDDLE;
 
 		@Override
-		public String func_176610_l() {
+		public String getString() {
 			return name().toLowerCase(Locale.ENGLISH);
 		}
 	}

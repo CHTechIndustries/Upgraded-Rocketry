@@ -69,8 +69,9 @@ public class BlockLinkedHorizontalTexture extends Block {
 			this.suffix = suffix;
 		}
 		@Override
-		public String func_176610_l() {
+		public String getString() {
 			return suffix;
 		}
+
 	}
 }
