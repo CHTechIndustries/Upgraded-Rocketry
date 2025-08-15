@@ -25,9 +25,10 @@ import zmaster587.advancedRocketry.api.RocketEvent.RocketDismantleEvent;
 import zmaster587.advancedRocketry.api.RocketEvent.RocketLandedEvent;
 import zmaster587.advancedRocketry.api.RocketEvent.RocketPreLaunchEvent;
 import zmaster587.advancedRocketry.api.stations.ISpaceObject;
+import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.entity.EntityRocket;
-import zmaster587.advancedRocketry.stations.SpaceStationObject;
 import zmaster587.advancedRocketry.stations.SpaceObjectManager;
+import zmaster587.advancedRocketry.stations.SpaceStationObject;
 import zmaster587.advancedRocketry.util.StationLandingLocation;
 import zmaster587.libVulpes.LibVulpes;
 import zmaster587.libVulpes.api.LibVulpesItems;
@@ -45,6 +46,8 @@ import zmaster587.libVulpes.util.HashedBlockPosition;
 import zmaster587.libVulpes.util.INetworkMachine;
 import zmaster587.libVulpes.util.ZUtils;
 
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -57,8 +60,10 @@ public class TileLandingPad extends TileInventoryHatch implements ILinkableTile,
 
 	public TileLandingPad() {
 		super(AdvancedRocketryTileEntityType.TILE_LANDING_PAD , 1);
+		inventory.setCanInsertSlot(0, true);
+		inventory.setCanExtractSlot(0, true);
 		MinecraftForge.EVENT_BUS.register(this);
-		blockPos = new LinkedList<HashedBlockPosition>();
+		blockPos = new LinkedList<>();
 		moduleNameTextbox = new ModuleTextBox(this, 40, 30, 60, 12, 9);
 		name = "";
 	}
@@ -97,6 +102,7 @@ public class TileLandingPad extends TileInventoryHatch implements ILinkableTile,
 	}
 
 	@Override
+	@ParametersAreNonnullByDefault
 	public boolean onLinkStart(ItemStack item, TileEntity entity,
 			PlayerEntity player, World world) {
 		ItemLinker.setMasterCoords(item, getPos());
@@ -106,10 +112,11 @@ public class TileLandingPad extends TileInventoryHatch implements ILinkableTile,
 
 	@Override
 	public String getModularInventoryName() {
-		return "tile.landingPad.name";
+		return "block.advancedrocketry.landingpad";
 	}
 
 	@Override
+	@ParametersAreNonnullByDefault
 	public boolean onLinkComplete(ItemStack item, TileEntity entity,
 			PlayerEntity player, World world) {
 
@@ -131,7 +138,7 @@ public class TileLandingPad extends TileInventoryHatch implements ILinkableTile,
 
 
 			if(!world.isRemote) {
-				player.sendMessage(new TranslationTextComponent("msg.linker.success"), Util.field_240973_b_);
+				player.sendMessage(new TranslationTextComponent("msg.linker.success"), Util.DUMMY_UUID);
 
 				if(tile instanceof IMultiblock)
 					((IMultiblock)tile).setMasterBlock(getPos());
@@ -183,7 +190,7 @@ public class TileLandingPad extends TileInventoryHatch implements ILinkableTile,
 
 	@SubscribeEvent
 	public void onRocketDismantle(RocketDismantleEvent event) {
-		if(!world.isRemote && ARConfiguration.GetSpaceDimId().equals(ZUtils.getDimensionIdentifier(world))) {
+		if(!world.isRemote && DimensionManager.spaceId.equals(ZUtils.getDimensionIdentifier(world))) {
 
 			EntityRocketBase rocket = (EntityRocketBase)event.getEntity();
 			AxisAlignedBB bbCache =  new AxisAlignedBB(this.getPos().add(-1,0,-1), this.getPos().add(1,2,1));
@@ -200,7 +207,7 @@ public class TileLandingPad extends TileInventoryHatch implements ILinkableTile,
 	}
 
 	public void registerTileWithStation(World world, BlockPos pos) {
-		if(!world.isRemote && ARConfiguration.GetSpaceDimId().equals(ZUtils.getDimensionIdentifier(world))) {
+		if(!world.isRemote && DimensionManager.spaceId.equals(ZUtils.getDimensionIdentifier(world))) {
 			ISpaceObject spaceObj = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(pos);
 
 			if(spaceObj instanceof SpaceStationObject) {
@@ -209,14 +216,14 @@ public class TileLandingPad extends TileInventoryHatch implements ILinkableTile,
 				AxisAlignedBB bbCache =  new AxisAlignedBB(this.getPos().add(-1,0,-1), this.getPos().add(1,2,1));
 				List<EntityRocketBase> rockets = world.getEntitiesWithinAABB(EntityRocketBase.class, bbCache);
 
-				if(rockets != null && !rockets.isEmpty())
+				if(!rockets.isEmpty())
 					((SpaceStationObject)spaceObj).setPadStatus(pos, true);
 			}
 		}
 	}
 
 	public void setAllowAutoLand(World world, BlockPos pos, boolean allow) {
-		if(!world.isRemote && ARConfiguration.GetSpaceDimId().equals(ZUtils.getDimensionIdentifier(world))) {
+		if(!world.isRemote && DimensionManager.spaceId.equals(ZUtils.getDimensionIdentifier(world))) {
 			ISpaceObject spaceObj = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(pos);
 
 			if(spaceObj instanceof SpaceStationObject) {
@@ -226,7 +233,7 @@ public class TileLandingPad extends TileInventoryHatch implements ILinkableTile,
 	}
 
 	public void unregisterTileWithStation(World world, BlockPos pos) {
-		if(!world.isRemote && ARConfiguration.GetSpaceDimId().equals(ZUtils.getDimensionIdentifier(world))) {
+		if(!world.isRemote && DimensionManager.spaceId.equals(ZUtils.getDimensionIdentifier(world))) {
 			ISpaceObject spaceObj = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(pos);
 			if(spaceObj instanceof SpaceStationObject)
 				((SpaceStationObject)spaceObj).removeLandingPad(pos);
@@ -234,7 +241,7 @@ public class TileLandingPad extends TileInventoryHatch implements ILinkableTile,
 	}
 
 	@Override
-	public void setInventorySlotContents(int slot, ItemStack stack) {
+	public void setInventorySlotContents(int slot, @Nonnull ItemStack stack) {
 		super.setInventorySlotContents(slot, stack);
 
 		if(!stack.isEmpty()) {
@@ -270,19 +277,19 @@ public class TileLandingPad extends TileInventoryHatch implements ILinkableTile,
 	}
 
 	@Override
-	public boolean isItemValidForSlot(int slot, ItemStack stack) {
+	public boolean isItemValidForSlot(int slot, @Nonnull ItemStack stack) {
 		return stack.getItem() == LibVulpesItems.itemLinker;
 	}
 
 	public List<IInfrastructure> getConnectedInfrastructure() {
-		List<IInfrastructure> infrastructure = new LinkedList<IInfrastructure>();
+		List<IInfrastructure> infrastructure = new LinkedList<>();
 
 		Iterator<HashedBlockPosition> iter = blockPos.iterator();
 
 		while(iter.hasNext()) {
 			HashedBlockPosition position = iter.next();
 			TileEntity tile = world.getTileEntity(position.getBlockPos());
-			if((tile = world.getTileEntity(position.getBlockPos())) instanceof IInfrastructure) {
+			if(tile instanceof IInfrastructure) {
 				infrastructure.add((IInfrastructure)tile);
 			}
 			else
@@ -317,7 +324,7 @@ public class TileLandingPad extends TileInventoryHatch implements ILinkableTile,
 	@Override
 	public void onDataPacket(NetworkManager net, SUpdateTileEntityPacket pkt) {
 		super.onDataPacket(net, pkt);
-		func_230337_a_(getBlockState(), pkt.getNbtCompound());
+		read(getBlockState(), pkt.getNbtCompound());
 		moduleNameTextbox.setText(name);
 	}
 
@@ -338,7 +345,7 @@ public class TileLandingPad extends TileInventoryHatch implements ILinkableTile,
 			CompoundNBT nbt) {
 		if(id == 0) {
 			name = nbt.getString("id");
-			if(!world.isRemote && ARConfiguration.GetSpaceDimId().equals(ZUtils.getDimensionIdentifier(world))) {
+			if(!world.isRemote && DimensionManager.spaceId.equals(ZUtils.getDimensionIdentifier(world))) {
 				ISpaceObject spaceObj = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(pos);
 
 				if(spaceObj instanceof SpaceStationObject) {
@@ -355,11 +362,11 @@ public class TileLandingPad extends TileInventoryHatch implements ILinkableTile,
 	}
 
 	@Override
-	public void func_230337_a_(BlockState state, CompoundNBT nbt) {
-		super.func_230337_a_(state, nbt);
+	public void read(BlockState state, CompoundNBT nbt) {
+		super.read(state, nbt);
 		blockPos.clear();
 		if(nbt.contains("infrastructureLocations")) {
-			int array[] = nbt.getIntArray("infrastructureLocations");
+			int[] array = nbt.getIntArray("infrastructureLocations");
 
 			for(int counter = 0; counter < array.length; counter += 3) {
 				blockPos.add(new HashedBlockPosition(array[counter], array[counter+1], array[counter+2]));

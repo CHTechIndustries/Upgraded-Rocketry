@@ -4,12 +4,9 @@ import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.client.renderer.WorldRenderer;
 import net.minecraft.client.renderer.tileentity.TileEntityRenderer;
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Direction;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.vector.Quaternion;
-
-import org.lwjgl.opengl.GL11;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
@@ -20,7 +17,9 @@ import zmaster587.advancedRocketry.tile.multiblock.machine.TileChemicalReactor;
 import zmaster587.libVulpes.block.RotatableBlock;
 import zmaster587.libVulpes.render.RenderHelper;
 
-public class RendererChemicalReactor  extends TileEntityRenderer {
+import javax.annotation.ParametersAreNonnullByDefault;
+
+public class RendererChemicalReactor  extends TileEntityRenderer<TileChemicalReactor> {
 
 	WavefrontObject model;
 	ResourceLocation texture;
@@ -36,21 +35,17 @@ public class RendererChemicalReactor  extends TileEntityRenderer {
 	}
 	
 	@Override
-	public void render(TileEntity tile, float partialTicks, MatrixStack matrix,
-			IRenderTypeBuffer buffer, int combinedLightIn, int combinedOverlayIn) {
-		
-		TileChemicalReactor multiBlockTile = (TileChemicalReactor)tile;
+	@ParametersAreNonnullByDefault
+	public void render(TileChemicalReactor tile, float partialTicks, MatrixStack matrix, IRenderTypeBuffer buffer, int combinedLightIn, int combinedOverlayIn) {
 
-		if(!multiBlockTile.canRender())
+		if(!tile.canRender())
 			return;
-
+		
 		if (tile.getWorld() != null) {
 			combinedLightIn = WorldRenderer.getCombinedLight(tile.getWorld(), tile.getPos().add(0, 1, 0));
 		} else {
 			combinedLightIn = 15728880;
 		}
-		
-		matrix.push();
 
 		
 		//Rotate and move the model into position
@@ -59,20 +54,9 @@ public class RendererChemicalReactor  extends TileEntityRenderer {
 		Direction front = RotatableBlock.getFront(tile.getWorld().getBlockState(tile.getPos())); //tile.getWorldObj().getBlockMetadata(tile.xCoord, tile.yCoord, tile.zCoord));
 		
 		matrix.rotate(new Quaternion(0,(front.getZOffset() == 1 ? 180 : 0) - front.getXOffset()*90f,0, true));
+		matrix.translate(1.5f, -1.0f, -.5f);
 		IVertexBuilder entityTransparentBuilder = buffer.getBuffer(RenderHelper.getSolidEntityModelRenderType(texture));
-		model.renderOnly(matrix, combinedLightIn, combinedOverlayIn, entityTransparentBuilder, "mesh");
-		matrix.pop();
-		
-		
-		
-		matrix.translate(.5f, 0, 0.5f);
-		
-		matrix.rotate(new Quaternion(0,(front.getZOffset() == 1 ? 180 : 0) - front.getXOffset()*90f,0, true));
-		
-		matrix.translate(0f, -0.5f, 1f );
-		if(multiBlockTile.isRunning())
-			matrix.rotate(new Quaternion((8*tile.getWorld().getGameTime()) % 360,0,0, true));
-		model.renderOnly(matrix, combinedLightIn, combinedOverlayIn, entityTransparentBuilder, "Cylinder");
+		model.renderOnly(matrix, combinedLightIn, combinedOverlayIn, entityTransparentBuilder, "Hull");
 		
 		matrix.pop();
 	}

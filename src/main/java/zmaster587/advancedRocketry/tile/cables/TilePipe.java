@@ -11,11 +11,10 @@ import zmaster587.advancedRocketry.cable.NetworkRegistry;
 
 public class TilePipe extends TileEntity {
 
-	int networkID;
-	boolean initialized, destroyed;
+	private int networkID;
+	private boolean initialized, destroyed;
 
-	static boolean debug = false;
-	boolean connectedSides[];
+	boolean[] connectedSides;
 
 	public TilePipe(TileEntityType<?> type) {
 		super(type);
@@ -151,8 +150,8 @@ public class TilePipe extends TileEntity {
 			else {
 				getNetworkHandler().removeFromAllTypes(this, tile);
 				getNetworkHandler().addSource(this,tile,dir);
-				connectedSides[dir.ordinal()]=true;
 			}
+			connectedSides[dir.ordinal()]=true;
 		}
 
 		if(canInject(dir, tile) && world.getRedstonePowerFromNeighbors(pos) == 0 && world.getStrongPower(pos) == 0) {
@@ -161,8 +160,8 @@ public class TilePipe extends TileEntity {
 			else {
 				getNetworkHandler().removeFromAllTypes(this, tile);
 				getNetworkHandler().addSink(this, tile,dir);
-				connectedSides[dir.ordinal()]=true;
 			}
+			connectedSides[dir.ordinal()]=true;
 		}
 	}
 
@@ -209,31 +208,19 @@ public class TilePipe extends TileEntity {
 							initialize(pipe.getNetworkID());
 							linkSystems();
 							markDirty();
-							
-							if(debug && !world.isRemote)
-								System.out.println(" pos1 " + getPos());
 
 						} else if(pipe.getNetworkID() != networkID)
 							mergeNetworks(pipe.getNetworkID(), networkID);
 					}
 					else if(pipe.destroyed) {
 						getNetworkHandler().removeNetworkByID(pipe.networkID);
-
-						if( debug && !world.isRemote)
-							System.out.println(" pos2 " + getPos());
-						
 						onPlaced();
 						markDirty();
 					}
 					else if(isInitialized()) {
-						if(debug && !world.isRemote)
-							System.out.println(" pos3 " + getPos());
-						
 						pipe.initialize(networkID);
 					}
-					else {		
-						if(debug && !world.isRemote)
-							System.out.println(" pos4 " + getPos());
+					else {
 						onPlaced();
 						markDirty();
 					}

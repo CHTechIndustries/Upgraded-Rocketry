@@ -9,20 +9,15 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundEvent;
 import zmaster587.advancedRocketry.api.AdvancedRocketryBlocks;
 import zmaster587.advancedRocketry.api.AdvancedRocketryTileEntityType;
-import zmaster587.advancedRocketry.api.Constants;
 import zmaster587.advancedRocketry.inventory.TextureResources;
 import zmaster587.advancedRocketry.util.AudioRegistry;
-import zmaster587.libVulpes.LibVulpes;
 import zmaster587.libVulpes.api.LibVulpesBlocks;
-import zmaster587.libVulpes.api.material.AllowedProducts;
 import zmaster587.libVulpes.api.material.Material;
 import zmaster587.libVulpes.api.material.MaterialRegistry;
 import zmaster587.libVulpes.block.BlockMeta;
 import zmaster587.libVulpes.inventory.modules.IModularInventory;
 import zmaster587.libVulpes.inventory.modules.ModuleBase;
 import zmaster587.libVulpes.inventory.modules.ModuleProgress;
-import zmaster587.libVulpes.recipe.NumberedOreDictStack;
-import zmaster587.libVulpes.recipe.RecipesMachine;
 import zmaster587.libVulpes.tile.multiblock.TileMultiblockMachine;
 
 import java.util.List;
@@ -77,6 +72,8 @@ public class TileElectricArcFurnace extends TileMultiblockMachine implements IMo
 		List<BlockMeta> list = super.getAllowableWildCardBlocks();
 		list.add(new BlockMeta(LibVulpesBlocks.blockItemInputHatch));
 		list.add(new BlockMeta(LibVulpesBlocks.blockItemOutputHatch));
+		list.add(new BlockMeta(LibVulpesBlocks.blockFluidInputHatch));
+		list.add(new BlockMeta(LibVulpesBlocks.blockFluidOutputHatch));
 		list.add(new BlockMeta(AdvancedRocketryBlocks.blockBlastBrick));
 		return list;
 	}
@@ -119,7 +116,6 @@ public class TileElectricArcFurnace extends TileMultiblockMachine implements IMo
 
 	@Override
 	public List<ModuleBase> getModules(int ID, PlayerEntity player) {
-		// TODO Auto-generated method stub
 		List<ModuleBase> modules = super.getModules(ID, player);
 
 		modules.add(new ModuleProgress(80, 20, 0, TextureResources.arcFurnaceProgressBar, this));

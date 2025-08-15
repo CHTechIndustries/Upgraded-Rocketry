@@ -1,6 +1,5 @@
 package zmaster587.advancedRocketry.entity.fx;
 
-
 import net.minecraft.client.particle.IAnimatedSprite;
 import net.minecraft.client.particle.IParticleFactory;
 import net.minecraft.client.particle.Particle;
@@ -10,6 +9,8 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+
+import javax.annotation.ParametersAreNonnullByDefault;
 
 public class InverseTrailFluid extends InverseTrailFx {
 	double initX, initZ, distX, distZ;
@@ -26,12 +27,12 @@ public class InverseTrailFluid extends InverseTrailFx {
 		
 		float intensity = ((float)(Math.random())*0.3f) + 0.7f;
 		
-		this.particleRed = (float) (((color >> 16) & 0xFF)/255f) *intensity;
-		this.particleGreen = (float) (((color >> 8) & 0xFF)/255f)*intensity;
-		this.particleBlue = (float) (((color& 0xFF)/255f))*intensity;
-		
+		this.particleRed = (((color >> 16) & 0xFF)/255f) *intensity;
+		this.particleGreen = (((color >> 8) & 0xFF)/255f) *intensity;
+		this.particleBlue = ((color& 0xFF)/255f) *intensity;
+
         this.maxAge = time;
-        this.particleScale = (float) (this.rand.nextFloat() * 0.25F) + 0.75f;
+        this.particleScale = (this.rand.nextFloat() * 0.25F) + 0.75f;
 	}
 	
 	@Override
@@ -60,11 +61,15 @@ public class InverseTrailFluid extends InverseTrailFx {
 	@OnlyIn(Dist.CLIENT)
 	public static class Factory implements IParticleFactory<BasicParticleType> {
 		private final IAnimatedSprite spriteSet;
+		
+		public static IAnimatedSprite spriteSet2;
 
 		public Factory(IAnimatedSprite p_i50630_1_) {
 			this.spriteSet = p_i50630_1_;
+			spriteSet2 = p_i50630_1_;
 		}
 
+		@ParametersAreNonnullByDefault
 		public Particle makeParticle(BasicParticleType typeIn, ClientWorld worldIn, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
 			InverseTrailFluid arc = new InverseTrailFluid(worldIn, x, y, z, xSpeed, ySpeed, zSpeed, 0xFFFFFF, 0xFFF);
 			arc.selectSpriteWithAge(spriteSet);

@@ -3,7 +3,6 @@ package zmaster587.advancedRocketry.backwardCompat;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
 
-import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.util.math.vector.Matrix3f;
 import net.minecraft.util.math.vector.Matrix4f;
 import net.minecraft.util.math.vector.Vector3d;
@@ -28,11 +27,17 @@ public class Face
     @OnlyIn(value=Dist.CLIENT)
     public void addFaceForRender(MatrixStack matrix, IVertexBuilder tessellator)
     {
-        addFaceForRender(matrix, tessellator, 0.0005F);
+        addFaceForRender(matrix, tessellator, 0.0005F, 1,1,1,1);
     }
     
     @OnlyIn(value=Dist.CLIENT)
-    public void addFaceForRender(MatrixStack matrix, IVertexBuilder tessellator, float textureOffset)
+    public void addFaceForRender(MatrixStack matrix, IVertexBuilder tessellator, float r, float g, float b, float a)
+    {
+        addFaceForRender(matrix, tessellator, 0.0005F, r,g,b,a);
+    }
+    
+    @OnlyIn(value=Dist.CLIENT)
+    public void addFaceForRender(MatrixStack matrix, IVertexBuilder tessellator, float textureOffset, float r, float g, float b, float a)
     {
         if (faceNormal == null)
         {
@@ -46,10 +51,9 @@ public class Face
 
         if ((textureCoordinates != null) && (textureCoordinates.length > 0))
         {
-            for (int i = 0; i < textureCoordinates.length; ++i)
-            {
-                averageU += textureCoordinates[i].u;
-                averageV += textureCoordinates[i].v;
+            for (TextureCoordinate textureCoordinate : textureCoordinates) {
+                averageU += textureCoordinate.u;
+                averageV += textureCoordinate.v;
             }
 
             averageU = averageU / textureCoordinates.length;
@@ -93,7 +97,7 @@ public class Face
                 
                 Vector4f vector4f = new Vector4f(vertices[i].x, vertices[i].y, vertices[i].z, 1.0F);
                 vector4f.transform(matrix4f);
-            	tessellator.pos(vector4f.getX(), vector4f.getY(),vector4f.getZ()).color(1, 1, 1, 1).lightmap(-1, -1).normal(vector3f.getX(), vector3f.getY(), vector3f.getZ()).endVertex();
+            	tessellator.pos(vector4f.getX(), vector4f.getY(),vector4f.getZ()).color(r,g,b,a).lightmap(-1, -1).normal(vector3f.getX(), vector3f.getY(), vector3f.getZ()).endVertex();
             }
         }
     }
@@ -119,10 +123,9 @@ public class Face
 
         if ((textureCoordinates != null) && (textureCoordinates.length > 0))
         {
-            for (int i = 0; i < textureCoordinates.length; ++i)
-            {
-                averageU += textureCoordinates[i].u;
-                averageV += textureCoordinates[i].v;
+            for (TextureCoordinate textureCoordinate : textureCoordinates) {
+                averageU += textureCoordinate.u;
+                averageV += textureCoordinate.v;
             }
 
             averageU = averageU / textureCoordinates.length;
@@ -172,7 +175,7 @@ public class Face
 
     public Vertex calculateFaceNormal()
     {
-    	
+
         Vector3d v1 = new Vector3d(vertices[1].x - vertices[0].x, vertices[1].y - vertices[0].y, vertices[1].z - vertices[0].z);
         Vector3d v2 = new Vector3d(vertices[2].x - vertices[0].x, vertices[2].y - vertices[0].y, vertices[2].z - vertices[0].z);
         Vector3d normalVector = null;

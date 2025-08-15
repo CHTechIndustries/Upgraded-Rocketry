@@ -1,6 +1,5 @@
 package zmaster587.advancedRocketry.tile.multiblock.machine;
 
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.player.PlayerEntity;
@@ -12,12 +11,9 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import zmaster587.advancedRocketry.api.AdvancedRocketryTileEntityType;
-import zmaster587.advancedRocketry.api.Constants;
 import zmaster587.advancedRocketry.inventory.TextureResources;
 import zmaster587.advancedRocketry.util.AudioRegistry;
-import zmaster587.libVulpes.LibVulpes;
 import zmaster587.libVulpes.api.LibVulpesBlocks;
-import zmaster587.libVulpes.api.material.AllowedProducts;
 import zmaster587.libVulpes.api.material.Material;
 import zmaster587.libVulpes.api.material.MaterialRegistry;
 import zmaster587.libVulpes.inventory.modules.ModuleBase;
@@ -28,15 +24,14 @@ import java.util.List;
 
 public class TileRollingMachine extends TileMultiblockMachine {
 
-	public static final Object structure[][][] = new Object[][][] { 
-		{   {'c', null, Blocks.AIR, Blocks.AIR},
-			{'I', Blocks.AIR, LibVulpesBlocks.blockStructureBlock, Blocks.AIR},
-			{'I', Blocks.AIR, LibVulpesBlocks.blockStructureBlock, Blocks.AIR}},
+	public static final Object[][][] structure = new Object[][][] {
+		{   {Blocks.AIR, Blocks.AIR, Blocks.AIR, Blocks.AIR, Blocks.AIR},
+			{LibVulpesBlocks.blockMachineStructure, LibVulpesBlocks.blockMachineStructure, LibVulpesBlocks.blockMachineStructure, LibVulpesBlocks.blockMachineStructure, LibVulpesBlocks.blockMachineStructure},
+			{LibVulpesBlocks.blockMachineStructure, LibVulpesBlocks.blockMachineStructure, LibVulpesBlocks.blockMachineStructure, new ResourceLocation("forge","storage_blocks/steel"), LibVulpesBlocks.blockMachineStructure}},
 
-			{{'P', 'L', LibVulpesBlocks.blockStructureBlock, null},
-				{new ResourceLocation("forge","coils"), LibVulpesBlocks.blockStructureBlock, LibVulpesBlocks.blockStructureBlock, 'O'},
-				{new ResourceLocation("forge","coils"), LibVulpesBlocks.motors, LibVulpesBlocks.blockStructureBlock, 'O'}}
-	};
+		{{'P', 'c', 'I', Blocks.AIR, Blocks.AIR},
+				{LibVulpesBlocks.blockMachineStructure, LibVulpesBlocks.motors, LibVulpesBlocks.motors, new ResourceLocation("forge","storage_blocks/steel"), LibVulpesBlocks.blockMachineStructure},
+				{LibVulpesBlocks.blockMachineStructure, 'L', 'O', new ResourceLocation("forge","storage_blocks/steel"), LibVulpesBlocks.blockMachineStructure}}};
 	
 	public TileRollingMachine() {
 		super(AdvancedRocketryTileEntityType.TILE_ROLLING);
@@ -83,9 +78,7 @@ public class TileRollingMachine extends TileMultiblockMachine {
 	}
 	
 	@Override
-	public boolean shouldHideBlock(World world, BlockPos pos, BlockState tile) {
-		return tile.getBlock() != Block.getBlockFromItem(MaterialRegistry.getMaterialFromName("Copper").getProduct(AllowedProducts.getProductByName("COIL")).getItem());
-	}
+	public boolean shouldHideBlock(World world, BlockPos pos, BlockState tile) { return true; }
 
 	@Override
 	public String getMachineName() {

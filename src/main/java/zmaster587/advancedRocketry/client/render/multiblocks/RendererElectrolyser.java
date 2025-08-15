@@ -1,20 +1,14 @@
 package zmaster587.advancedRocketry.client.render.multiblocks;
 
 
-import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
-import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.WorldRenderer;
 import net.minecraft.client.renderer.tileentity.TileEntityRenderer;
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher;
-import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Direction;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Quaternion;
-
-import org.lwjgl.opengl.GL11;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
@@ -24,12 +18,12 @@ import zmaster587.advancedRocketry.backwardCompat.WavefrontObject;
 import zmaster587.advancedRocketry.tile.multiblock.machine.TileElectrolyser;
 import zmaster587.libVulpes.block.RotatableBlock;
 import zmaster587.libVulpes.render.RenderHelper;
-import zmaster587.libVulpes.tile.multiblock.TileMultiblockMachine;
+
+import javax.annotation.ParametersAreNonnullByDefault;
 
 public class RendererElectrolyser extends TileEntityRenderer<TileElectrolyser> {
 
 	WavefrontObject model;
-
 	ResourceLocation texture = new ResourceLocation("advancedrocketry","textures/models/electrolyser.png");
 
 	public RendererElectrolyser(TileEntityRendererDispatcher tile) {
@@ -43,11 +37,10 @@ public class RendererElectrolyser extends TileEntityRenderer<TileElectrolyser> {
 	}
 	
 	@Override
-	public void render(TileElectrolyser tile, float partialTicks, MatrixStack matrix,
-			IRenderTypeBuffer buffer, int combinedLightIn, int combinedOverlayIn){
-		TileMultiblockMachine multiBlockTile = (TileMultiblockMachine)tile;
+	@ParametersAreNonnullByDefault
+	public void render(TileElectrolyser tile, float partialTicks, MatrixStack matrix, IRenderTypeBuffer buffer, int combinedLightIn, int combinedOverlayIn){
 
-		if(!multiBlockTile.canRender())
+		if(!tile.canRender())
 			return;
 
 		if (tile.getWorld() != null) {
@@ -62,14 +55,16 @@ public class RendererElectrolyser extends TileEntityRenderer<TileElectrolyser> {
 		matrix.translate(.5f, 0, 0.5f);
 		Direction front = RotatableBlock.getFront(tile.getWorld().getBlockState(tile.getPos())); //tile.getWorldObj().getBlockMetadata(tile.xCoord, tile.yCoord, tile.zCoord));
 		matrix.rotate(new Quaternion(0,(front.getZOffset() == 1 ? 180 : 0) - front.getXOffset()*90f, 0, true ));
+		matrix.translate(1.5f, 0f, -0.5f);
 
 		IVertexBuilder entitySolidBuilder = buffer.getBuffer(RenderHelper.getSolidEntityModelRenderType(texture));
 		model.tessellateAll(matrix, combinedLightIn, combinedOverlayIn, entitySolidBuilder);
 
 		//Lightning effect
 
-		if(multiBlockTile.isRunning()) {
-
+		if(tile.isRunning()) {
+			matrix.push();
+			matrix.translate(-1.5, 0.05f, 0.5f);
 			double width = 0.01;
 
 			//Isn't precision fun?
@@ -78,7 +73,6 @@ public class RendererElectrolyser extends TileEntityRenderer<TileElectrolyser> {
 			double yPos = 1.4;
 			
 			IVertexBuilder entityTransparentBuilder = buffer.getBuffer(RenderHelper.getTranslucentManualRenderType());
-
 			float r = .64f, g = 0.64f, b = 1f, a= 0.4f;
 			
 			double xMin = -0.3f;
@@ -106,7 +100,7 @@ public class RendererElectrolyser extends TileEntityRenderer<TileElectrolyser> {
 			xMin += 0.15;
 
 			RenderHelper.renderCrossXZ(matrix, entityTransparentBuilder, width, xMin, yPos + ySkew, zMin + xSkew, xMax, yPos, zMax, r,g,b,a);
-			
+			matrix.pop();
 		}
 		matrix.pop();
 	}

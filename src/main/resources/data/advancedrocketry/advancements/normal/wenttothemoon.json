@@ -1,20 +1,21 @@
 {
     "display": {
         "icon": {
-            "item": "advancedrocketry:spaceboots"
+            "item": "advancedrocketry:spacesuitboots"
         },
         "title": {
-            "translate": "achievement.weReallyWentToTheMoon"
+            "translate": "advancement.advancedrocketry.wereallywenttothemoon"
         },
         "description": {
-            "translate": "achievement.weReallyWentToTheMoon.desc"
+            "translate": "advancement.advancedrocketry.wereallywenttothemoon.desc"
         },
-        "frame": "challenge"
+        "frame": "challenge",
+        "hidden": true
     },
-    "parent": "advancedrocketry:normal/moonlanding",
+    "parent": "advancedrocketry:normal/onesmallstep",
     "criteria": {
         "wenttothemoon": {
-            "trigger": "wenttothemoon"
+            "trigger": "minecraft:impossible"
         }
     }
 } 

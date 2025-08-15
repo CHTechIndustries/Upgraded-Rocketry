@@ -1,11 +1,5 @@
 package zmaster587.advancedRocketry.unit;
 
-import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Map.Entry;
-
 import com.google.common.base.Predicate;
 
 import net.minecraft.entity.player.PlayerEntity;
@@ -19,9 +13,15 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.server.ServerLifecycleHooks;
 import zmaster587.advancedRocketry.AdvancedRocketry;
 
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
+
 public class IngameTestOrchestrator {
 	
-	static final Map<Long, PlayerMapping> eventScheduler = new HashMap<Long, PlayerMapping>();
+	static final Map<Long, PlayerMapping> eventScheduler = new HashMap<>();
 	public static String name;
 	public static boolean registered = false;
 	public static IngameTestOrchestrator instance = new IngameTestOrchestrator();
@@ -41,14 +41,14 @@ public class IngameTestOrchestrator {
 				} catch (AssertionError e1) {
 					AdvancedRocketry.logger.error("Test Failed!!!");
 					AdvancedRocketry.logger.catching(e1);
-					getPlayerFromAnywhere().sendMessage(new StringTextComponent(test.getName() + " Failed!"), Util.field_240973_b_);
+					getPlayerFromAnywhere().sendMessage(new StringTextComponent(test.getName() + " Failed!"), Util.DUMMY_UUID);
 				} catch (Exception e2) {
 					e2.printStackTrace();
 				}
 				
 				if(test.passed())
 				{
-					getPlayerFromAnywhere().sendMessage(new StringTextComponent(test.getName() + " Passed!"), Util.field_240973_b_);
+					getPlayerFromAnywhere().sendMessage(new StringTextComponent(test.getName() + " Passed!"), Util.DUMMY_UUID);
 				}
 			}
 		}
@@ -92,12 +92,7 @@ public class IngameTestOrchestrator {
 	private static PlayerEntity getPlayerByName(String name) {
 		PlayerEntity player = null;
 		for(ServerWorld world : ServerLifecycleHooks.getCurrentServer().getWorlds()) {
-			player = (PlayerEntity) world.getPlayers(new Predicate<ServerPlayerEntity>() {
-				public boolean apply(ServerPlayerEntity input) 
-				{
-					return input.getName().toString().equals(name);
-				};
-			});
+			player = (PlayerEntity) world.getPlayers((Predicate<ServerPlayerEntity>) input -> input.getName().toString().equals(name));
 			if ( player != null) break;
 		}
 

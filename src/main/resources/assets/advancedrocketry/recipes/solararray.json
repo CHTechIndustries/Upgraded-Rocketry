@@ -1,0 +1,35 @@
+{
+    "type": "minecraft:crafting_shaped",
+    "pattern":
+    [
+	"rur",
+	"gbg",
+	"rrr"
+    ],
+    "key":
+    {
+        "g":
+        {
+
+            "tag": "forge:glass_panes"
+        },
+        "u":
+        {
+            "item": "advancedrocketry:item_ui"
+        },
+	"b":
+        {
+            "item": "libvulpes:structure_machine"
+        },
+	"r":
+        {
+
+            "tag": "forge:rods/iron"
+        }
+    },
+    "result":
+    {
+        "item": "advancedrocketry:solararray",
+        "count": 1
+    }
+}

@@ -1,19 +1,16 @@
 package zmaster587.advancedRocketry.client.render.entity;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererManager;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.EntityRayTraceResult;
 import net.minecraft.util.math.RayTraceResult;
+import net.minecraft.util.math.RayTraceResult.Type;
 import net.minecraft.util.math.vector.Quaternion;
 import net.minecraftforge.fml.client.registry.IRenderFactory;
-import org.lwjgl.opengl.GL11;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
@@ -25,9 +22,12 @@ import zmaster587.advancedRocketry.dimension.DimensionProperties;
 import zmaster587.advancedRocketry.entity.EntityUIPlanet;
 import zmaster587.libVulpes.render.RenderHelper;
 
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
+
 public class RenderPlanetUIEntity extends EntityRenderer<EntityUIPlanet> implements IRenderFactory<EntityUIPlanet> {
 
-	private static WavefrontObject sphere;
+	private static final WavefrontObject sphere;
 	public static ResourceLocation planetUIBG = new ResourceLocation("advancedrocketry","textures/gui/planetuioverlay.png");
 	public static ResourceLocation planetUIFG = new ResourceLocation("advancedrocketry","textures/gui/planetuioverlayfg.png");
 
@@ -39,6 +39,7 @@ public class RenderPlanetUIEntity extends EntityRenderer<EntityUIPlanet> impleme
 		}
 	}
 
+	@ParametersAreNonnullByDefault
 	public RenderPlanetUIEntity(EntityRendererManager renderManager) {
 		super(renderManager);
 	}
@@ -49,22 +50,22 @@ public class RenderPlanetUIEntity extends EntityRenderer<EntityUIPlanet> impleme
 		return new RenderPlanetUIEntity(manager);
 	}
 
+	@Nonnull
 	@Override
+	@ParametersAreNonnullByDefault
 	public ResourceLocation getEntityTexture(EntityUIPlanet entity) {
 		return DimensionProperties.PlanetIcons.EARTHLIKE.getResource();
 	}
 	
 	@Override
-	public void render(EntityUIPlanet entity, float entityYaw, float partialTicks, MatrixStack matrix,
-			IRenderTypeBuffer bufferIn, int packedLightIn) {
+	@ParametersAreNonnullByDefault
+	public void render(EntityUIPlanet entity, float entityYaw, float partialTicks, MatrixStack matrix, IRenderTypeBuffer bufferIn, int packedLightIn) {
 
 		DimensionProperties properties = entity.getProperties();
 		if(properties == null)
 			return;
 
 		float sizeScale = Math.max(properties.gravitationalMultiplier*properties.gravitationalMultiplier*entity.getScale(), .5f);
-        int j = packedLightIn;
-        int k = OverlayTexture.NO_OVERLAY;
 		
 		matrix.push();
 		matrix.translate(0, sizeScale*0.03f, 0);
@@ -72,11 +73,13 @@ public class RenderPlanetUIEntity extends EntityRenderer<EntityUIPlanet> impleme
 
 		matrix.scale(.1f*sizeScale, .1f*sizeScale, .1f*sizeScale);
 		IVertexBuilder translucentBuffer = bufferIn.getBuffer(RenderHelper.getTranslucentEntityModelRenderType(properties.getPlanetIconLEO()));
-
+		
+		
+		
 		matrix.push();
 		matrix.rotate(new Quaternion(0, entity.world.getGameTime() & 0xFF, 0, true));
-		sphere.tessellateAll(matrix, j, k, translucentBuffer);
-		matrix.pop();
+		sphere.tessellateAll(matrix, packedLightIn, OverlayTexture.NO_OVERLAY, translucentBuffer);
+		
 		
 		//Render shadow
 		/*matrix.push();
@@ -115,20 +118,17 @@ public class RenderPlanetUIEntity extends EntityRenderer<EntityUIPlanet> impleme
 		matrix.pop();*/
 
 		//Render ATM
-		/*if(properties.hasAtmosphere()) {
+		IVertexBuilder atmBuffer = bufferIn.getBuffer(RenderHelper.getLightningTranslucencyNoTexEntityModelRenderType());
+		if(properties.hasAtmosphere()) {
 			matrix.push();
-			GlStateManager.disableTexture();
-			GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-			GlStateManager.color4f(properties.skyColor[0], properties.skyColor[1], properties.skyColor[2], .1f);
-
+			matrix.scale(1.1f,1.1f,1.1f);
 			for(int i = 0; i < 5; i++) {
-				GL11.glScalef(1.02f, 1.02f, 1.02f);
-				sphere.renderAll(matrix);
+				matrix.scale(1.01f,1.01f,1.01f);
+				sphere.renderOnly(matrix, 0, 0, atmBuffer, properties.skyColor[0], properties.skyColor[1], properties.skyColor[2], 0.5f, "Sphere");	
 			}
-			
-			GlStateManager.enableTexture();
 			matrix.pop();
-		}*/
+		}
+		matrix.pop();
 
 		//Render hololines
 		matrix.push();
@@ -148,66 +148,58 @@ public class RenderPlanetUIEntity extends EntityRenderer<EntityUIPlanet> impleme
 		if(entity.isSelected()) {
 			double speedRotate = 0.025d;
 			//GlStateManager.color4f(0.4f, 0.4f, 1f, 0.6f);
+			float r = 0.4f, g = 0.4f, b = 1.0f, a = 0.6f;
 			matrix.translate(0, -1.25, 0);
 			matrix.push();
 			matrix.rotate(new Quaternion(0f, (float) (speedRotate*System.currentTimeMillis() % 360), 0f, true));
-			RendererWarpCore.model.renderOnly(matrix, j, k, translucentBuffer, "Rotate1");
+			RendererWarpCore.model.renderOnly(matrix, packedLightIn, OverlayTexture.NO_OVERLAY, translucentBuffer, r,g,b,a, "Rotate1");
 			matrix.pop();
 
 			matrix.push();
 			matrix.rotate(new Quaternion(0f, (float) (180 + speedRotate*System.currentTimeMillis() % 360), 0f, true));
-			RendererWarpCore.model.renderOnly(matrix, j, k, translucentBuffer, "Rotate1");
+			RendererWarpCore.model.renderOnly(matrix, packedLightIn, OverlayTexture.NO_OVERLAY, translucentBuffer, r,g,b,a, "Rotate1");
 			matrix.pop();
 		}
 
 		matrix.pop();
 
-		/*RayTraceResult hitObj = Minecraft.getInstance().objectMouseOver;
-		if(hitObj != null && hitObj.entityHit == entity) {
+		
+		
+		RayTraceResult hitObj = Minecraft.getInstance().objectMouseOver;
+		if(hitObj != null && hitObj.getType() == Type.ENTITY && ((EntityRayTraceResult)hitObj).getEntity() == entity) {
 
 			matrix.push();
-			GlStateManager.color4f(1, 1, 1);
-			matrix.translate(x, y + sizeScale*0.03f, z);
-			sizeScale = .1f*sizeScale;
-			GL11.glScaled(sizeScale,sizeScale,sizeScale);
+			matrix.translate(0, sizeScale*0.1f, 0);
+			sizeScale = .005f*sizeScale;
+			matrix.scale(sizeScale,sizeScale,sizeScale);
 
 			//Render atmosphere UI/planet info
 
-			RenderHelper.setupPlayerFacingMatrix(Minecraft.getInstance().player.getDistanceSq(hitObj.hitVec.z, hitObj.hitVec.y, hitObj.hitVec.x), 0, 0, 0);
-			buffer = Tessellator.getInstance().getBuffer();
-
+			matrix.rotate( Minecraft.getInstance().getRenderManager().getCameraOrientation());
+			matrix.rotate(new Quaternion(0, 0, 180, true));
+			
+			IVertexBuilder HUDBufferFG = bufferIn.getBuffer(RenderHelper.getTranslucentTexturedManualRenderType(planetUIFG));
 			//Draw Mass indicator
-			Minecraft.getInstance().getTextureManager().bindTexture(planetUIFG);
-			GlStateManager.color4f(1, 1, 1,0.8f);
-			renderMassIndicator(buffer, Math.min(properties.gravitationalMultiplier/2f, 1f));
+			renderMassIndicator(matrix, HUDBufferFG, Math.min(properties.gravitationalMultiplier/2f, 1f));
 
 			//Draw background
-			GlStateManager.color4f(1, 1, 1,1);
-			Minecraft.getInstance().getTextureManager().bindTexture(planetUIBG);
-			buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-			RenderHelper.renderNorthFaceWithUV(matrix, buffer, 1, -40, -25, 40, 55, 1, 0, 1, 0);
-			Tessellator.getInstance().draw();
+			IVertexBuilder HUDBufferBG = bufferIn.getBuffer(RenderHelper.getTranslucentTexturedManualRenderType(planetUIBG));
+			RenderHelper.renderNorthFaceWithUV(matrix, HUDBufferBG, 1, -40, -25, 40, 55, 1, 0, 1, 0);
 
 
 			//Render ATM
-			Minecraft.getInstance().getTextureManager().bindTexture(planetUIFG);
-			renderATMIndicator(buffer, Math.min(properties.getAtmosphereDensity()/200f, 1f));
+			HUDBufferFG = bufferIn.getBuffer(RenderHelper.getTranslucentTexturedManualRenderType(planetUIFG));
+			
+			renderATMIndicator(matrix, HUDBufferFG, Math.min(properties.getAtmosphereDensity()/200f, 1f));
 			//Render Temp
-			renderTemperatureIndicator(buffer, Math.min(properties.getAverageTemp()/400f,1f));
+			renderTemperatureIndicator(matrix, HUDBufferFG, Math.min(properties.getAverageTemp()/400f,1f));
 
 			//Render planet name
-			RenderHelper.cleanupPlayerFacingMatrix();
-			RenderHelper.renderTag(Minecraft.getInstance().player.getDistanceSq(hitObj.hitVec.z, hitObj.hitVec.y, hitObj.hitVec.x), properties.getName(), 0, .9, 0, 5);
-			RenderHelper.renderTag(Minecraft.getInstance().player.getDistanceSq(hitObj.hitVec.z, hitObj.hitVec.y, hitObj.hitVec.x), "NumMoons: " + properties.getChildPlanets().size(), 0, .6, 0, 5);
+			RenderHelper.renderTag(matrix, bufferIn, Minecraft.getInstance().player.getDistanceSq(hitObj.getHitVec().z, hitObj.getHitVec().y, hitObj.getHitVec().x), properties.getName(), packedLightIn, 5);
+			RenderHelper.renderTag(matrix, bufferIn, Minecraft.getInstance().player.getDistanceSq(hitObj.getHitVec().z, hitObj.getHitVec().y, hitObj.getHitVec().x), "NumMoons: " + properties.getChildPlanets().size(), packedLightIn, 5);
 
 			matrix.pop();
 		}
-
-		//Clean up and make player not transparent
-		GlStateManager.color4f(1, 1, 1);
-		GlStateManager.disableBlend();
-		GlStateManager.enableLighting();
-		GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);*/
 	}
 
 	protected void renderMassIndicator(MatrixStack matrix, IVertexBuilder buffer, float percent) {

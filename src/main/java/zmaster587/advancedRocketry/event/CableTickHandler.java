@@ -14,8 +14,6 @@ import zmaster587.advancedRocketry.tile.cables.TilePipe;
 
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 public class CableTickHandler {
@@ -25,8 +23,8 @@ public class CableTickHandler {
 		try {
 			if(tick.phase == Phase.END) {
 				NetworkRegistry.dataNetwork.tickAllNetworks();
-				NetworkRegistry.energyNetwork.tickAllNetworks();
-				NetworkRegistry.liquidNetwork.tickAllNetworks();
+				//NetworkRegistry.energyNetwork.tickAllNetworks();
+				//NetworkRegistry.liquidNetwork.tickAllNetworks();
 			}
 		} catch (ConcurrentModificationException e) {
 			e.printStackTrace();
@@ -44,7 +42,7 @@ public class CableTickHandler {
 				TileEntity obj = event.getChunk().getTileEntity(iter.next());
 
 				if(obj instanceof TilePipe) {
-					((TilePipe)obj).markDirty();
+					obj.markDirty();
 				}
 			}
 		} catch ( ConcurrentModificationException e) {
@@ -54,7 +52,6 @@ public class CableTickHandler {
 
 	@SubscribeEvent
 	public void onBlockBroken(BreakEvent event) {
-
 		if(event.getState().getBlock().hasTileEntity(event.getState())) {
 
 			TileEntity homeTile = event.getWorld().getTileEntity(event.getPos());
@@ -89,7 +86,7 @@ public class CableTickHandler {
 				}
 				if(pipecount == 0) //lastInNetwork
 					((TilePipe)homeTile).getNetworkHandler().removeNetworkByID(((TilePipe)homeTile).getNetworkID());
-				((TilePipe)homeTile).markDirty();
+				homeTile.markDirty();
 			}
 			else if(homeTile != null) {
 				for(Direction dir : Direction.values()) {

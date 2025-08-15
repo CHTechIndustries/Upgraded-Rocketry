@@ -6,7 +6,6 @@ import net.minecraft.client.gui.screen.inventory.ContainerScreen;
 import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
@@ -25,46 +24,51 @@ import zmaster587.advancedRocketry.client.render.ClientDynamicTexture;
 import zmaster587.advancedRocketry.satellite.SatelliteOreMapping;
 import zmaster587.libVulpes.LibVulpes;
 import zmaster587.libVulpes.render.RenderHelper;
+
+import javax.annotation.Nonnull;
 import java.nio.IntBuffer;
 
-public class GuiOreMappingSatellite extends ContainerScreen<ContainerOreMappingSatallite> {
+public class GuiOreMappingSatellite extends ContainerScreen<ContainerOreMappingSatellite> {
 
-	ClientDynamicTexture texture;
-	Thread currentMapping;
+	private ClientDynamicTexture texture;
+	private Thread currentMapping;
 	TileEntity masterConsole;
-	boolean merged = false;
+	private boolean merged = false;
 	private static final int SCREEN_SIZE = 146;
-	private int maxZoom = 128;
+	private int maxZoom;
 	private static final int MAXRADIUS = 16;
 	private static final int FANCYSCANMAXSIZE = 57;
 	private int fancyScanOffset;
 	private long prevWorldTickTime;
 	private int prevSlot;
 	private int mouseValue;
-	private int scanSize = 2;
+	private int scanSize;
 	private int radius = 1;
+	private int zoomScale;
 	private int xSelected, zSelected, xCenter, zCenter, playerPosX, playerPosZ;
 	private static final ResourceLocation backdrop = new ResourceLocation("advancedrocketry", "textures/gui/VideoSatallite.png");
-	int[][] oreMap;
-	World world;
-	SatelliteOreMapping tile;
+	private int[][] oreMap;
+	private World world;
+	private SatelliteOreMapping satellite;
 
-	public GuiOreMappingSatellite(ContainerOreMappingSatallite container, PlayerInventory inventoryPlayer, ITextComponent title) {
+	public GuiOreMappingSatellite(ContainerOreMappingSatellite container, PlayerInventory inventoryPlayer, ITextComponent title) {
 		super( container, inventoryPlayer, title);
 		world = container.player.world;
 
 		prevSlot = -1;
-		this.tile = container.inv;
+		this.satellite = container.inv;
 		//masterConsole = tile;
 		playerPosX = xCenter = (int) container.player.getPosX();
 		playerPosZ = zCenter = (int) container.player.getPosZ();
 
+		satellite = container.inv;
+		
 		//Max zoom is 128
-		if(tile != null)
-			maxZoom = (int) Math.pow(2, tile.getZoomRadius());
+		maxZoom = (int) Math.pow(2, satellite.getZoomRadius());
+		zoomScale = satellite.getZoomRadius();
 
 		if(maxZoom == 1)
-			this.tile = null;
+			this.satellite = null;
 		scanSize = maxZoom;
 
 		prevWorldTickTime = world.getGameTime();
@@ -73,13 +77,11 @@ public class GuiOreMappingSatellite extends ContainerScreen<ContainerOreMappingS
 	}
 
 	//Create separate thread to do this because it takes a while!
-	Runnable mapper = new Runnable() {
+	private Runnable mapper = new Runnable() {
 		@Override
 		public void run() {
-			oreMap = SatelliteOreMapping.scanChunk(world, xCenter, zCenter, scanSize/2, radius);
-			if(oreMap != null && !Thread.interrupted())
-				merged = true;
-			else merged = false;
+			oreMap = satellite.scanChunk(world, xCenter, zCenter, scanSize/2, radius, zoomScale);
+			merged = oreMap != null && !Thread.interrupted();
 		}
 	};
 
@@ -87,52 +89,50 @@ public class GuiOreMappingSatellite extends ContainerScreen<ContainerOreMappingS
 	class ItemMapper implements Runnable {
 		private ItemStack myBlock;
 
-		ItemMapper(ItemStack block) {
-			//Copy so we dont have any possible CME or oddness due to that
+		ItemMapper(@Nonnull ItemStack block) {
+			//Copy so we don't have any possible CME or oddness due to that
 			myBlock = block.copy();
 		}
 
 		@Override
 		public void run() {
-			oreMap = SatelliteOreMapping.scanChunk(world, xCenter, zCenter, scanSize/2, radius, myBlock);
-			if(oreMap != null && !Thread.interrupted())
-				merged = true;
-			else merged = false;
+			oreMap = satellite.scanChunk(world, xCenter, zCenter, scanSize/2, radius, myBlock, zoomScale);
+			merged = oreMap != null && !Thread.interrupted();
 		}
-	};
+	}
 
 	//Don't pause the game whilst player is looking at the satellite
 	public boolean doesGuiPauseGame(){ return false; }
 
 	private void runMapperWithSelection() {
-		if(tile == null)
+		if(satellite == null)
 			return;
 
 		currentMapping.interrupt();
 		resetTexture();
 		if(prevSlot == -1) {
 			currentMapping = new Thread(mapper);
-			currentMapping.setName("Ore Scan");
 		}
 		else {
 
 			currentMapping = new Thread(new ItemMapper(this.playerInventory.getStackInSlot(prevSlot).getStack()));
 			currentMapping.setName("Ore Scan");
 		}
+		currentMapping.setName("Ore Scan");
 		currentMapping.start();
 	}
 
 	//onMouseclicked
 	@Override
-	public boolean func_231048_c_(double x, double y, int button) {
+	public boolean mouseReleased(double x, double y, int button) {
 		// TODO Auto-generated method stub
-		boolean val = super.func_231048_c_(x, y, button);
+		boolean val = super.mouseReleased(x, y, button);
 
-		int xOffset = 47 + (field_230708_k_ - 240) / 2, yOffset = 20 + (field_230709_l_ - 192) / 2;
+		int xOffset = 47 + (width - 240) / 2, yOffset = 20 + (height - 192) / 2;
 
 		//Get selected slot and begin scan!
-		if(button == 0 && tile.getSelectedSlot() != prevSlot) {
-			prevSlot = tile.getSelectedSlot();
+		if(button == 0 && satellite.getSelectedSlot() != prevSlot) {
+			prevSlot = satellite.getSelectedSlot();
 			runMapperWithSelection();
 		}
 
@@ -154,7 +154,7 @@ public class GuiOreMappingSatellite extends ContainerScreen<ContainerOreMappingS
 
 
 	@Override
-	protected boolean func_195363_d(int keyCode, int scanCode)  {
+	protected boolean itemStackMoved(int keyCode, int scanCode)  {
 		if(keyCode == GLFW.GLFW_KEY_W) {
 			zCenter -= radius;
 			runMapperWithSelection();
@@ -166,11 +166,6 @@ public class GuiOreMappingSatellite extends ContainerScreen<ContainerOreMappingS
 		}
 		else if(keyCode == GLFW.GLFW_KEY_A) {
 			xCenter -= radius;
-
-			runMapperWithSelection();
-		}
-		else if(keyCode == GLFW.GLFW_KEY_A) {
-			xCenter += radius;
 
 			runMapperWithSelection();
 		}
@@ -204,25 +199,30 @@ public class GuiOreMappingSatellite extends ContainerScreen<ContainerOreMappingS
 			}
 		}*/
 		else 
-			return super.func_195363_d(keyCode, scanCode);
+			return super.itemStackMoved(keyCode, scanCode);
 		return true;
 	}
 
 	//Create our image here
 	// InitGui
 	@Override
-	public void func_231160_c_() {
-		super.func_231160_c_();
+	public void init() {
+		super.init();
 		texture = new ClientDynamicTexture(Math.max(scanSize/radius,1),Math.max(scanSize/radius,1));
 
 		ItemStack stack = this.playerInventory.getStackInSlot(0).getStack();
 
-		if(tile != null) {
+		if(satellite != null) {
 			currentMapping = new Thread(mapper);
 			currentMapping.setName("Ore Scan");
 			currentMapping.start();
 		}
 	}
+
+	/*@Override
+	protected void drawGuiContainerBackgroundLayer(MatrixStack matrixStack, float partialTicks, int x, int y) {
+
+	}*/
 
 	//Reset the texture and prevent memory leaks
 	private void resetTexture() {
@@ -231,8 +231,8 @@ public class GuiOreMappingSatellite extends ContainerScreen<ContainerOreMappingS
 	}
 
 	@Override
-	public void func_231164_f_() {
-		super.func_231164_f_();
+	public void onClose() {
+		super.onClose();
 		//Delete texture and stop any mapping on close
 		GL11.glDeleteTextures(texture.getTextureId());
 		if(currentMapping != null)
@@ -243,25 +243,25 @@ public class GuiOreMappingSatellite extends ContainerScreen<ContainerOreMappingS
 
 	// Draw foreground
 	@Override
-	protected void func_230451_b_(MatrixStack matrix, int a, int b)  {
+	protected void drawGuiContainerForegroundLayer(MatrixStack matrix, int a, int b)  {
 
 		BufferBuilder buffer = Tessellator.getInstance().getBuffer();
 		//Draw fancy things
 		RenderSystem.disableTexture();
 		RenderSystem.color4f(0f, 0.8f, 0f,1f);
 		buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION);
-		buffer.pos(-21, 82 + fancyScanOffset, (double)this.func_230927_p_()).endVertex();
-		buffer.pos(0, 84 + fancyScanOffset, (double)this.func_230927_p_()).endVertex();
-		buffer.pos(0, 81 + fancyScanOffset, (double)this.func_230927_p_()).endVertex();
-		buffer.pos(-21, 81 + fancyScanOffset, (double)this.func_230927_p_()).endVertex();
+		buffer.pos(-21, 82 + fancyScanOffset, this.getBlitOffset()).endVertex();
+		buffer.pos(0, 84 + fancyScanOffset, this.getBlitOffset()).endVertex();
+		buffer.pos(0, 81 + fancyScanOffset, this.getBlitOffset()).endVertex();
+		buffer.pos(-21, 81 + fancyScanOffset, this.getBlitOffset()).endVertex();
 		Tessellator.getInstance().draw();
 
 
 		buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION);
-		buffer.pos(-21, 82 - fancyScanOffset + FANCYSCANMAXSIZE, (double)this.func_230927_p_()).endVertex();
-		buffer.pos(0, 84 - fancyScanOffset + FANCYSCANMAXSIZE, (double)this.func_230927_p_()).endVertex();
-		buffer.pos(0, 81 - fancyScanOffset + FANCYSCANMAXSIZE, (double)this.func_230927_p_()).endVertex();
-		buffer.pos(-21, 81 - fancyScanOffset + FANCYSCANMAXSIZE, (double)this.func_230927_p_()).endVertex();
+		buffer.pos(-21, 82 - fancyScanOffset + FANCYSCANMAXSIZE, this.getBlitOffset()).endVertex();
+		buffer.pos(0, 84 - fancyScanOffset + FANCYSCANMAXSIZE, this.getBlitOffset()).endVertex();
+		buffer.pos(0, 81 - fancyScanOffset + FANCYSCANMAXSIZE, this.getBlitOffset()).endVertex();
+		buffer.pos(-21, 81 - fancyScanOffset + FANCYSCANMAXSIZE, this.getBlitOffset()).endVertex();
 		Tessellator.getInstance().draw();
 
 
@@ -270,7 +270,7 @@ public class GuiOreMappingSatellite extends ContainerScreen<ContainerOreMappingS
 		RenderSystem.color4f(0.5f, 0.5f, 0.0f,0.3f + ((float)Math.sin(Math.PI*(fancyScanOffset/(float)FANCYSCANMAXSIZE))/3f));
 
 		buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_COLOR);
-		RenderHelper.renderNorthFace(matrix, buffer, this.func_230927_p_(), 173, 82, 194, 141,1f,1f,1f,1f);
+		RenderHelper.renderNorthFace(matrix, buffer, this.getBlitOffset(), 173, 82, 194, 141,1f,1f,1f,1f);
 		Tessellator.getInstance().draw();
 
 		GL11.glEnable(GL11.GL_TEXTURE_2D);
@@ -288,13 +288,13 @@ public class GuiOreMappingSatellite extends ContainerScreen<ContainerOreMappingS
 
 		//If a slot is selected draw an indicator
 		int slot;
-		if(tile != null && (slot = tile.getSelectedSlot()) != -1) {
+		if(satellite != null && (slot = satellite.getSelectedSlot()) != -1) {
 
 			RenderSystem.disableTexture();
 			RenderSystem.color4f(0f, 0.8f, 0f, 1f);
 
 			buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-			RenderHelper.renderNorthFaceWithUV(matrix, buffer, func_230927_p_(), 13 + (18*slot), 155, 13 + 16 + (18*slot), 155 + 16, 0, 0, 0, 0);
+			RenderHelper.renderNorthFaceWithUV(matrix, buffer, getBlitOffset(), 13 + (18*slot), 155, 13 + 16 + (18*slot), 155 + 16, 0, 0, 0, 0);
 			Tessellator.getInstance().draw();
 			RenderSystem.enableTexture();
 		}
@@ -304,8 +304,8 @@ public class GuiOreMappingSatellite extends ContainerScreen<ContainerOreMappingS
 
 	// Draw background
 	@Override
-	protected void func_230450_a_(MatrixStack matrix, float f1, int i2, int i3)  {
-		int x = (field_230708_k_ - 240) / 2, y = (field_230709_l_ - 192) / 2;
+	protected void drawGuiContainerBackgroundLayer(MatrixStack matrix, float f1, int i2, int i3)  {
+		int x = (width - 240) / 2, y = (height - 192) / 2;
 
 		//If the scan is done then 
 		if(merged) {
@@ -329,7 +329,7 @@ public class GuiOreMappingSatellite extends ContainerScreen<ContainerOreMappingS
 		//Render the background then render
 		RenderSystem.color4f(1.0F, 1.0F, 1.0F, 1.0F);
 		Minecraft.getInstance().getTextureManager().bindTexture(backdrop);
-		this.func_238474_b_(matrix, x, y, 0, 0, 240, 192);
+		this.blit(matrix, x, y, 0, 0, 240, 192);
 
 
 		//NOTE: if the controls are rendered first the display never shows up
@@ -337,52 +337,52 @@ public class GuiOreMappingSatellite extends ContainerScreen<ContainerOreMappingS
 		RenderSystem.bindTexture( texture.getTextureId() );
 
 		buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-		RenderHelper.renderNorthFaceWithUV(matrix, buffer, this.func_230927_p_(), 47 + x, 20 + y, 47 + x + SCREEN_SIZE, 20 + y + SCREEN_SIZE, 0, 1, 0, 1);
+		RenderHelper.renderNorthFaceWithUV(matrix, buffer, this.getBlitOffset(), 47 + x, 20 + y, 47 + x + SCREEN_SIZE, 20 + y + SCREEN_SIZE, 0, 1, 0, 1);
 		Tessellator.getInstance().draw();
 
 
 		//Render player location
 		float offsetX = playerPosX - xCenter + 0.5f;
 		float offsetY = zCenter - playerPosZ + 0.5f;
-		double numPixels = SCREEN_SIZE/scanSize;//(scanSize/(float)(SCREEN_SIZE*radius));
+		double numPixels = ((float) SCREEN_SIZE)/scanSize;//(scanSize/(float)(SCREEN_SIZE*radius));
 
 
 		float radius = 2;
-		if(Math.abs(offsetX) < scanSize/2 && Math.abs(offsetY) < scanSize/2) {
+		if(Math.abs(offsetX) < scanSize/2f && Math.abs(offsetY) < scanSize/2f) {
 			offsetX *= numPixels;
 			offsetY *= numPixels;
 
 			RenderSystem.disableTexture();
 			RenderSystem.color4f(0.4f, 1f, 0.4f,1f);
 			buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-			RenderHelper.renderNorthFaceWithUV(matrix, buffer, this.func_230927_p_(), offsetX + 47 + x + SCREEN_SIZE/2 - radius,  offsetY + 20 + y + SCREEN_SIZE/2 - radius, offsetX + 47 + x + SCREEN_SIZE/2 + radius, offsetY + 20 + y + SCREEN_SIZE/2 + radius, 0, 1, 0, 1);
+			RenderHelper.renderNorthFaceWithUV(matrix, buffer, this.getBlitOffset(), offsetX + 47 + x + SCREEN_SIZE/2 - radius,  offsetY + 20 + y + SCREEN_SIZE/2 - radius, offsetX + 47 + x + SCREEN_SIZE/2 + radius, offsetY + 20 + y + SCREEN_SIZE/2 + radius, 0, 1, 0, 1);
 			Tessellator.getInstance().draw();
 			RenderSystem.color4f(1, 1, 1,1f);
 			RenderSystem.enableTexture();
-			this.drawCenteredString(matrix, this.field_230712_o_, "You", (int)(offsetX + 47 + x + SCREEN_SIZE/2 - radius), (int)(offsetY + 20 + y + SCREEN_SIZE/2 - radius) -10, 0xF0F0F0);
+			drawCenteredString(matrix, this.font, "You", (int)(offsetX + 47 + x + SCREEN_SIZE/2 - radius), (int)(offsetY + 20 + y + SCREEN_SIZE/2 - radius) -10, 0xF0F0F0);
 		}
 
 		//Render sliders and controls
 		Minecraft.getInstance().getTextureManager().bindTexture(backdrop);
 
-		this.func_238474_b_(matrix, 197 + x, 31 + y, 0, 192, 32, 14);
+		this.blit(matrix, 197 + x, 31 + y, 0, 192, 32, 14);
 		//this.drawVerticalLine((int)(32*VulpineMath.log2(scanSize-1)/8F) + 199 + x, 34 + y, 45 + y, 0xFFC00F0F);
-		this.drawString(matrix, this.field_230712_o_, "Zoom", 198 + x, 22 + y, 0xF0F0F0);
-		this.drawString(matrix, this.field_230712_o_, "X: " + xSelected, 6 + x, 33 + y, 0xF0F0F0);
-		this.drawString(matrix, this.field_230712_o_, "Z: " + zSelected, 6 + x, 49 + y, 0xF0F0F0);
-		this.drawString(matrix, this.field_230712_o_,  LibVulpes.proxy.getLocalizedString("msg.itemorescanner.value"), 6 + x, 65 + y, 0xF0F0F0);
-		this.drawString(matrix, this.field_230712_o_, String.valueOf(mouseValue), 6 + x, 79 + y, 0xF0F0F0);
+		drawString(matrix, this.font, "Zoom", 198 + x, 22 + y, 0xF0F0F0);
+		drawString(matrix, this.font, "X: " + xSelected, 6 + x, 33 + y, 0xF0F0F0);
+		drawString(matrix, this.font, "Z: " + zSelected, 6 + x, 49 + y, 0xF0F0F0);
+		drawString(matrix, this.font,  LibVulpes.proxy.getLocalizedString("msg.itemorescanner.value"), 6 + x, 65 + y, 0xF0F0F0);
+		drawString(matrix, this.font, String.valueOf(mouseValue), 6 + x, 79 + y, 0xF0F0F0);
 	}
 
-	public void drawString(MatrixStack matrix, FontRenderer font, String str, int x, int z , int color)
+	public static void drawString(MatrixStack matrix, FontRenderer font, String str, int x, int z, int color)
 	{
-		font.func_243246_a(matrix, new StringTextComponent(str), x, z, 0);
+		font.drawText(matrix, new StringTextComponent(str), x, z, 0);
 	}
 	
 
-	public void drawCenteredString(MatrixStack matrix, FontRenderer font, String str, int x, int z , int color)
+	public static void drawCenteredString(MatrixStack matrix, FontRenderer font, String str, int x, int z, int color)
 	{
-		font.func_243246_a(matrix, new StringTextComponent(str), x, z, 0);
+		font.drawText(matrix, new StringTextComponent(str), x, z, 0);
 	}
 	
 	/**
@@ -390,8 +390,8 @@ public class GuiOreMappingSatellite extends ContainerScreen<ContainerOreMappingS
 	 */
     public void drawScreen(MatrixStack matrix, int mouseX, int mouseY, float partialTicks)
 	{
-        this.func_230446_a_(matrix); // DrawDefaultWorldBackground
-        super.func_230430_a_(matrix, mouseX, mouseY, partialTicks); //drawScreen
-        this.func_230459_a_(matrix, mouseX, mouseY); // renderHoveredToolTip
+        this.renderBackground(matrix); // DrawDefaultWorldBackground
+        super.render(matrix, mouseX, mouseY, partialTicks); //drawScreen
+        this.renderHoveredTooltip(matrix, mouseX, mouseY); // renderHoveredToolTip
 	}
 }

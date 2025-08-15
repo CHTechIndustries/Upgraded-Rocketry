@@ -7,39 +7,46 @@ import net.minecraft.entity.Pose;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.IPacket;
+import net.minecraft.network.PacketBuffer;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
-import net.minecraft.network.play.server.SSpawnObjectPacket;
 import net.minecraft.util.ActionResultType;
 import net.minecraft.util.Hand;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
+import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
+import net.minecraftforge.fml.network.NetworkHooks;
 import zmaster587.advancedRocketry.api.AdvancedRocketryEntities;
 import zmaster587.advancedRocketry.api.Constants;
 import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.dimension.DimensionProperties;
-import zmaster587.advancedRocketry.tile.station.TilePlanetaryHologram;
+import zmaster587.advancedRocketry.tile.station.TileHolographicPlanetSelector;
 import zmaster587.libVulpes.network.PacketSpawnEntity;
 
-public class EntityUIPlanet extends Entity {
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+public class EntityUIPlanet extends Entity implements IEntityAdditionalSpawnData {
 
 	DimensionProperties properties;
-	protected TilePlanetaryHologram tile;
-	protected static final DataParameter<String> planetID =  EntityDataManager.<String>createKey(EntityUIPlanet.class, DataSerializers.STRING);
-	protected static final DataParameter<Float> scale =  EntityDataManager.<Float>createKey(EntityUIPlanet.class, DataSerializers.FLOAT);
-	protected static final DataParameter<Boolean> selected =  EntityDataManager.<Boolean>createKey(EntityUIPlanet.class, DataSerializers.BOOLEAN);
+	protected TileHolographicPlanetSelector tile;
+	protected static final DataParameter<String> planetID =  EntityDataManager.createKey(EntityUIPlanet.class, DataSerializers.STRING);
+	protected static final DataParameter<Float> scale =  EntityDataManager.createKey(EntityUIPlanet.class, DataSerializers.FLOAT);
+	protected static final DataParameter<Boolean> selected =  EntityDataManager.createKey(EntityUIPlanet.class, DataSerializers.BOOLEAN);
 	protected EntitySize size;
+
+
 	
-	public EntityUIPlanet(World worldIn, DimensionProperties properties, TilePlanetaryHologram tile, double x, double y, double z) {
+	public EntityUIPlanet(World worldIn, DimensionProperties properties, TileHolographicPlanetSelector tile, double x, double y, double z) {
 		this(AdvancedRocketryEntities.ENTITY_UIPLANET, worldIn);
 		setPosition(x, y, z);
 		setProperties(properties);
 		this.tile = tile;
 	}
 	
-	public EntityUIPlanet(EntityType<?> type, World worldIn, DimensionProperties properties, TilePlanetaryHologram tile, double x, double y, double z) {
+	public EntityUIPlanet(EntityType<?> type, World worldIn, DimensionProperties properties, TileHolographicPlanetSelector tile, double x, double y, double z) {
 		this(type, worldIn);
 		setPosition(x, y, z);
 		setProperties(properties);
@@ -52,7 +59,9 @@ public class EntityUIPlanet extends Entity {
 		setSize(0.2f, 0.2f);
 	}
 	
+	@Nonnull
 	@Override
+	@ParametersAreNonnullByDefault
 	public EntitySize getSize(Pose poseIn) {
 		return super.getSize(poseIn);
 	}
@@ -63,7 +72,7 @@ public class EntityUIPlanet extends Entity {
 	}
 	
 	public float getScale() {
-		float scale = this.dataManager.get(this.scale);
+		float scale = this.dataManager.get(EntityUIPlanet.scale);
 		setSize(0.1f*scale, 0.1f*scale);
 		return scale;
 	}
@@ -74,6 +83,7 @@ public class EntityUIPlanet extends Entity {
 	}
 
 	@Override
+	@ParametersAreNonnullByDefault
 	public boolean writeUnlessRemoved(CompoundNBT compound) {
 		return false;
 	}
@@ -97,9 +107,9 @@ public class EntityUIPlanet extends Entity {
 		return false;
 	}
 	
+	@Nonnull
 	@Override
-	public ActionResultType processInitialInteract(PlayerEntity player, 
-			Hand hand) {
+	public ActionResultType processInitialInteract(PlayerEntity player, Hand hand) {
 		if(!world.isRemote && tile != null) {
 			tile.selectSystem(properties.getId());
 		}
@@ -107,11 +117,13 @@ public class EntityUIPlanet extends Entity {
 	}
 
 	@Override
+	@ParametersAreNonnullByDefault
 	protected void writeAdditional(CompoundNBT compound) {
 
 	}
 	
 	@Override
+	@ParametersAreNonnullByDefault
 	protected void readAdditional(CompoundNBT compound) {
 	}
 	
@@ -131,7 +143,7 @@ public class EntityUIPlanet extends Entity {
 
 		ResourceLocation planetId = new ResourceLocation(this.dataManager.get(planetID));
 
-		if(properties != null && properties.getId() != planetId) {
+		if(properties != null && !properties.getId().equals(planetId)) {
 			if(Constants.INVALID_PLANET.equals(planetId) )
 				properties = null;
 			else
@@ -164,9 +176,22 @@ public class EntityUIPlanet extends Entity {
 		setPosition(originX, originY, originZ);
 	}
 	
+	@Nonnull
 	@Override
 	public IPacket<?> createSpawnPacket() {
-		return new PacketSpawnEntity(this);
+		return NetworkHooks.getEntitySpawningPacket(this);
+	}
+
+	@Override
+	public void writeSpawnData(PacketBuffer buffer) {
+		new PacketSpawnEntity(this).write(buffer);	
+	}
+
+	@Override
+	public void readSpawnData(PacketBuffer additionalData) {
+		PacketSpawnEntity packet = new PacketSpawnEntity();
+		packet.read(additionalData);
+		packet.execute(this);
 	}
 
 }

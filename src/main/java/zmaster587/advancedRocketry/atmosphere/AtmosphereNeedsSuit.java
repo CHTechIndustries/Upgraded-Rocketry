@@ -11,6 +11,8 @@ import zmaster587.advancedRocketry.api.capability.CapabilitySpaceArmor;
 import zmaster587.advancedRocketry.entity.EntityElevatorCapsule;
 import zmaster587.advancedRocketry.util.ItemAirUtils;
 
+import javax.annotation.Nonnull;
+
 public class AtmosphereNeedsSuit extends AtmosphereType {
 	
 	public AtmosphereNeedsSuit(boolean canTick, boolean isBreathable, boolean allowsCombustion, String name) {
@@ -36,12 +38,12 @@ public class AtmosphereNeedsSuit extends AtmosphereType {
 
 		// Note: protectsFrom(chest) is intentionally the last thing to check here.  This is because java will bail on the check early if others fail
 		// this will prevent the O2 level in the chest from being needlessly decremented
-		return (player instanceof PlayerEntity && ((((PlayerEntity)player).isCreative()) || ((PlayerEntity)player).isSpectator()))
+		return (player instanceof PlayerEntity && ((((PlayerEntity)player).isCreative()) || player.isSpectator()))
 				|| player.getRidingEntity() instanceof EntityRocketBase || player.getRidingEntity() instanceof EntityElevatorCapsule ||
 				( ( (!onlyNeedsMask() && protectsFrom(leg) && protectsFrom(feet) ) || onlyNeedsMask() ) && protectsFrom(helm) && protectsFrom(chest) );
 		}
 
-	protected boolean protectsFrom(ItemStack stack) {
+	protected boolean protectsFrom(@Nonnull ItemStack stack) {
 		boolean armorProtec = false;
 		if(!stack.isEmpty())
 		{

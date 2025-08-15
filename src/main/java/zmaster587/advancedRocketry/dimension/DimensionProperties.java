@@ -3,10 +3,10 @@ package zmaster587.advancedRocketry.dimension;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.entity.Entity;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.*;
+import net.minecraft.util.IItemProvider;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -14,11 +14,7 @@ import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.Biome.Category;
-import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.util.Constants.NBT;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.fml.common.thread.EffectiveSide;
-import net.minecraftforge.common.util.JsonUtils;
 import net.minecraftforge.registries.ForgeRegistries;
 import zmaster587.advancedRocketry.AdvancedRocketry;
 import zmaster587.advancedRocketry.api.AdvancedRocketryBiomes;
@@ -34,7 +30,6 @@ import zmaster587.advancedRocketry.api.satellite.SatelliteBase;
 import zmaster587.advancedRocketry.api.stations.ISpaceObject;
 import zmaster587.advancedRocketry.atmosphere.AtmosphereType;
 import zmaster587.advancedRocketry.client.render.planet.ISkyRenderer;
-import zmaster587.advancedRocketry.client.render.planet.RenderPlanetarySky;
 import zmaster587.advancedRocketry.inventory.TextureResources;
 import zmaster587.advancedRocketry.network.PacketDimInfo;
 import zmaster587.advancedRocketry.network.PacketSatellite;
@@ -51,8 +46,6 @@ import zmaster587.libVulpes.util.ZUtils;
 import java.util.*;
 import java.util.Map.Entry;
 
-import com.google.gson.JsonElement;
-
 public class DimensionProperties implements Cloneable, IDimensionProperties {
 
 	/**
@@ -60,7 +53,7 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	 * This facilitates precise temperature calculations and specifications
 	 * 286 is Earthlike (13 C), Hot is 52 C, Cold is -23 C. Snowball is absolute zero
 	 */
-	public static enum Temps {
+	public enum Temps {
 		TOOHOT(450),
 		HOT(325),
 		NORMAL(275),
@@ -115,7 +108,7 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	 * Contains standardized pressure ranges for planets
 	 * where 100 is earthlike, largers values are higher pressure
 	 */
-	public static enum AtmosphereTypes {
+	public enum AtmosphereTypes {
 		SUPERHIGHPRESSURE(800),
 		HIGHPRESSURE(200),
 		NORMAL(75),
@@ -124,7 +117,7 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 
 		private int value;
 
-		private AtmosphereTypes(int value) {
+		AtmosphereTypes(int value) {
 			this.value = value;
 		}
 
@@ -164,7 +157,7 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	public static final ResourceLocation shadow = new ResourceLocation("advancedrocketry:textures/planets/shadow.png");
 	public static final ResourceLocation shadow3 = new ResourceLocation("advancedrocketry:textures/planets/shadow3.png");
 
-	public static enum PlanetIcons {
+	public enum PlanetIcons {
 		EARTHLIKE(new ResourceLocation("advancedrocketry:textures/planets/earthlike.png")),
 		LAVA(new ResourceLocation("advancedrocketry:textures/planets/lava.png")),
 		MARSLIKE(new ResourceLocation("advancedrocketry:textures/planets/marslike.png")),
@@ -186,13 +179,13 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 		private ResourceLocation resource;
 		private ResourceLocation resourceLEO;
 
-		private PlanetIcons(ResourceLocation resource) {
+		PlanetIcons(ResourceLocation resource) {
 			this.resource = resource;
 
 			this.resourceLEO = new ResourceLocation(resource.toString().substring(0, resource.toString().length() - 4) + "leo.jpg");
 		}
 
-		private PlanetIcons(ResourceLocation resource, ResourceLocation leo) {
+		PlanetIcons(ResourceLocation resource, ResourceLocation leo) {
 			this.resource = resource;
 
 			this.resourceLEO = atmosphereLEO;
@@ -220,6 +213,7 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 
 	//True if dimension is managed and created by AR (false otherwise)
 	public boolean isNativeDimension;
+	public boolean skyRenderOverride;
 	//Gas giants DO NOT need a dimension registered to them
 	public float[] skyColor;
 	public float[] fogColor;
@@ -227,7 +221,11 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	public float gravitationalMultiplier;
 	public int orbitalDist;
 	public boolean hasOxygen;
+	public boolean colorOverride;
 	private int originalAtmosphereDensity;
+	//Used in solar panels
+	public double peakInsolationMultiplier;
+	public double peakInsolationMultiplierWithoutAtmosphere;
 	private int atmosphereDensity;
 	//Stored in Kelvin
 	public int averageTemperature;
@@ -238,7 +236,15 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	public double prevOrbitalTheta;
 	public double orbitalPhi;
 	public double rotationalPhi;
+	public boolean isRetrograde;
 	public OreGenProperties oreProperties = null;
+	public List<ItemStack> laserDrillOres;
+	public List<ItemStack> craterOres;
+	public List<ItemStack> geodeOres;
+	public String craterOresRaw;
+	public String geodeOresRaw;
+	// The parsing of laserOreDrills is destructive of the actual oredict entries, so we keep a copy of the raw data around for XML writing
+	public String laserDrillOresRaw;
 	public String customIcon;
 	IAtmosphere atmosphereType;
 
@@ -251,7 +257,8 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	private LinkedList<Biome> terraformedBiomes;
 	private boolean isRegistered = false;
 	private boolean isTerraformed = false;
-	public boolean hasRings = false;
+	public boolean hasRings;
+	public boolean hasRivers;
 	public List<ItemStack> requiredArtifacts;
 
 	//Planet Heirachy
@@ -262,8 +269,9 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	private boolean isGasGiant;
 	private boolean canGenerateCraters;
 	private boolean canGenerateGeodes;
-	private boolean canGenerateVolcanos;
+	private boolean canGenerateVolcanoes;
 	private boolean canGenerateStructures;
+	private boolean canGenerateCaves;
 	private boolean canDecorate; //Should the button draw shadows, etc.  Clientside
 	private boolean overrideDecoration;
 	private float craterFrequencyMultiplier;
@@ -272,15 +280,15 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	ISkyRenderer sky;
 
 
-	//Satallites
-	private HashMap<Long,SatelliteBase> satallites;
-	private HashMap<Long,SatelliteBase> tickingSatallites;
+	//Satellites
+	private HashMap<Long,SatelliteBase> satellites;
+	private HashMap<Long,SatelliteBase> tickingSatellites;
 	private List<Fluid> harvestableAtmosphere;
 	private List<SpawnListEntryNBT> spawnableEntities;
 	private HashSet<HashedBlockPosition> beaconLocations;
 	private BlockState oceanBlock;
 	private BlockState fillerBlock;
-	private int sealevel;
+	private int seaLevel;
 	private int generatorType;
 
 	public DimensionProperties(ResourceLocation id) {
@@ -289,35 +297,44 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 
 		planetId = id;
 		parentPlanet = Constants.INVALID_PLANET;
-		childPlanets = new HashSet<ResourceLocation>();
+		childPlanets = new HashSet<>();
 		orbitalPhi = 0;
+		isRetrograde = false;
 		ringColor = new float[] {.4f, .4f, .7f};
 		oceanBlock = null;
 		fillerBlock = null;
-
-		allowedBiomes = new LinkedList<Biome>();
-		terraformedBiomes = new LinkedList<Biome>();
-		satallites = new HashMap<>();
-		requiredArtifacts = new LinkedList<ItemStack>();
-		tickingSatallites = new HashMap<Long,SatelliteBase>();
+		laserDrillOres = new ArrayList<>();
+		geodeOres = new ArrayList<>();
+		craterOres = new ArrayList<>();
+		allowedBiomes = new LinkedList<>();
+		terraformedBiomes = new LinkedList<>();
+		satellites = new HashMap<>();
+		requiredArtifacts = new LinkedList<>();
+		tickingSatellites = new HashMap<>();
 		isNativeDimension = true;
+		skyRenderOverride = false;
 		hasOxygen = true;
+		colorOverride = false;
+		peakInsolationMultiplier = -1;
+		peakInsolationMultiplierWithoutAtmosphere = -1;
 		isGasGiant = false;
 		hasRings = false;
 		canGenerateCraters = false;
 		canGenerateGeodes = false;
 		canGenerateStructures = false;
-		canGenerateVolcanos = false;
+		canGenerateVolcanoes = false;
+		canGenerateCaves = false;
+		hasRivers = false;
 		craterFrequencyMultiplier = 1f;
 		volcanoFrequencyMultiplier = 1f;
 		geodeFrequencyMultiplier = 1f;
 		canDecorate = true;
 
 		customIcon = "";
-		harvestableAtmosphere = new LinkedList<Fluid>();
-		spawnableEntities = new LinkedList<SpawnListEntryNBT>();
-		beaconLocations = new HashSet<HashedBlockPosition>();
-		sealevel = 63;
+		harvestableAtmosphere = new LinkedList<>();
+		spawnableEntities = new LinkedList<>();
+		beaconLocations = new HashSet<>();
+		seaLevel = 63;
 		generatorType = 0;
 	}
 
@@ -332,7 +349,7 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	}
 
 	public void copySatellites(DimensionProperties props) {
-		this.satallites = props.satallites;
+		this.satellites = props.satellites;
 	}
 
 	public void copyTerraformedBiomes(DimensionProperties props) {
@@ -371,20 +388,21 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 		rotationalPeriod = 24000;
 		orbitalDist = 100;
 		originalAtmosphereDensity = atmosphereDensity = 100;
-		childPlanets = new HashSet<ResourceLocation>();
-		requiredArtifacts = new LinkedList<ItemStack>();
-		parentPlanet = null;
+		childPlanets = new HashSet<>();
+		requiredArtifacts = new LinkedList<>();
+		parentPlanet = Constants.INVALID_PLANET;
 		starId = Constants.INVALID_STAR;
 		averageTemperature = 100;
 		hasRings = false;
-		harvestableAtmosphere = new LinkedList<Fluid>();
-		spawnableEntities = new LinkedList<SpawnListEntryNBT>();
-		beaconLocations = new HashSet<HashedBlockPosition>();
-		sealevel = 63;
+		harvestableAtmosphere = new LinkedList<>();
+		spawnableEntities = new LinkedList<>();
+		beaconLocations = new HashSet<>();
+		seaLevel = 63;
 		oceanBlock = null;
 		fillerBlock = null;
 		generatorType = 0;
 		sky = null;
+		laserDrillOres = new ArrayList<>();
 	}
 
 	public ISkyRenderer getSkyRenderer()
@@ -557,6 +575,9 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 		if(isStar() && getStarData().isBlackHole())
 			return TextureResources.locationBlackHole_icon;
 
+		if(isStar())
+			return TextureResources.locationSunPng;
+
 		if(isGasGiant())
 			return PlanetIcons.GASGIANTBLUE.resource;
 
@@ -695,15 +716,13 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 
 	/**
 	 * Sets this planet as a moon of the supplied planet's id.
-	 * @param parentId parent planet's DIMID, or Constants.INVALID_PLANET for none
+	 * @param parent parent planet's DimensionProperties, or null for none
 	 */
-	public void setParentPlanet(DimensionProperties parent) {
-		this.setParentPlanet(parent, true);
-	}
+	public void setParentPlanet(DimensionProperties parent) { this.setParentPlanet(parent, true); }
 
 	/**
 	 * Sets this planet as a moon of the supplied planet's ID
-	 * @param parentId DIMID of the parent planet
+	 * @param parent DimensionProperties of the parent planet, or null for none
 	 * @param update true to update the parent's planet to the change
 	 */
 	public void setParentPlanet(DimensionProperties parent, boolean update) {
@@ -840,6 +859,29 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	public boolean hasAtmosphere() {
 		return AtmosphereTypes.getAtmosphereTypeFromValue(atmosphereDensity).compareTo(AtmosphereTypes.NONE) < 0;
 	}
+	
+	/**
+	 * @return the multiplier compared to Earth(1040W) for peak insolation of the body
+	 */
+	public double getPeakInsolationMultiplier() {
+		//Set peak insolation multiplier --  we do this here because I've had problems with it in the past in the XML loader, and people keep asking to change it
+		//Assumes that a 16 atmosphere is 16x the partial pressure but not thicker, because I don't want to deal with that and this is fairly simple right now
+		//Get what it would be relative to LEO, this gives ~0.76 for Earth at the surface
+		double insolationRelativeToLEO = AstronomicalBodyHelper.getStellarBrightness(star, getSolarOrbitalDistance()) * Math.pow(Math.E, -(0.0026899d * getAtmosphereDensity()));
+		//Multiply by Earth LEO/Earth Surface for ratio relative to Earth surface (1360/1040)
+		peakInsolationMultiplier = insolationRelativeToLEO * 1.308d;
+		return peakInsolationMultiplier;
+	}
+
+	/**
+	 * @return the multiplier compared to Earth(1040W) for peak insolation of the body, ignoring the atmosphere
+	 */
+	public double getPeakInsolationMultiplierWithoutAtmosphere() {
+		//Set peak insolation multiplier without atmosphere --  we do this here because I've had problems with it in the past in the XML loader, and people keep asking to change it
+		peakInsolationMultiplierWithoutAtmosphere = AstronomicalBodyHelper.getStellarBrightness(star, getSolarOrbitalDistance()) * 1.308d;
+		return peakInsolationMultiplierWithoutAtmosphere;
+	}
+
 
 	public boolean isAsteroid() {
 		return generatorType == Constants.GENTYPE_ASTEROID;
@@ -886,7 +928,7 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 
 	/**
 	 * Does not check for hierarchy loops!
-	 * @param id DIMID of the new child
+	 * @param child DimensionProperties of the new child
 	 * @return true if successfully added as a child planet
 	 */
 	public boolean addChildPlanet(DimensionProperties child) {
@@ -901,31 +943,31 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 
 	/**
 	 * Removes the passed DIMID from the list of moons
-	 * @param id
+	 * @param id DIMID of the child planet to remove
 	 */
 	public void removeChild(ResourceLocation id) {
 		childPlanets.remove(id);
 	}
 
-	//Satallites --------------------------------------------------------
+	//Satellites --------------------------------------------------------
 	/**
 	 * Adds a satellite to this DIM
 	 * @param satellite satellite to add
 	 * @param world world to add the satellite to
 	 */
-	public void addSatallite(SatelliteBase satellite, World world) {
+	public void addSatellite(SatelliteBase satellite, World world) {
 		//Prevent dupes
-		if(satallites.containsKey(satellite.getId())) {
-			satallites.remove(satellite.getId());
-			tickingSatallites.remove(satellite.getId());
+		if(satellites.containsKey(satellite.getId())) {
+			satellites.remove(satellite.getId());
+			tickingSatellites.remove(satellite.getId());
 		}
 
-		satallites.put(satellite.getId(), satellite);
+		satellites.put(satellite.getId(), satellite);
 		satellite.setDimensionId(world);
 
 
 		if(satellite.canTick())
-			tickingSatallites.put(satellite.getId(),satellite);
+			tickingSatellites.put(satellite.getId(),satellite);
 
 		if(!world.isRemote)
 			PacketHandler.sendToAll(new PacketSatellite(satellite));
@@ -936,51 +978,50 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	 * @param satellite satellite to add
 	 * @param world world to add the satellite to
 	 */
-	public void addSatallite(SatelliteBase satellite, ResourceLocation world, boolean isRemote) {
+	public void addSatellite(SatelliteBase satellite, ResourceLocation world, boolean isRemote) {
 		//Prevent dupes
-		if(satallites.containsKey(satellite.getId())) {
-			satallites.remove(satellite.getId());
-			tickingSatallites.remove(satellite.getId());
+		if(satellites.containsKey(satellite.getId())) {
+			satellites.remove(satellite.getId());
+			tickingSatellites.remove(satellite.getId());
 		}
 
-		satallites.put(satellite.getId(), satellite);
+		satellites.put(satellite.getId(), satellite);
 		satellite.setDimensionId(world);
 
 
 		if(satellite.canTick())
-			tickingSatallites.put(satellite.getId(),satellite);
+			tickingSatellites.put(satellite.getId(),satellite);
 
 		if(!isRemote)
 			PacketHandler.sendToAll(new PacketSatellite(satellite));
 	}
 
 	/**
-	 * Really only meant to be used on the client when recieving a packet
-	 * @param satallite
+	 * Really only meant to be used on the client when receiving a packet
+	 * @param satellite the satellite to add to orbit
 	 */
-	public void addSatallite(SatelliteBase satallite) {
-		if(satallites.containsKey(satallite.getId())) {
-			satallites.remove(satallite.getId());
-			tickingSatallites.remove(satallite.getId());
+	public void addSatellite(SatelliteBase satellite) {
+		if(satellites.containsKey(satellite.getId())) {
+			satellites.remove(satellite.getId());
+			tickingSatellites.remove(satellite.getId());
 		}
-		satallites.put(satallite.getId(), satallite);
+		satellites.put(satellite.getId(), satellite);
 
-		if(satallite.canTick()) //TODO: check for dupes
-			tickingSatallites.put(satallite.getId(), satallite);
+		if(satellite.canTick()) //TODO: check for dupes
+			tickingSatellites.put(satellite.getId(), satellite);
 	}
 
 	/**
 	 * Removes the satellite from orbit around this world
-	 * @param satalliteId ID # for this satellite
+	 * @param satelliteId ID # for this satellite
 	 * @return reference to the satellite object
 	 */
-	public SatelliteBase removeSatellite(long satalliteId) {
-		SatelliteBase satallite = satallites.remove(satalliteId);
+	public SatelliteBase removeSatellite(long satelliteId) {
+		SatelliteBase satellite = satellites.remove(satelliteId);
+		if(satellite != null && satellite.canTick() && tickingSatellites.containsKey(satelliteId))
+			tickingSatellites.get(satelliteId).remove();
 
-		if(satallite != null && satallite.canTick() && tickingSatallites.containsKey(satalliteId))
-			tickingSatallites.get(satalliteId).remove();
-
-		return satallite;
+		return satellite;
 	}
 
 	/**
@@ -988,7 +1029,15 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	 * @return a reference to the satelliteBase object given this ID
 	 */
 	public SatelliteBase getSatellite(long id) {
-		return satallites.get(id);
+		return satellites.get(id);
+	}
+
+	/**
+	 * Returns all of a dimension's satellites
+	 * @return a Collection containing all of a dimension's satellites
+	 */
+	public Collection<SatelliteBase> getAllSatellites() {
+		return this.satellites.values();
 	}
 
 	//TODO: multithreading
@@ -997,26 +1046,33 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	 */
 	public void tick() {
 
-		Iterator<SatelliteBase> iterator = tickingSatallites.values().iterator();
+		Iterator<SatelliteBase> iterator = tickingSatellites.values().iterator();
 
 		while(iterator.hasNext()) {
-			SatelliteBase satallite = iterator.next();
-			satallite.tickEntity();
+			SatelliteBase satellite = iterator.next();
+			satellite.tickEntity();
 
-			if(satallite.isDead()) {
+			if(satellite.isDead()) {
 				iterator.remove();
-				satallites.remove(satallite.getId());
+				satellites.remove(satellite.getId());
 			}
 		}
 		updateOrbit();
 	}
 
 	public void updateOrbit() {
+		try
+		{
 		this.prevOrbitalTheta = this.orbitTheta;
 		if (this.isMoon()) {
-			this.orbitTheta = AstronomicalBodyHelper.getMoonOrbitalTheta(orbitalDist, getParentProperties().gravitationalMultiplier) + baseOrbitTheta;
+			this.orbitTheta = (AstronomicalBodyHelper.getMoonOrbitalTheta(orbitalDist, getParentProperties().gravitationalMultiplier) + baseOrbitTheta) * (isRetrograde ? -1 : 1);
 		} else if (!this.isMoon()) {
-			this.orbitTheta = AstronomicalBodyHelper.getOrbitalTheta(orbitalDist, getStar().getSize()) + baseOrbitTheta;
+			this.orbitTheta = (AstronomicalBodyHelper.getOrbitalTheta(orbitalDist, getStar().getSize()) + baseOrbitTheta) * (isRetrograde ? -1 : 1);
+		}
+		}
+		catch(NullPointerException e)
+		{
+			
 		}
 	}
 
@@ -1024,7 +1080,7 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	 * @return true if this dimension is allowed to have rivers
 	 */
 	public boolean hasRivers() {
-		return AtmosphereTypes.getAtmosphereTypeFromValue(originalAtmosphereDensity).compareTo(AtmosphereTypes.LOW) <= 0 && Temps.getTempFromValue(getAverageTemp()).isInRange(Temps.COLD, Temps.HOT);
+		return hasRivers || (AtmosphereTypes.getAtmosphereTypeFromValue(originalAtmosphereDensity).compareTo(AtmosphereTypes.LOW) <= 0 && Temps.getTempFromValue(getAverageTemp()).isInRange(Temps.COLD, Temps.HOT));
 	}
 
 
@@ -1033,11 +1089,11 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	 * @return List of biomes allowed to spawn on this planet
 	 */
 	public List<Biome> getBiomes() {
-		return (List<Biome>)allowedBiomes;
+		return allowedBiomes;
 	}
 
 	public List<Biome> getTerraformedBiomes() {
-		return (List<Biome>)terraformedBiomes;
+		return terraformedBiomes;
 	}
 
 	/**
@@ -1054,10 +1110,10 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	 */
 	public List<Biome> getViableBiomes() {
 		Random random = new Random(System.nanoTime());
-		List<Biome> viableBiomes = new ArrayList<Biome>();
+		List<Biome> viableBiomes = new ArrayList<>();
 
 		if(atmosphereDensity > AtmosphereTypes.LOW.value && random.nextInt(3) == 0) {
-			List<Biome> list = new LinkedList<Biome>(AdvancedRocketryBiomes.instance.getSingleBiome());
+			List<Biome> list = new LinkedList<>(AdvancedRocketryBiomes.instance.getSingleBiome());
 
 			while(list.size() > 1) {
 				Biome biome = list.get(random.nextInt(list.size()));
@@ -1083,49 +1139,47 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 			viableBiomes.add(AdvancedRocketryBiomes.moonBiomeDark);
 		}
 
-		else if(averageTemperature > Temps.TOOHOT.getTemp()) {
+		else if(Temps.getTempFromValue(averageTemperature).hotterThan(Temps.TOOHOT)) {
 			viableBiomes.add(AdvancedRocketryBiomes.hotDryBiome);
 			viableBiomes.add(AdvancedRocketryBiomes.volcanic);
 			viableBiomes.add(AdvancedRocketryBiomes.volcanicBarren);
 		}
-		else if(averageTemperature > Temps.HOT.getTemp()) {
-
+		else if(Temps.getTempFromValue(averageTemperature).hotterThan(Temps.HOT)) {
 			Iterator<Biome> itr = AdvancedRocketryBiomes.getAllBiomes();
 			while( itr.hasNext()) {
 				Biome biome = itr.next();
 				Temps biomeTemp = AdvancedRocketryBiomes.getBiomeTemp(biome);
-				if(biome != null && (biomeTemp == Temps.HOT || biome.getCategory() == Category.OCEAN)  && !isBiomeblackListed(biome)) {
+				if((biomeTemp == Temps.HOT || biome.getCategory() == Category.OCEAN) && !isBiomeblackListed(biome)) {
 					viableBiomes.add(biome);
 				}
 			}
 		}
-		else if(averageTemperature > Temps.NORMAL.getTemp()) {
+		else if(Temps.getTempFromValue(averageTemperature).hotterThan(Temps.NORMAL)) {
 			Iterator<Biome> itr = AdvancedRocketryBiomes.getAllBiomes();
 			while( itr.hasNext()) {
 				Biome biome = itr.next();
 				Temps biomeTemp = AdvancedRocketryBiomes.getBiomeTemp(biome);
-				if(biome != null && biomeTemp.isInRange(Temps.COLD, Temps.HOT) && !isBiomeblackListed(biome) || biome.getCategory() == Category.OCEAN) {
+				if(biomeTemp.isInRange(Temps.COLD, Temps.HOT) && !isBiomeblackListed(biome) || biome.getCategory() == Category.OCEAN) {
 					viableBiomes.add(biome);
 				}
 			}
 		}
-		else if(averageTemperature > Temps.COLD.getTemp()) {
+		else if(Temps.getTempFromValue(averageTemperature).hotterThan(Temps.COLD)) {
 			Iterator<Biome> itr = AdvancedRocketryBiomes.getAllBiomes();
 			while( itr.hasNext()) {
 				Biome biome = itr.next();
 				Temps biomeTemp = AdvancedRocketryBiomes.getBiomeTemp(biome);
-				if(biome != null && biomeTemp.isInRange(Temps.FRIGID, Temps.NORMAL) && !isBiomeblackListed(biome) || biome.getCategory() == Category.OCEAN) {
+				if(biomeTemp.isInRange(Temps.FRIGID, Temps.NORMAL) && !isBiomeblackListed(biome) || biome.getCategory() == Category.OCEAN) {
 					viableBiomes.add(biome);
 				}
 			}
 		}
-		else if(averageTemperature > Temps.FRIGID.getTemp()) {
-
+		else if(Temps.getTempFromValue(averageTemperature).hotterThan(Temps.FRIGID)) {
 			Iterator<Biome> itr = AdvancedRocketryBiomes.getAllBiomes();
 			while( itr.hasNext()) {
 				Biome biome = itr.next();
 				Temps biomeTemp = AdvancedRocketryBiomes.getBiomeTemp(biome);
-				if(biome != null && biomeTemp.isInRange(Temps.SNOWBALL, Temps.COLD) && !isBiomeblackListed(biome)) {
+				if(biomeTemp.isInRange(Temps.SNOWBALL, Temps.COLD) && !isBiomeblackListed(biome)) {
 					viableBiomes.add(biome);
 				}
 			}
@@ -1135,15 +1189,15 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 			while( itr.hasNext()) {
 				Biome biome = itr.next();
 				Temps biomeTemp = AdvancedRocketryBiomes.getBiomeTemp(biome);
-				if(biome != null && biomeTemp.isInRange(Temps.SNOWBALL, Temps.FRIGID) && !isBiomeblackListed(biome)) {
+				if(biomeTemp.isInRange(Temps.SNOWBALL, Temps.FRIGID) && !isBiomeblackListed(biome)) {
 					viableBiomes.add(biome);
 				}
 			}
-			//TODO:
 		}
 
-		if(viableBiomes.size() > 5) {
-			viableBiomes  = ZUtils.copyRandomElements(viableBiomes, 5);
+		int maxBiomesPerPlanet = ARConfiguration.getCurrentConfig().maxBiomesPerPlanet.get();
+		if(viableBiomes.size() > maxBiomesPerPlanet) {
+			viableBiomes  = ZUtils.copyRandomElements(viableBiomes, maxBiomesPerPlanet);
 		}
 
 		if(atmosphereDensity > AtmosphereTypes.HIGHPRESSURE.value && Temps.getTempFromValue(averageTemperature).isInRange(Temps.NORMAL, Temps.HOT))
@@ -1151,13 +1205,13 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 
 		return viableBiomes;
 	}
-
+	
 	/**
 	 * Adds a biome to the list of biomes allowed to spawn on this planet
 	 * @param biome biome to be added as viable
 	 */
 	public boolean addBiome(Biome biome) {
-		ArrayList<Biome> biomes = new ArrayList<Biome>();
+		ArrayList<Biome> biomes = new ArrayList<>();
 		biomes.add(biome);
 		allowedBiomes.addAll(getBiomesEntries(biomes));
 		return true;
@@ -1165,14 +1219,13 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 
 	/**
 	 * Adds a biome to the list of biomes allowed to spawn on this planet
-	 * @param biome biome to be added as viable
-	 * @return true if the biome was added sucessfully, false otherwise
+	 * @param biomeId biome to be added as viable
+	 * @return true if the biome was added successfully, false otherwise
 	 */
 	public boolean addBiome(ResourceLocation biomeId) {
-
 		if(AdvancedRocketryBiomes.doesBiomeExist(biomeId)) {
 			Biome biome =  AdvancedRocketryBiomes.getBiomeFromResourceLocation(biomeId);
-			List<Biome> biomes = new ArrayList<Biome>();
+			List<Biome> biomes = new ArrayList<>();
 			biomes.add(biome);
 			allowedBiomes.addAll(getBiomesEntries(biomes));
 			return true;
@@ -1217,20 +1270,18 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	 */
 	/*public void addBiomeType(BiomeDictionary.Type type) {
 
-		ArrayList<Biome> entryList = new ArrayList<Biome>();
-
-		entryList.addAll(BiomeDictionary.getBiomes(type));
+		ArrayList<Biome> entryList = new ArrayList<>(BiomeDictionary.getBiomes(type));
 
 		//Neither are acceptable on planets
-		entryList.remove(Biomes.field_235254_j_.getRegistryName());
+		entryList.remove(Biomes.NETHER_WASTES.getRegistryName());
 		entryList.remove(Biomes.THE_END.getRegistryName());
 
-		//Make sure we dont add double entries
+		//Make sure we don't add double entries
 		Iterator<Biome> iter = entryList.iterator();
 		while(iter.hasNext()) {
-			Biome nextbiome = iter.next();
+			Biome nextBiome = iter.next();
 			for(Biome entry : allowedBiomes) {
-				if(BiomeDictionary.areSimilar(entry.biome, nextbiome))
+				if(BiomeDictionary.areSimilar(entry.biome, nextBiome))
 					iter.remove();
 			}
 
@@ -1245,36 +1296,26 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	 */
 	/*public void removeBiomeType(BiomeDictionary.Type type) {
 
-		ArrayList<Biome> entryList = new ArrayList<Biome>();
-
-		entryList.addAll(BiomeDictionary.getBiomes(type));
+		ArrayList<Biome> entryList = new ArrayList<>(BiomeDictionary.getBiomes(type));
 
 		Iterator<Biome> itr = AdvancedRocketryBiomes.getAllBiomes();
 		while(itr.hasNext()) {
 			Biome biome = itr.next();
-			Iterator<Biome> iterator = allowedBiomes.iterator();
-			while(iterator.hasNext()) {
-				if(BiomeDictionary.areSimilar(iterator.next().biome, biome))
-					iterator.remove();
-			}
+			allowedBiomes.removeIf(biome1 -> BiomeDictionary.areSimilar(biome1.biome, biome));
 		}
 	}*/
 
 	/**
 	 * Gets a list of BiomeEntries allowed to spawn in this dimension
 	 * @param biomeIds
-	 * @return
+	 * @return the list of BiomeEntries
 	 */
 	private List<Biome> getBiomesEntries(List<Biome> biomeIds) {
-
 		return biomeIds;
 
-		/*ArrayList<Biome> biomeEntries = new ArrayList<BiomeManager.Biome>();
+		/*ArrayList<Biome> biomeEntries = new ArrayList<>();
 
-		Iterator<Biome> itr = biomeIds.iterator();
-		while( itr.hasNext()) {
-			Biome biomes = itr.next();
-
+		for (Biome biomes : biomeIds) {
 			/*if(biomes == Biome.desert) {
 				biomeEntries.add(new Biome(BiomeGenBase.desert, 30));
 				continue;
@@ -1292,18 +1333,18 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 
 			label:
 
-				for(BiomeManager.BiomeType types : BiomeManager.BiomeType.values()) {
-					for(Biome entry : BiomeManager.getBiomes(types)) {
-						if(biomes == null)
-							AdvancedRocketry.logger.warn("Null biomes loaded for DIMID: " + this.getId());
-						else if(entry.biome.equals(biomes)) {
-							biomeEntries.add(entry);
-							notFound = false;
+			for(BiomeManager.BiomeType types : BiomeManager.BiomeType.values()) {
+				for(Biome entry : BiomeManager.getBiomes(types)) {
+					if(biomes == null)
+						AdvancedRocketry.logger.warn("Null biomes loaded for DIMID: " + this.getId());
+					else if(entry.biome.equals(biomes)) {
+						biomeEntries.add(entry);
+						notFound = false;
 
-							break label;
-						}
+						break label;
 					}
 				}
+			}
 
 			if(notFound && biomes != null) {
 				biomeEntries.add(new Biome(biomes, 30));
@@ -1349,10 +1390,9 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 			terraformedBiomes.clear();
 
 			ListNBT terraformedList = nbt.getList("biomesTerra", NBT.TAG_STRING);
-			List<Biome> biomesList = new ArrayList<Biome>();
+			List<Biome> biomesList = new ArrayList<>();
 
-			for(int i = 0; i < terraformedList.size(); i++)
-			{
+			for(int i = 0; i < terraformedList.size(); i++) {
 				biomesList.add(AdvancedRocketryBiomes.getBiomeFromResourceLocation(new ResourceLocation(terraformedList.getString(i))));
 			}
 
@@ -1360,28 +1400,27 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 		}
 
 		//Satellites
+		if(nbt.contains("satellites")) {
+			CompoundNBT allSatelliteNbt = nbt.getCompound("satellites");
 
-		if(nbt.contains("satallites")) {
-			CompoundNBT allSatalliteNbt = nbt.getCompound("satallites");
-
-			for(Object keyObject : allSatalliteNbt.keySet()) {
-				String key = (String)keyObject;
+			for(String keyObject : allSatelliteNbt.keySet()) {
+				String key = keyObject;
 				Long longKey = Long.parseLong(key);
 
-				CompoundNBT satalliteNbt = allSatalliteNbt.getCompound(key);
+				CompoundNBT satelliteNBT = allSatelliteNbt.getCompound(key);
 
-				if(satallites.containsKey(longKey)){
-					satallites.get(longKey).readFromNBT(satalliteNbt);
+				if(satellites.containsKey(longKey)){
+					satellites.get(longKey).readFromNBT(satelliteNBT);
 				} 
 				else {
 					//Check for NBT errors
 					try {
-						SatelliteBase satallite = SatelliteRegistry.createFromNBT(satalliteNbt);
+						SatelliteBase satellite = SatelliteRegistry.createFromNBT(satelliteNBT);
 
-						satallites.put(longKey, satallite);
+						satellites.put(longKey, satellite);
 
-						if(satallite.canTick()) {
-							tickingSatallites.put(satallite.getId(), satallite);
+						if(satellite.canTick()) {
+							tickingSatellites.put(satellite.getId(), satellite);
 						}
 
 					} catch (NullPointerException e) {
@@ -1432,7 +1471,7 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 
 			allowedBiomes.clear();
 			ListNBT biomeIds = nbt.getList("biomes", NBT.TAG_STRING);
-			List<Biome> biomesList = new ArrayList<Biome>();
+			List<Biome> biomesList = new ArrayList<>();
 
 
 			for(int i = 0; i < biomeIds.size(); i++)
@@ -1440,9 +1479,56 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 				biomesList.add(AdvancedRocketryBiomes.getBiomeFromResourceLocation(new ResourceLocation(biomeIds.getString(i))));
 			}
 
-			allowedBiomes.addAll(getBiomesEntries(biomesList));
+			allowedBiomes.addAll(biomesList);
 		}
 
+		if(nbt.contains("laserDrillOres")) {
+			laserDrillOres.clear();
+			list = nbt.getList("laserDrillOres", NBT.TAG_COMPOUND);
+			for(INBT entry : list) {
+				assert entry instanceof CompoundNBT;
+				laserDrillOres.add(ItemStack.read((CompoundNBT) entry));
+			}
+		}
+
+		if(nbt.contains("laserDrillOresRaw")) {
+			laserDrillOresRaw = nbt.getString("laserDrillOresRaw");
+		}
+
+		if(nbt.contains("geodeOres")) {
+			geodeOres.clear();
+			list = nbt.getList("geodeOres", NBT.TAG_COMPOUND);
+			for(INBT entry : list) {
+				assert entry instanceof CompoundNBT;
+				geodeOres.add(ItemStack.read((CompoundNBT) entry));
+			}
+		}
+
+		if(nbt.contains("geodeOresRaw")) {
+			geodeOresRaw = nbt.getString("geodeOresRaw");
+		}
+
+		if(nbt.contains("craterOres")) {
+			craterOres.clear();
+			list = nbt.getList("craterOres", NBT.TAG_COMPOUND);
+			for(INBT entry : list) {
+				assert entry instanceof CompoundNBT;
+				craterOres.add(ItemStack.read((CompoundNBT) entry));
+			}
+		}
+
+		if(nbt.contains("craterOresRaw")) {
+			craterOresRaw = nbt.getString("craterOresRaw");
+		}
+
+		if(nbt.contains("artifacts")) {
+			requiredArtifacts.clear();
+			list = nbt.getList("artifacts", NBT.TAG_COMPOUND);
+			for(INBT entry : list) {
+				assert entry instanceof CompoundNBT;
+				requiredArtifacts.add(new ItemStack((IItemProvider) entry));
+			}
+		}
 
 		gravitationalMultiplier = nbt.getFloat("gravitationalMultiplier");
 		orbitalDist = nbt.getInt("orbitalDist");
@@ -1450,7 +1536,9 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 		baseOrbitTheta = nbt.getDouble("baseOrbitTheta");
 		orbitalPhi = nbt.getDouble("orbitPhi");
 		rotationalPhi = nbt.getDouble("rotationalPhi");
+		isRetrograde = nbt.getBoolean("isRetrograde");
 		hasOxygen = nbt.getBoolean("hasOxygen");
+		colorOverride = nbt.getBoolean("colorOverride");
 		atmosphereDensity = nbt.getInt("atmosphereDensity");
 
 		if(nbt.contains("originalAtmosphereDensity"))
@@ -1458,18 +1546,23 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 		else 
 			originalAtmosphereDensity = atmosphereDensity;
 
+		peakInsolationMultiplier = nbt.getDouble("peakInsolationMultiplier");
+		peakInsolationMultiplierWithoutAtmosphere = nbt.getDouble("peakInsolationMultiplierWithoutAtmosphere");
 		averageTemperature = nbt.getInt("avgTemperature");
 		rotationalPeriod = nbt.getInt("rotationalPeriod");
 		name = nbt.getString("name");
-		isNativeDimension = nbt.contains("isNative") ? nbt.getBoolean("isNative") : true; //Prevent world breakages when loading from old version
+		customIcon = nbt.getString("icon");
+		isNativeDimension = !nbt.contains("isNative") || nbt.getBoolean("isNative"); //Prevent world breakages when loading from old version
 		isGasGiant = nbt.getBoolean("isGasGiant");
 		hasRings = nbt.getBoolean("hasRings");
-		sealevel = nbt.getInt("sealevel");
+		seaLevel = nbt.getInt("sealevel");
 		generatorType = nbt.getInt("genType");
 		canGenerateCraters = nbt.getBoolean("canGenerateCraters");
 		canGenerateGeodes = nbt.getBoolean("canGenerateGeodes");
 		canGenerateStructures = nbt.getBoolean("canGenerateStructures");
-		canGenerateVolcanos = nbt.getBoolean("canGenerateVolcanos");
+		canGenerateVolcanoes = nbt.getBoolean("canGenerateVolcanos");
+		canGenerateCaves = nbt.getBoolean("canGenerateCaves");
+		hasRivers = nbt.getBoolean("hasRivers");
 		geodeFrequencyMultiplier = nbt.getFloat("geodeFrequencyMultiplier");
 		craterFrequencyMultiplier = nbt.getFloat("craterFrequencyMultiplier");
 		volcanoFrequencyMultiplier = nbt.getFloat("volcanoFrequencyMultiplier");
@@ -1493,9 +1586,9 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 			getHarvestableGasses().clear();
 
 			for(int i = 0; i < fluidList.size(); i++) {
-				Fluid f = ForgeRegistries.FLUIDS.getValue(new ResourceLocation(fluidList.getString(i)));
-				if(f != null)
-					getHarvestableGasses().add(f);
+				Fluid fluid = ForgeRegistries.FLUIDS.getValue(new ResourceLocation(fluidList.getString(i)));
+				if(fluid != null)
+					getHarvestableGasses().add(fluid);
 			}
 
 			//Do not allow empty atmospheres, at least not yet
@@ -1550,24 +1643,23 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 
 		if(!terraformedBiomes.isEmpty()) {
 			ListNBT terraformedBiomeList = new ListNBT();
-			for(int i = 0; i < terraformedBiomes.size(); i++) {
+			for (Biome terraformedBiome : terraformedBiomes) {
 
-				terraformedBiomeList.add(StringNBT.valueOf(AdvancedRocketryBiomes.getBiomeResource(terraformedBiomes.get(i)).toString()));
+				terraformedBiomeList.add(StringNBT.valueOf(AdvancedRocketryBiomes.getBiomeResource(terraformedBiome).toString()));
 			}
 			nbt.put("biomesTerra", terraformedBiomeList);
 		}
 
 		//Satellites
-
-		if(!satallites.isEmpty()) {
+		if(!satellites.isEmpty()) {
 			CompoundNBT allSatalliteNbt = new CompoundNBT();
-			for(Entry<Long, SatelliteBase> entry : satallites.entrySet()) {
+			for(Entry<Long, SatelliteBase> entry : satellites.entrySet()) {
 				CompoundNBT satalliteNbt = new CompoundNBT();
 
 				entry.getValue().writeToNBT(satalliteNbt);
 				allSatalliteNbt.put(entry.getKey().toString(), satalliteNbt);
 			}
-			nbt.put("satallites", allSatalliteNbt);
+			nbt.put("satellites", allSatalliteNbt);
 		}
 	}
 
@@ -1606,15 +1698,66 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 
 		if(!allowedBiomes.isEmpty()) {
 
-
 			ListNBT biomeList = new ListNBT();
-			for(int i = 0; i < allowedBiomes.size(); i++) {
-				biomeList.add(StringNBT.valueOf(AdvancedRocketryBiomes.getBiomeResource(allowedBiomes.get(i)).toString()));
+			for (Biome allowedBiome : allowedBiomes) {
+				biomeList.add(StringNBT.valueOf(AdvancedRocketryBiomes.getBiomeResource(allowedBiome).toString()));
 			}
 			nbt.put("biomes", biomeList);
 		}
 
 
+		if(!laserDrillOres.isEmpty()) {
+			list = new ListNBT();
+			for(ItemStack ore : laserDrillOres) {
+				CompoundNBT entry = new CompoundNBT();
+				ore.write(entry);
+				list.add(entry);
+			}
+			nbt.put("laserDrillOres",list);
+		}
+
+		if(laserDrillOresRaw != null) {
+			nbt.put("laserDrillOresRaw", StringNBT.valueOf(laserDrillOresRaw));
+		}
+
+		if(!geodeOres.isEmpty()) {
+			list = new ListNBT();
+			for(ItemStack ore : geodeOres) {
+				CompoundNBT entry = new CompoundNBT();
+				ore.write(entry);
+				list.add(entry);
+			}
+			nbt.put("geodeOres",list);
+		}
+
+		if(geodeOresRaw != null) {
+			nbt.put("geodeOresRaw", StringNBT.valueOf(geodeOresRaw));
+		}
+
+		if(!craterOres.isEmpty()) {
+			list = new ListNBT();
+			for(ItemStack ore : craterOres) {
+				CompoundNBT entry = new CompoundNBT();
+				ore.write(entry);
+				list.add(entry);
+			}
+			nbt.put("craterOres",list);
+		}
+
+		if(craterOresRaw != null) {
+			nbt.put("craterOresRaw", StringNBT.valueOf(craterOresRaw));
+		}
+
+		if(!requiredArtifacts.isEmpty()) {
+			list = new ListNBT();
+			for(ItemStack ore : requiredArtifacts) {
+				CompoundNBT entry = new CompoundNBT();
+				ore.write(entry);
+				list.add(entry);
+			}
+			nbt.put("artifacts", list);
+		}
+		
 		nbt.putString("starId", starId.toString());
 		nbt.putFloat("gravitationalMultiplier", gravitationalMultiplier);
 		nbt.putInt("orbitalDist", orbitalDist);
@@ -1622,28 +1765,34 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 		nbt.putDouble("baseOrbitTheta", baseOrbitTheta);
 		nbt.putDouble("orbitPhi", orbitalPhi);
 		nbt.putDouble("rotationalPhi", rotationalPhi);
+		nbt.putBoolean("isRetrograde", isRetrograde);
 		nbt.putBoolean("hasOxygen", hasOxygen);
+		nbt.putBoolean("colorOverride", colorOverride);
 		nbt.putInt("atmosphereDensity", atmosphereDensity);
 		nbt.putInt("originalAtmosphereDensity", originalAtmosphereDensity);
+		nbt.putDouble("peakInsolationMultiplier", peakInsolationMultiplier);
+		nbt.putDouble("peakInsolationMultiplierWithoutAtmosphere", peakInsolationMultiplierWithoutAtmosphere);
 		nbt.putInt("avgTemperature", averageTemperature);
 		nbt.putInt("rotationalPeriod", rotationalPeriod);
 		nbt.putString("name", name);
+		nbt.putString("icon", customIcon);
 		nbt.putBoolean("isNative", isNativeDimension);
 		nbt.putBoolean("isGasGiant", isGasGiant);
 		nbt.putBoolean("hasRings", hasRings);
-		nbt.putInt("sealevel", sealevel);
+		nbt.putInt("sealevel", seaLevel);
 		nbt.putInt("genType", generatorType);
 		nbt.putBoolean("canGenerateCraters", canGenerateCraters);
 		nbt.putBoolean("canGenerateGeodes", canGenerateGeodes);
 		nbt.putBoolean("canGenerateStructures", canGenerateStructures);
-		nbt.putBoolean("canGenerateVolcanos", canGenerateVolcanos);
+		nbt.putBoolean("canGenerateVolcanos", canGenerateVolcanoes);
+		nbt.putBoolean("canGenerateCaves", canGenerateCaves);
+		nbt.putBoolean("hasRivers", hasRivers);
 		nbt.putFloat("geodeFrequencyMultiplier", geodeFrequencyMultiplier);
 		nbt.putFloat("craterFrequencyMultiplier", craterFrequencyMultiplier);
 		nbt.putFloat("volcanoFrequencyMultiplier", volcanoFrequencyMultiplier);
 
 		//Hierarchy
 		if(!childPlanets.isEmpty()) {
-
 			ListNBT childList = new ListNBT();
 			for(ResourceLocation childPlanet : childPlanets)
 				childList.add(StringNBT.valueOf(childPlanet.toString()));
@@ -1677,60 +1826,55 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 
 		writeTechnicalNBT(nbt);
 	}
-
 	public String generateDimJSON()
 	{
 		long seed = 0;
-		List<String> structures = new LinkedList<String>();
-		List<String> biomeConditionalStructures = new LinkedList<String>();
-		List<String> biomeStrings = new LinkedList<String>();
+		List<String> structures = new LinkedList<>();
+		List<String> biomeConditionalStructures = new LinkedList<>();
+		List<String> biomeStrings = new LinkedList<>();
 		Random random = new Random("Yes, I know that temp, altidude and humidity are not the same as the noise generator, but im coming in anywayyy".hashCode());
 
 		
 		if(!isAsteroid()) {
-			if(canGenerateCraters())
-			{
+			if(canGenerateCraters()) {
 				structures.add("\"advancedrocketry:crater\"");
 
 				biomeConditionalStructures.add(
 						"	          \"advancedrocketry:crater\": {\n" + 
-								"	            \"spacing\": " + String.valueOf(40*getCraterMultiplier()) + ",\n" + 
-								"	            \"separation\": " + String.valueOf(20*getCraterMultiplier()) + ",\n" + 
+								"	            \"spacing\": " + 40 * getCraterMultiplier() + ",\n" +
+								"	            \"separation\": " + 20 * getCraterMultiplier() + ",\n" +
 								"	            \"salt\": 0\n" + 
 						"	          }");
 
 			}
-			if(canGenerateVolcanos())
-			{
+			if(canGenerateVolcanoes) {
 				structures.add("\"advancedrocketry:volcano\"");
 				biomeConditionalStructures.add(
 						"	          \"advancedrocketry:volcano\": {\n" + 
-								"	            \"spacing\": " + String.valueOf(40*getVolcanoMultiplier()) + ",\n" + 
-								"	            \"separation\": " + String.valueOf(20*getVolcanoMultiplier()) + ",\n" + 
+								"	            \"spacing\": " + 40 * getVolcanoMultiplier() + ",\n" +
+								"	            \"separation\": " + 20 * getVolcanoMultiplier() + ",\n" +
 								"	            \"salt\": 0\n" + 
 						"	          }");
 			}
-			if(canGenerateGeodes())
-			{
+			if(canGenerateGeodes()) {
 				structures.add("\"advancedrocketry:geode\"");
 				biomeConditionalStructures.add(
 						"	          \"advancedrocketry:geode\": {\n" + 
-								"	            \"spacing\": " + String.valueOf(40*getGeodeMultiplier()) + ",\n" + 
-								"	            \"separation\": " + String.valueOf(20*getGeodeMultiplier()) + ",\n" + 
+								"	            \"spacing\": " + 40 * getGeodeMultiplier() + ",\n" +
+								"	            \"separation\": " + 20 * getGeodeMultiplier() + ",\n" +
 								"	            \"salt\": 0\n" + 
 						"	          }");
 			}
 			
-			for(Biome biome : getBiomes())
-			{
+			for(Biome biome : getBiomes()) {
 				biomeStrings.add(
 						"	    {\n" + 
 								"              \"biome\": \"" + biome.getRegistryName().toString() + "\",\n" + 
 								"              \"parameters\": {\n" + 
-								"                \"altitude\": " +  String.valueOf(random.nextFloat()) + ",\n" + 
-								"		\"humidity\": " + String.valueOf(biome.getDownfall()) + ",\n" + 
-								"                \"temperature\": " + String.valueOf(biome.func_242445_k()) + ",				\n" + 
-								"                \"weirdness\": " + String.valueOf(biome.getScale()) + ",\n" + 
+								"                \"altitude\": " + random.nextFloat() + ",\n" +
+								"		\"humidity\": " + biome.getDownfall() + ",\n" +
+								"                \"temperature\": " + biome.getTemperature() + ",				\n" +
+								"                \"weirdness\": " + biome.getScale() + ",\n" +
 								"                \"offset\": 0\n" + 
 								"              }\n" + 
 						"            }");
@@ -1741,7 +1885,7 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 					"{\n" + 
 					"      \"generator\": {\n" + 
 					"        \"type\": \"advancedrocketry:planetary_noise\",\n" + 
-					"        \"seed\": " + String.valueOf(seed) + ",\n" + 
+					"        \"seed\": " + seed + ",\n" +
 					(structures.isEmpty() ?  "        \"starts\": [],\n" : "        \"starts\": [" + String.join(", ", structures) +  "],\n") + 
 					"        \"dimension_props\": \"" + getId().toString() +  "\",\n" + 
 					"        \"biome_source\": {\n" + 
@@ -1754,7 +1898,7 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 					"		\n" + 
 					"		\n" + 
 					"          \"type\": \"advancedrocketry:planetary\",\n" + 
-					"          \"seed\": " + String.valueOf(seed) + ",\n" + 
+					"          \"seed\": " + seed + ",\n" +
 					"          \"biomes\": [\n" + 
 					String.join(",\n", biomeStrings) + "\n" +
 					"          ]\n" + 
@@ -1763,7 +1907,7 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 					"      \"name\": \"" + getId().toString() + "\",\n" + 
 					"      \"bedrock_roof_position\": -10,\n" + 
 					"      \"bedrock_floor_position\": 0,\n" + 
-					"      \"sea_level\": "  +  String.valueOf(getSeaLevel()) + ",\n" + 
+					"      \"sea_level\": "  + getSeaLevel() + ",\n" +
 					"      \"disable_mob_generation\": " +  (isHabitable() ? "true" : "false") + ",\n" + 
 					"      \"default_block\": {\n" + 
 					"        \"Name\": \"" + getStoneBlock().getBlock().getRegistryName().toString() + "\"\n" + 
@@ -1818,10 +1962,10 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 				"	    {\n" + 
 						"              \"biome\": \"" + biome.getRegistryName().toString() + "\",\n" + 
 						"              \"parameters\": {\n" + 
-						"                \"altitude\": " +  String.valueOf(random.nextFloat()) + ",\n" + 
-						"		\"humidity\": " + String.valueOf(biome.getDownfall()) + ",\n" + 
-						"                \"temperature\": " + String.valueOf(biome.func_242445_k()) + ",				\n" + 
-						"                \"weirdness\": " + String.valueOf(biome.getScale()) + ",\n" + 
+						"                \"altitude\": " + random.nextFloat() + ",\n" +
+						"		\"humidity\": " + biome.getDownfall() + ",\n" +
+						"                \"temperature\": " + biome.getTemperature() + ",				\n" +
+						"                \"weirdness\": " + biome.getScale() + ",\n" +
 						"                \"offset\": 0\n" + 
 						"              }\n" + 
 				"            }");
@@ -1830,7 +1974,7 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 				"{\n" + 
 				"      \"generator\": {\n" + 
 				"        \"type\": \"advancedrocketry:planetary_noise\",\n" + 
-				"        \"seed\": " + String.valueOf(seed) + ",\n" + 
+				"        \"seed\": " + seed + ",\n" +
 				(structures.isEmpty() ?  "        \"starts\": [],\n" : "        \"starts\": [" + String.join(", ", structures) +  "],\n") + 
 				"        \"dimension_props\": \"" + getId().toString() +  "\",\n" + 
 				"        \"biome_source\": {\n" + 
@@ -1843,7 +1987,7 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 				"		\n" + 
 				"		\n" + 
 				"          \"type\": \"advancedrocketry:planetary\",\n" + 
-				"          \"seed\": " + String.valueOf(seed) + ",\n" + 
+				"          \"seed\": " + seed + ",\n" +
 				"          \"biomes\": [\n" + 
 				String.join(",\n", biomeStrings) + "\n" +
 				"          ]\n" + 
@@ -1852,7 +1996,7 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 				"      \"name\": \"" + getId().toString() + "\",\n" + 
 				"      \"bedrock_roof_position\": -10,\n" + 
 				"      \"bedrock_floor_position\": -10,\n" + 
-				"      \"sea_level\": "  +  String.valueOf(getSeaLevel()) + ",\n" + 
+				"      \"sea_level\": "  + getSeaLevel() + ",\n" +
 				"      \"disable_mob_generation\": " +  (isHabitable() ? "true" : "false") + ",\n" + 
 				"      \"default_block\": {\n" + 
 				"        \"Name\": \"" + getStoneBlock().getBlock().getRegistryName().toString() + "\"\n" + 
@@ -1906,6 +2050,10 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	 */
 	@Override
 	public int getAverageTemp() {
+		
+		// Star is sometimes null early on in the loading process
+		if(this.getStar() == null)
+			return averageTemperature;
 		averageTemperature = AstronomicalBodyHelper.getAverageTemperature(this.getStar(), this.getSolarOrbitalDistance(), this.getAtmosphereDensity());
 		return averageTemperature;
 	}
@@ -1935,7 +2083,7 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	}
 
 	/**
-	 * Function for calculating atmosphere thinning with respect to hieght, normallized
+	 * Function for calculating atmosphere thinning with respect to height, normalized
 	 * @param y
 	 * @return the density of the atmosphere at the given height
 	 */
@@ -1945,7 +2093,7 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 
 	/**
 	 * Gets the fog color at a given altitude, used to assist the illusion of thinning atmosphere
-	 * @param y
+	 * @param y y-height
 	 * @param fogColor current fog color at this location
 	 * @return
 	 */
@@ -1973,16 +2121,12 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 
 	}
 
-
-	public double[] getPlanetPositon()
-	{
+	public double[] getPlanetPosition() {
 		double orbitalDistance = this.orbitalDist;
 		double theta = this.orbitTheta;
 		double phi = this.orbitalPhi;
 
-		double[] coords = new double[] {orbitalDistance*Math.cos(theta), orbitalDistance*Math.sin(phi), orbitalDistance*Math.sin(theta)};
-
-		return coords;
+		return new double[] {orbitalDistance*Math.cos(theta), orbitalDistance*Math.sin(phi), orbitalDistance*Math.sin(theta)};
 	}
 
 	public ResourceLocation getStarId() {
@@ -2005,11 +2149,11 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	}
 
 	public int getSeaLevel() {
-		return sealevel;
+		return seaLevel;
 	}
 
-	public void setSeaLevel(int sealevel) {
-		this.sealevel = MathHelper.clamp(sealevel, 0, 255);
+	public void setSeaLevel(int seaLevel) {
+		this.seaLevel = MathHelper.clamp(seaLevel, 0, 255);
 	}
 
 	public void setGenType(int genType)
@@ -2054,11 +2198,11 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 	}
 
 	public void setGenerateVolcanos(boolean canGenerateVolcanos) {
-		this.canGenerateVolcanos = canGenerateVolcanos;
+		this.canGenerateVolcanoes = canGenerateVolcanos;
 	}
 
 	public boolean canGenerateVolcanos() {
-		return this.canGenerateVolcanos;
+		return this.canGenerateVolcanoes;
 	}
 
 	public float getVolcanoMultiplier() {
@@ -2076,13 +2220,19 @@ public class DimensionProperties implements Cloneable, IDimensionProperties {
 		return canGenerateStructures;
 	}
 
-	public float getRenderSizePlanetView()
-	{
+	public void setGenerateCaves(boolean canGenerateCaves) {
+		this.canGenerateCaves = canGenerateCaves;
+	}
+
+	public boolean canGenerateCaves() {
+		return this.canGenerateCaves;
+	}
+
+	public float getRenderSizePlanetView() {
 		return (isMoon() ? 8f : 10f)*Math.max(this.getGravitationalMultiplier()*this.getGravitationalMultiplier(), .5f)*100;
 	}
 
-	public float getRenderSizeSolarView()
-	{
+	public float getRenderSizeSolarView() {
 		return (isMoon() ? 0.2f : 1f)*Math.max(this.getGravitationalMultiplier()*this.getGravitationalMultiplier(), .5f)*100;
 	}
 

@@ -1,53 +1,40 @@
 package zmaster587.advancedRocketry.event;
 
-import net.java.games.input.Mouse;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.material.MaterialColor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.inventory.ContainerScreen;
 import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.inventory.container.Container;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.vector.Quaternion;
 import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.gen.Heightmap.Type;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.ForgeHooksClient;
-import net.minecraftforge.client.IRenderHandler;
-import net.minecraftforge.client.event.InputEvent.MouseInputEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent.ElementType;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
-import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL11;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.systems.RenderSystem;
-
 import zmaster587.advancedRocketry.api.ARConfiguration;
-import zmaster587.advancedRocketry.api.IPlanetaryProvider;
 import zmaster587.advancedRocketry.api.RocketEvent;
 import zmaster587.advancedRocketry.api.armor.IFillableArmor;
 import zmaster587.advancedRocketry.atmosphere.AtmosphereHandler;
-import zmaster587.advancedRocketry.backwardCompat.WavefrontObject;
 import zmaster587.advancedRocketry.client.render.ClientDynamicTexture;
 import zmaster587.advancedRocketry.client.render.planet.ISkyRenderer;
 import zmaster587.advancedRocketry.client.render.planet.RenderPlanetarySky;
@@ -105,7 +92,7 @@ public class RocketEventHandler extends Screen {
 			//ForgeHooksClient. getSkyBlendColour(event.world, new BlockPos(event.getEntity().getPositionVec()));
 
 			if(ARConfiguration.getCurrentConfig().planetSkyOverride.get() && !DimensionManager.getInstance().isDimensionCreated(event.world)) {
-				DimensionProperties props = DimensionManager.getInstance().getDimensionProperties(event.world);
+				DimensionProperties props = DimensionManager.getInstance().getDimensionProperties(ZUtils.getDimensionIdentifier(event.world));
 				prevRenderHanlder = props.getSkyRenderer();
 				props.setSkyRenderer(new RenderPlanetarySky());
 			}
@@ -123,7 +110,7 @@ public class RocketEventHandler extends Screen {
 		if(ARConfiguration.getCurrentConfig().planetSkyOverride.get() && event.world.isRemote && !event.getEntity().getPassengers().isEmpty() && event.getEntity().getPassengers().contains(Minecraft.getInstance().player)) {
 			//prepareOrbitalMap(event);
 			mapReady = true; //temp
-			DimensionProperties props = DimensionManager.getInstance().getDimensionProperties(event.world);
+			DimensionProperties props = DimensionManager.getInstance().getDimensionProperties(ZUtils.getDimensionIdentifier(event.world));
 			prevRenderHanlder = props.getSkyRenderer();
 			props.setSkyRenderer(new RenderPlanetarySky());
 		}
@@ -137,8 +124,8 @@ public class RocketEventHandler extends Screen {
 
 	@OnlyIn(value=Dist.CLIENT)
 	public static void destroyOrbitalTextures(World world) {
-		if(!ARConfiguration.getCurrentConfig().skyOverride.get() && !DimensionManager.getInstance().isDimensionCreated(ZUtils.getDimensionIdentifier(world))) {
-			DimensionProperties props = DimensionManager.getInstance().getDimensionProperties(world);
+		if(!DimensionManager.getInstance().isDimensionCreated(ZUtils.getDimensionIdentifier(world))) {
+			DimensionProperties props = DimensionManager.getInstance().getDimensionProperties(ZUtils.getDimensionIdentifier(world));
 			props.setSkyRenderer(prevRenderHanlder);
 			prevRenderHanlder = null;
 		}
@@ -162,7 +149,7 @@ public class RocketEventHandler extends Screen {
 			outerBounds = new ClientDynamicTexture(outerImgSize, outerImgSize);
 		}
 
-		if(ARConfiguration.GetSpaceDimId().equals(ZUtils.getDimensionIdentifier(event.world))) {
+		if(DimensionManager.spaceId.equals(ZUtils.getDimensionIdentifier(event.world))) {
 			destroyOrbitalTextures(event.world);
 			mapReady = false;
 			return;
@@ -174,113 +161,109 @@ public class RocketEventHandler extends Screen {
 
 		if(thread == null || !thread.isAlive()) {
 
-			thread = new Thread(new Runnable() {
-				@Override
-				public void run() {
+			thread = new Thread(() -> {
 
-					int numChunksLoaded = 0;
+				int numChunksLoaded = 0;
 
-					//table = earth.getByteBuffer();
-					//outerBoundsTable = outerBounds.getByteBuffer();
+				//table = earth.getByteBuffer();
+				//outerBoundsTable = outerBounds.getByteBuffer();
 
-					//Get the average of each edge RGB
-					long topEdge[], bottomEdge[], leftEdge[], rightEdge[], total[];
-					total = topEdge = bottomEdge = leftEdge = rightEdge = new long[] {0,0,0};
+				//Get the average of each edge RGB
+				long[] total = new long[]{0, 0, 0};
 
-					int numtries = 0;
-					
+				int numtries = 0;
 
-					do {
-						numtries++;
-						for(int i = 0; i < getImgSize*getImgSize; i++) {
-							//TODO: Optimize
-							int xOffset = (i % getImgSize);
-							int yOffset = (i / getImgSize);
 
-							int xPosition = (int)entity.getPosX() - (getImgSize/2) + xOffset;
-							int zPosition = (int)entity.getPosZ() - (getImgSize/2) + yOffset;
-							BlockPos thisPos = new BlockPos(xPosition, 0, zPosition);
-							Chunk chunk = worldObj.getChunkAt(thisPos);
+				do {
+					numtries++;
+					for(int i = 0; i < getImgSize*getImgSize; i++) {
+						//TODO: Optimize
+						int xOffset = (i % getImgSize);
+						int yOffset = (i / getImgSize);
 
-							if(!chunk.isEmpty()) {
-								//Get Xcoord and ZCoords in the chunk
-								numChunksLoaded++;
-								int heightValue = chunk.getTopBlockY(Type.WORLD_SURFACE, xPosition + (chunk.getPos().x >= 0 ? - (Math.abs( chunk.getPos().x )<< 4) : (Math.abs( chunk.getPos().x )<< 4)), zPosition + (chunk.getPos().z >= 0 ? - (Math.abs(chunk.getPos().z )<< 4) : (Math.abs(chunk.getPos().z )<< 4)));
-								MaterialColor color = MaterialColor.AIR;
-								int yPosition;
+						int xPosition = (int)entity.getPosX() - (getImgSize/2) + xOffset;
+						int zPosition = (int)entity.getPosZ() - (getImgSize/2) + yOffset;
+						BlockPos thisPos = new BlockPos(xPosition, 0, zPosition);
+						Chunk chunk = worldObj.getChunkAt(thisPos);
 
-								BlockState block = null;
+						if(!chunk.isEmpty()) {
+							//Get Xcoord and ZCoords in the chunk
+							numChunksLoaded++;
+							int heightValue = chunk.getTopBlockY(Type.WORLD_SURFACE, xPosition + (chunk.getPos().x >= 0 ? - (Math.abs( chunk.getPos().x )<< 4) : (Math.abs( chunk.getPos().x )<< 4)), zPosition + (chunk.getPos().z >= 0 ? - (Math.abs(chunk.getPos().z )<< 4) : (Math.abs(chunk.getPos().z )<< 4)));
+							MaterialColor color = MaterialColor.AIR;
+							int yPosition;
 
-								//Get the first non-air block
-								for(yPosition = heightValue; yPosition > 0; yPosition-- ) {
-									block = worldObj.getBlockState(new BlockPos(xPosition, yPosition, zPosition));
-									if((color = block.getMaterialColor(worldObj, thisPos)) != MaterialColor.AIR) {
-										break;
-									}
+							BlockState block = null;
+
+							//Get the first non-air block
+							for(yPosition = heightValue; yPosition > 0; yPosition-- ) {
+								block = worldObj.getBlockState(new BlockPos(xPosition, yPosition, zPosition));
+								if((color = block.getMaterialColor(worldObj, thisPos)) != MaterialColor.AIR) {
+									break;
 								}
-								if(block == null)
-									continue;
-
-								int intColor;
-
-								if(block.getBlock() == Blocks.GRASS_BLOCK || block.getBlock() == Blocks.TALL_GRASS) {
-									int color2 = worldObj.getBiome(thisPos).getGrassColor(thisPos.getX(), thisPos.getZ());
-									int r = (color2 & 0xFF);
-									int g = ( (color2 >>> 8) & 0xFF);
-									int b = ( (color2 >>> 16) & 0xFF);
-									intColor = b | (g << 8) | (r << 16);
-								}
-								else if(block.getBlock() == Blocks.OAK_LEAVES ) {
-									int color2 = worldObj.getBiome(thisPos).getFoliageColor();
-									int r = (color2 & 0xFF);
-									int g = ( (color2 >>> 8) & 0xFF);
-									int b = ( (color2 >>> 16) & 0xFF);
-									intColor = b | (g << 8) | (r << 16);
-								}
-								else
-									intColor = ( (color.colorValue & 0xFF) << 16) | ( ( color.colorValue >>> 16 ) & 0xFF ) | ( color.colorValue & 0xFF00 );
-
-								//Put into the table and make opaque
-								table.put(i, intColor | 0xFF000000);
-
-								//Background in case chunk doesnt load
-								total[0] += intColor & 0xFF;
-								total[1] += (intColor & 0xFF00) >>> 8;
-									total[2] += (intColor & 0xFF0000) >>> 16;
-
 							}
+							if(block == null)
+								continue;
+
+							int intColor;
+
+							if(block.getBlock() == Blocks.GRASS_BLOCK || block.getBlock() == Blocks.TALL_GRASS) {
+								int color2 = worldObj.getBiome(thisPos).getGrassColor(thisPos.getX(), thisPos.getZ());
+								int r = (color2 & 0xFF);
+								int g = ( (color2 >>> 8) & 0xFF);
+								int b = ( (color2 >>> 16) & 0xFF);
+								intColor = b | (g << 8) | (r << 16);
+							}
+							else if(block.getBlock() == Blocks.OAK_LEAVES ) {
+								int color2 = worldObj.getBiome(thisPos).getFoliageColor();
+								int r = (color2 & 0xFF);
+								int g = ( (color2 >>> 8) & 0xFF);
+								int b = ( (color2 >>> 16) & 0xFF);
+								intColor = b | (g << 8) | (r << 16);
+							}
+							else
+								intColor = ( (color.colorValue & 0xFF) << 16) | ( ( color.colorValue >>> 16 ) & 0xFF ) | ( color.colorValue & 0xFF00 );
+
+							//Put into the table and make opaque
+							table.put(i, intColor | 0xFF000000);
+
+							//Background in case chunk doesnt load
+							total[0] += intColor & 0xFF;
+							total[1] += (intColor & 0xFF00) >>> 8;
+								total[2] += (intColor & 0xFF0000) >>> 16;
+
 						}
-					} while(numChunksLoaded == 0 && numtries < 5000);
-
-					int multiplierGreen = 1;
-					int multiplierBlue = 1;
-
-					//Get the outer layer
-					total[0] =     ZUtils.getAverageColor(total[0], total[1]*multiplierGreen, total[2]* multiplierBlue, numChunksLoaded);
-
-					Random random = new Random(); 
-
-					int randomMax = 0x2A;
-
-					for(int i = 0; i < outerImgSize*outerImgSize; i++) {
-
-						int randR =   randomMax - random.nextInt(randomMax) / 2;
-						int randG = ( randomMax - random.nextInt(randomMax)/2 ) << 8;
-						int randB = ( randomMax - random.nextInt(randomMax) /2 ) << 16;
-
-
-						int color = (int)( MathHelper.clamp((int) ( (total[0] & 0xFF) + randR ),0, 0xFF ) |
-								MathHelper.clamp((int)(total[0] & 0xFF00) + randG, 0x0100, 0xFF00)  | 
-								MathHelper.clamp( (int)(( total[0] & 0xFF0000) + randB), 0x010000, 0xFF0000) );
-
-						outerBoundsTable.put(i, color | 0xff000000);
 					}
+				} while(numChunksLoaded == 0 && numtries < 5000);
 
-					outerBoundsTable.flip();
-					table.flip(); //Yes really
-					mapNeedsBinding = true;
-					mapReady = true;
+				int multiplierGreen = 1;
+				int multiplierBlue = 1;
+
+				//Get the outer layer
+				total[0] =     ZUtils.getAverageColor(total[0], total[1]*multiplierGreen, total[2]* multiplierBlue, numChunksLoaded);
+
+				Random random = new Random();
+
+				int randomMax = 0x2A;
+
+				for(int i = 0; i < outerImgSize*outerImgSize; i++) {
+
+					int randR =   randomMax - random.nextInt(randomMax) / 2;
+					int randG = ( randomMax - random.nextInt(randomMax)/2 ) << 8;
+					int randB = ( randomMax - random.nextInt(randomMax) /2 ) << 16;
+
+
+					int color = MathHelper.clamp((int) ( (total[0] & 0xFF) + randR ),0, 0xFF ) |
+							MathHelper.clamp((int)(total[0] & 0xFF00) + randG, 0x0100, 0xFF00)  |
+							MathHelper.clamp( (int)(( total[0] & 0xFF0000) + randB), 0x010000, 0xFF0000);
+
+					outerBoundsTable.put(i, color | 0xff000000);
 				}
+
+				outerBoundsTable.flip();
+				table.flip(); //Yes really
+				mapNeedsBinding = true;
+				mapReady = true;
 			}, "Planet Texture Creator");
 			thread.start();
 		}
@@ -293,7 +276,7 @@ public class RocketEventHandler extends Screen {
 		if(!mapReady)
 			return;
 		
-		if(ARConfiguration.GetSpaceDimId().equals(ZUtils.getDimensionIdentifier(Minecraft.getInstance().getRenderViewEntity().world))) {
+		if(DimensionManager.spaceId.equals(ZUtils.getDimensionIdentifier(Minecraft.getInstance().getRenderViewEntity().world))) {
 			destroyOrbitalTextures(Minecraft.getInstance().getRenderViewEntity().world);
 			mapReady = false;
 			return;
@@ -317,16 +300,15 @@ public class RocketEventHandler extends Screen {
 		RenderSystem.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 
 		float brightness = 16;
-		
+
 		if(Minecraft.getInstance().getRenderViewEntity() != null && Minecraft.getInstance().getRenderViewEntity().world != null)
 			brightness = Minecraft.getInstance().getRenderViewEntity().world.getBrightness(new BlockPos( Minecraft.getInstance().getRenderViewEntity().getPositionVec()));
 
 		double deltaY = (Minecraft.getInstance().getRenderViewEntity().getPosY() - Minecraft.getInstance().getRenderViewEntity().lastTickPosY)*partialTicks;
-
-		double size = (getImgSize*5/(72-Minecraft.getInstance().getRenderViewEntity().getPosY() - deltaY));
+		double size = (getImgSize/(5 * Minecraft.getInstance().getRenderViewEntity().getPosY() * (1000f / ARConfiguration.getCurrentConfig().orbit.get())));
 		
 		
-		DimensionProperties props = DimensionManager.getInstance().getDimensionProperties(Minecraft.getInstance().getRenderViewEntity().world);
+		DimensionProperties props = DimensionManager.getInstance().getDimensionProperties(ZUtils.getDimensionIdentifier(Minecraft.getInstance().getRenderViewEntity().world));
 
 		BufferBuilder buffer = Tessellator.getInstance().getBuffer();
 
@@ -335,8 +317,8 @@ public class RocketEventHandler extends Screen {
 		buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_COLOR_TEX);
 		//RenderSystem.bindTexture(outerBounds.getTextureId());
 		Minecraft.getInstance().textureManager.bindTexture(props.getPlanetIconLEO());
-		double size2 = size*16;
-		float brightness2 =brightness*.43f;
+		double size2 = size*400;
+		float brightness2 =brightness;
 		RenderHelper.renderTopFaceWithUV(matrix, buffer, -10.1, size2, size2, -size2, -size2, 0, 1, 0, 1, brightness2, brightness2, brightness2, MathHelper.clamp(((float)Minecraft.getInstance().getRenderViewEntity().getPosY() -400f)/50f, 0f, 1f));
 		Tessellator.getInstance().draw();
 
@@ -362,13 +344,13 @@ public class RocketEventHandler extends Screen {
 		//RenderSystem.bindTexture(0);
 
 		buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_COLOR);
-		RenderSystem.color4f((float)skyColor.x, (float)skyColor.y, (float)skyColor.z, 0.05f);
+		RenderSystem.color4f((float)skyColor.x, (float)skyColor.y, (float)skyColor.z, 0.15f);
 
 		size = (getImgSize*100/(180-Minecraft.getInstance().getRenderViewEntity().getPosY() - deltaY));
 
 
-		for(int i = 0; i < 5 * MathHelper.clamp(( ( DimensionManager.getInstance().getDimensionProperties(Minecraft.getInstance().getRenderViewEntity().world).getAtmosphereDensity() *.01f * (float)Minecraft.getInstance().getRenderViewEntity().getPosY() -280f) )/150f, 0f, 2f); i++) {
-			RenderHelper.renderTopFace(matrix, buffer, -9 + i*.6, size, size, -size , -size, (float)skyColor.x, (float)skyColor.y, (float)skyColor.z, 0.05f);
+		for(int i = 0; i < 5 * MathHelper.clamp(( ( DimensionManager.getInstance().getDimensionProperties(ZUtils.getDimensionIdentifier(Minecraft.getInstance().getRenderViewEntity().world)).getAtmosphereDensity() *.01f * (float)Minecraft.getInstance().getRenderViewEntity().getPosY() -280f) )/150f, 0f, 2f); i++) {
+			RenderHelper.renderTopFace(matrix, buffer, -9 + i*.6, size, size, -size , -size, (float)skyColor.x/255f, (float)skyColor.y/255f, (float)skyColor.z/255f, 0.1f);
 		}
 
 		//
@@ -394,18 +376,18 @@ public class RocketEventHandler extends Screen {
 				Minecraft.getInstance().getTextureManager().bindTexture(background);
 
 				//Draw BG
-				this.func_238474_b_(event.getMatrixStack(),0, 0, 0, 0, 17, 252);
+				this.blit(event.getMatrixStack(),0, 0, 0, 0, 17, 252);
 
 				//Draw altitude indicator
 				float percentOrbit = MathHelper.clamp((float) ((rocket.getPosY() - rocket.world.getSeaLevel())/(float)(ARConfiguration.getCurrentConfig().orbit.get()-rocket.world.getSeaLevel())), 0f, 1f);
-				this.func_238474_b_(event.getMatrixStack(), 3, 8 + (int)(79*(1 - percentOrbit)), 17, 0, 6, 6); //6 to 83
+				this.blit(event.getMatrixStack(), 3, 8 + (int)(79*(1 - percentOrbit)), 17, 0, 6, 6); //6 to 83
 
 				//Draw Velocity indicator
-				this.func_238474_b_(event.getMatrixStack(), 3, 94 + (int)(69*(0.5 - (MathHelper.clamp((float) (rocket.getMotion().y), -1f, 1f)/2f))), 17, 0, 6, 6); //94 to 161
+				this.blit(event.getMatrixStack(), 3, 94 + (int)(69*(0.5 - (MathHelper.clamp((float) (rocket.getMotion().y), -1f, 1f)/2f))), 17, 0, 6, 6); //94 to 161
 
 				//Draw fuel indicator
-				int size = (int)(68*(rocket.getFuelAmount() /(float)rocket.getFuelCapacity()));
-				this.func_238474_b_(event.getMatrixStack(), 3, 242 - size, 17, 75 - size, 3, size); //94 to 161
+				int size = (int)(68 * rocket.getNormallizedProgress(0));
+				this.blit(event.getMatrixStack(), 3, 242 - size, 17, 75 - size, 3, size); //94 to 161
 
 				RenderSystem.disableBlend();
 				String str = rocket.getTextOverlay();
@@ -426,7 +408,7 @@ public class RocketEventHandler extends Screen {
 						GL11.glPushMatrix();
 						GL11.glScalef(scale*3, scale*3, scale*3);
 
-						fontRenderer.func_243246_a(event.getMatrixStack(), new StringTextComponent(strPart), screenX, screenY, 0xFFFFFF);
+						fontRenderer.drawTextWithShadow(event.getMatrixStack(), new StringTextComponent(strPart), screenX, screenY, 0xFFFFFF);
 
 						GL11.glPopMatrix();
 
@@ -436,7 +418,8 @@ public class RocketEventHandler extends Screen {
 			}
 
 			//Draw the O2 Bar if needed
-			if(!Minecraft.getInstance().player.isCreative()) {
+			boolean isCreativeOrSpec = Minecraft.getInstance().player.isCreative() || Minecraft.getInstance().player.isSpectator();
+			if(!isCreativeOrSpec) {
 				ItemStack chestPiece = Minecraft.getInstance().player.getItemStackFromSlot(EquipmentSlotType.CHEST);
 				IFillableArmor fillable = null;
 				if(!chestPiece.isEmpty() && chestPiece.getItem() instanceof IFillableArmor)
@@ -451,17 +434,18 @@ public class RocketEventHandler extends Screen {
 					Minecraft.getInstance().getTextureManager().bindTexture(background);
 					RenderSystem.color4f(1f, 1f, 1f, 1f);
 					int width = 83;
-					int screenX = oxygenBar.getRenderX();//+ 8;
-					int screenY = oxygenBar.getRenderY();//- 57;
+					
+					int screenX = Minecraft.getInstance().getMainWindow().getScaledWidth()/2 + oxygenBar.getRenderX();//+ 8;
+					int screenY = Minecraft.getInstance().getMainWindow().getScaledHeight() + oxygenBar.getRenderY();//- 57;
 
 					//Draw BG
-					this.func_238474_b_(event.getMatrixStack(), screenX, screenY, 23, 0, width, 17);
-					this.func_238474_b_(event.getMatrixStack(),screenX , screenY, 23, 17, (int)(width*size), 17);
+					this.blit(event.getMatrixStack(), screenX, screenY, 23, 0, width, 17);
+					this.blit(event.getMatrixStack(),screenX , screenY, 23, 17, (int)(width*size), 17);
 				}
 			}
 
 			//Draw module icons
-			if(!Minecraft.getInstance().player.isCreative() && Minecraft.getInstance().player.getItemStackFromSlot(EquipmentSlotType.HEAD) != null && Minecraft.getInstance().player.getItemStackFromSlot(EquipmentSlotType.HEAD).getItem() instanceof IModularArmor) {
+			if(!isCreativeOrSpec && Minecraft.getInstance().player.getItemStackFromSlot(EquipmentSlotType.HEAD).getItem() instanceof IModularArmor) {
 				for(EquipmentSlotType slot : EquipmentSlotType.values()) {
 					renderModuleSlots(Minecraft.getInstance().player.getItemStackFromSlot(slot), 4-slot.getIndex(), event);
 				}
@@ -484,10 +468,10 @@ public class RocketEventHandler extends Screen {
 				GL11.glPushMatrix();
 				GL11.glScalef(3, 3, 3);
 
-				fontRenderer.func_243246_a(event.getMatrixStack(), new StringTextComponent(str), screenX, screenY, 0xFF5656);
+				fontRenderer.drawTextWithShadow(event.getMatrixStack(), new StringTextComponent(str), screenX, screenY, 0xFF5656);
 				RenderSystem.color4f(1f, 1f, 1f, 1f);
 				Minecraft.getInstance().getTextureManager().bindTexture(TextureResources.progressBars);
-				this.func_238474_b_( event.getMatrixStack(), screenX + fontRenderer.getStringWidth(str)/2 -8, screenY - 16, 0, 156, 16, 16);
+				this.blit( event.getMatrixStack(), screenX + fontRenderer.getStringWidth(str)/2 -8, screenY - 16, 0, 156, 16, 16);
 
 				GL11.glPopMatrix();
 			}
@@ -505,7 +489,7 @@ public class RocketEventHandler extends Screen {
 
 
 
-					fontRenderer.func_243246_a(event.getMatrixStack(), new StringTextComponent(str), screenX, screenY, 0xFF5656);
+					fontRenderer.drawTextWithShadow(event.getMatrixStack(), new StringTextComponent(str), screenX, screenY, 0xFF5656);
 					loc++;
 				}
 
@@ -514,49 +498,6 @@ public class RocketEventHandler extends Screen {
 			}
 		}
 	}
-
-	@SubscribeEvent
-	public void mouseInputEvent(MouseInputEvent event) {
-		if(!ARConfiguration.getCurrentConfig().lockUI.get() && Minecraft.getInstance().mouseHelper.isMouseGrabbed()) {
-
-			if(event.getButton() == GLFW.GLFW_MOUSE_BUTTON_2) {
-				int i = getMinecraft().getMainWindow().getScaledWidth();
-				int j = getMinecraft().getMainWindow().getScaledHeight();
-				
-				int mouseX =  (int) (Minecraft.getInstance().mouseHelper.getMouseX() * i / getMinecraft().getMainWindow().getWidth());
-				int mouseY = (int) (j - Minecraft.getInstance().mouseHelper.getMouseY() * j / getMinecraft().getMainWindow().getHeight() - 1);
-               
-				if(currentlySelectedBox == null && mouseX >= suitPanel.getX(i) && mouseX < suitPanel.getX(i) + suitPanel.sizeX &&
-						mouseY >= suitPanel.getY(j) && mouseY < suitPanel.getY(j) + suitPanel.sizeY) {
-					currentlySelectedBox = suitPanel;
-				}
-
-				if(currentlySelectedBox == null && mouseX >= oxygenBar.getX(i) && mouseX < oxygenBar.getX(i) + oxygenBar.sizeX &&
-						mouseY >= oxygenBar.getY(j) && mouseY < oxygenBar.getY(j) + oxygenBar.sizeY) {
-					currentlySelectedBox = oxygenBar;
-				}
-
-				if(currentlySelectedBox == null && mouseX >= hydrogenBar.getX(i) && mouseX < hydrogenBar.getX(i) + hydrogenBar.sizeX &&
-						mouseY >= hydrogenBar.getY(j) && mouseY < hydrogenBar.getY(j) + hydrogenBar.sizeY) {
-					currentlySelectedBox = hydrogenBar;
-				}
-				
-				if(currentlySelectedBox == null && mouseX >= atmBar.getX(i) && mouseX < atmBar.getX(i) + atmBar.sizeX &&
-						mouseY >= atmBar.getY(j) && mouseY < atmBar.getY(j) + atmBar.sizeY) {
-					currentlySelectedBox = atmBar;
-				}
-				
-				if(currentlySelectedBox != null) {
-
-					currentlySelectedBox.setRenderX(mouseX, i);
-					currentlySelectedBox.setRenderY(mouseY, j);
-				}
-			}
-			else
-				currentlySelectedBox = null;
-		}
-	}
-
 	private void renderModuleSlots(ItemStack armorStack, int slot, RenderGameOverlayEvent event) {
 		int index = 1;
 		float color = 0.85f + 0.15F*MathHelper.sin( 2f*(float)Math.PI*((Minecraft.getInstance().world.getGameTime()) % 60)/60f );
@@ -568,7 +509,7 @@ public class RocketEventHandler extends Screen {
 
 		MatrixStack matrix = event.getMatrixStack();
 
-		if( armorStack != null ) {
+		if( !armorStack.isEmpty() ) {
 
 			boolean modularArmorFlag = armorStack.getItem() instanceof IModularArmor;
 
@@ -582,19 +523,19 @@ public class RocketEventHandler extends Screen {
 				RenderSystem.color4f(1f, 1f, 1f, 1f);
 				Minecraft.getInstance().getTextureManager().bindTexture(TextureResources.frameHUDBG);
 				buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-				RenderHelper.renderNorthFaceWithUV(matrix, buffer, this.func_230927_p_()-1, screenX - 4, screenY - 4, screenX + size, screenY + size + 4,0f,0.5f,0f,1f);
+				RenderHelper.renderNorthFaceWithUV(matrix, buffer, this.getBlitOffset()-1, screenX - 4, screenY - 4, screenX + size, screenY + size + 4,0f,0.5f,0f,1f);
 				Tessellator.getInstance().draw();
 
 				Minecraft.getInstance().getTextureManager().bindTexture(TextureResources.frameHUDBG);
 				buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-				RenderHelper.renderNorthFaceWithUV(matrix, buffer, this.func_230927_p_()-1, screenX + size, screenY - 3, screenX + 2 + size, screenY + size + 3,0.5f,0.5f,0f,0f);
+				RenderHelper.renderNorthFaceWithUV(matrix, buffer, this.getBlitOffset()-1, screenX + size, screenY - 3, screenX + 2 + size, screenY + size + 3,0.5f,0.5f,0f,0f);
 				Tessellator.getInstance().draw();
 
 				//Draw Icon
 				RenderSystem.color4f(color,color,color, color);
 				Minecraft.getInstance().getTextureManager().bindTexture(TextureResources.armorSlots[slot-1]);
 				buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-				RenderHelper.renderNorthFaceWithUV(matrix, buffer, this.func_230927_p_()-1, screenX, screenY, screenX + size, screenY + size,0f,1f,1f,0f);
+				RenderHelper.renderNorthFaceWithUV(matrix, buffer, this.getBlitOffset()-1, screenX, screenY, screenX + size, screenY + size,0f,1f,1f,0f);
 				Tessellator.getInstance().draw();
 
 				if(modularArmorFlag) {
@@ -616,7 +557,7 @@ public class RocketEventHandler extends Screen {
 
 						Minecraft.getInstance().getTextureManager().bindTexture(TextureResources.frameHUDBG);
 						buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-						RenderHelper.renderNorthFaceWithUV(matrix, buffer, this.func_230927_p_() -1, screenX - 4, screenY - 4, screenX + size - 2, screenY + size + 4,0.5f,0.5f,0f,1f);
+						RenderHelper.renderNorthFaceWithUV(matrix, buffer, this.getBlitOffset() -1, screenX - 4, screenY - 4, screenX + size - 2, screenY + size + 4,0.5f,0.5f,0f,1f);
 						Tessellator.getInstance().draw();
 
 
@@ -627,7 +568,7 @@ public class RocketEventHandler extends Screen {
 							Minecraft.getInstance().getTextureManager().bindTexture(texture);
 							RenderSystem.color4f(color,color,color, alpha);
 							buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-							RenderHelper.renderNorthFaceWithUV(matrix, buffer, this.func_230927_p_()-1, screenX, screenY, screenX + size, screenY + size, icon.getMinU(),icon.getMaxU(), icon.getMaxV(),icon.getMinV());
+							RenderHelper.renderNorthFaceWithUV(matrix, buffer, this.getBlitOffset()-1, screenX, screenY, screenX + size, screenY + size, icon.getMinU(),icon.getMaxU(), icon.getMaxV(),icon.getMinV());
 							Tessellator.getInstance().draw();
 						}
 						else {
@@ -648,7 +589,7 @@ public class RocketEventHandler extends Screen {
 				RenderSystem.color4f(1,1,1, 1f);
 				Minecraft.getInstance().getTextureManager().bindTexture(TextureResources.frameHUDBG);
 				buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-				RenderHelper.renderNorthFaceWithUV(matrix, buffer, (double) this.func_230927_p_()-1, (double)screenX + 12, (double)screenY - 4, (double)screenX + size, (double)screenY + size + 4,0.75f,1f,0f,1f);
+				RenderHelper.renderNorthFaceWithUV(matrix, buffer, (double) this.getBlitOffset()-1, (double)screenX + 12, (double)screenY - 4, (double)screenX + size, (double)screenY + size + 4,0.75f,1f,0f,1f);
 				Tessellator.getInstance().draw();
 			}
 		}
@@ -692,33 +633,31 @@ public class RocketEventHandler extends Screen {
 		}
 
 		public void setRenderX(int x, double scaleX) {
-			double i = scaleX;
-			if(x < i/3) {
+			if(x < scaleX /3) {
 				modeX = -1;
 				this.setRawX(x); 
 			}
-			else if(x > i*2/3) {
-				this.setRawX((int) (i - x));
+			else if(x > scaleX *2/3) {
+				this.setRawX((int) (scaleX - x));
 				modeX = 1;
 			}
 			else {
-				this.setRawX((int)(i/2 - x));
+				this.setRawX((int)(scaleX /2 - x));
 				modeX = 0;
 			}
 		}
 
 		public void setRenderY(int y, double scaleY) {
-			double i = scaleY;
-			if(y < i/3) {
+			if(y < scaleY /3) {
 				modeY = -1;
 				this.setRawY(y); 
 			}
-			else if(y > i*2/3) {
-				this.setRawY((int) (i - y));
+			else if(y > scaleY *2/3) {
+				this.setRawY((int) (scaleY - y));
 				modeY = 1;
 			}
 			else {
-				this.setRawY((int)(i/2 - y));
+				this.setRawY((int)(scaleY /2 - y));
 				modeY = 0;
 			}
 		}
@@ -761,22 +700,6 @@ public class RocketEventHandler extends Screen {
 
 		public void setRawY(int y) {
 			this.y = y;
-		}
-
-		public void setSizeModeX(int int1) {
-			modeX = int1;
-		}
-
-		public void setSizeModeY(int int1) {
-			modeY = int1;
-		}
-
-		public int getSizeModeX() {
-			return modeX;
-		}
-
-		public int getSizeModeY() {
-			return modeY;
 		}
 	}
 }

@@ -1,13 +1,24 @@
 package zmaster587.advancedRocketry.api;
 
+import net.minecraft.fluid.Fluid;
+import net.minecraft.fluid.Fluids;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.nbt.FloatNBT;
 import net.minecraft.nbt.IntNBT;
+import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.IFluidTank;
+import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.fluids.capability.templates.FluidTank;
+import net.minecraftforge.registries.ForgeRegistries;
 import zmaster587.advancedRocketry.api.fuel.FuelRegistry;
 import zmaster587.advancedRocketry.api.fuel.FuelRegistry.FuelType;
+import zmaster587.advancedRocketry.util.RocketFluidTank;
 import zmaster587.libVulpes.util.HashedBlockPosition;
 import zmaster587.libVulpes.util.Vector3F;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -18,53 +29,40 @@ public class StatsRocket {
 	private int weight;
 	private float drillingPower;
 
-	private int fuelLiquid;
-	private int fuelNuclear;
-	private int fuelIon;
-	private int fuelWarp;
-	private int fuelImpulse;
+	//Used for orbital height calculations
+	public int orbitHeight;
+	public float injectionBurnLengthMult;
 
-	private int fuelCapacityLiquid;
-	private int fuelCapacityNuclear;
-	private int fuelCapacityIon;
-	private int fuelCapacityWarp;
-	private int fuelCapacityImpulse;
-
-	private int fuelRateLiquid;
-	private int fuelRateNuclear;
-	private int fuelRateIon;
-	private int fuelRateWarp;
-	private int fuelRateImpulse;
+	private RocketFluidTank fuelTank;
+	private RocketFluidTank oxidizerTank;
+	private RocketFluidTank workingFluidTank;
 
 	HashedBlockPosition pilotSeatPos;
-	private final List<HashedBlockPosition> passengerSeats = new ArrayList<HashedBlockPosition>();
+	private final List<HashedBlockPosition> passengerSeats = new ArrayList<>();
 	private List<Vector3F<Float>> engineLoc;
 
-	private static final String TAGNAME = "rocketStats";
+	public static final String TAGNAME = "rocketstats";
 	private HashMap<String, Object> statTags;
 	
 	private static final int INVALID_SEAT = Integer.MIN_VALUE;
 
 	public StatsRocket() {
+		//Basic rocket stats
 		thrust = 0;
 		weight = 0;
-		fuelLiquid = 0;
+		//Fuel handling stuff
+		fuelTank = new RocketFluidTank(0, 0, FuelType.LIQUID_BIPROPELLANT);
+		oxidizerTank = new RocketFluidTank(0, 0, FuelType.LIQUID_OXIDIZER);
+		workingFluidTank = new RocketFluidTank(0, 0, FuelType.NUCLEAR_WORKING_FLUID);
+		//Non-fuel stuff
 		drillingPower = 0f;
+		orbitHeight = ARConfiguration.getCurrentConfig().orbit.get();
+		injectionBurnLengthMult = 1;
 		pilotSeatPos = new HashedBlockPosition(0,0,0);
 		pilotSeatPos.x = INVALID_SEAT;
-		engineLoc = new ArrayList<Vector3F<Float>>();
-		statTags = new HashMap<String, Object>();
+		engineLoc = new ArrayList<>();
+		statTags = new HashMap<>();
 	}
-
-	/*public StatsRocket(int thrust, int weight, int fuelRate, int fuel) {
-		this.thrust = thrust;
-		this.weight = weight;
-		this.fuelLiquid = fuel;
-		lastSeatX = -1;
-		engineLoc = new ArrayList<Vector3F>();
-	}*/
-
-
 
 	public int getSeatX() { return pilotSeatPos.x; }
 	public int getSeatY() { return pilotSeatPos.y; }
@@ -82,8 +80,10 @@ public class StatsRocket {
 	public int getWeight() {return weight;}
 	public float getDrillingPower() {return drillingPower;}
 	public void setDrillingPower(float power) {drillingPower = power;}
-	public float getAcceleration() { return (getThrust() - weight)/10000f; }
+	public float getAcceleration(float gravitationalMultiplier) { return (getThrust() - (weight * ((ARConfiguration.getCurrentConfig().gravityAffectsFuel.get()) ? gravitationalMultiplier : 1)))/10000f; }
+	public float getAcceleration() { return getThrust()/10000f; }
 	public List<Vector3F<Float>> getEngineLocations() { return engineLoc; }
+	public boolean isNuclear() {return workingFluidTank.getBaseFuelRate() > 0;}
 
 	public void setThrust(int thrust) { this.thrust = thrust; }
 	public void setWeight(int weight) { this.weight = weight; }
@@ -109,7 +109,7 @@ public class StatsRocket {
 	 */
 	public void addEngineLocation(float x, float y, float z) {
 		//We want to be in the center of the block
-		engineLoc.add(new Vector3F<Float>(x , y, z));
+		engineLoc.add(new Vector3F<>(x, y, z));
 	}
 
 	/**
@@ -129,131 +129,15 @@ public class StatsRocket {
 		stat.weight = this.weight;
 		stat.drillingPower = this.drillingPower;
 
-		for(FuelType type : FuelType.values()) {
-			stat.setFuelAmount(type, this.getFuelAmount(type));
-			stat.setFuelRate(type, this.getFuelRate(type));
-			stat.setFuelCapacity(type, this.getFuelCapacity(type));
-		}
+		stat.fuelTank = this.fuelTank;
+		stat.oxidizerTank = this.oxidizerTank;
+		stat.workingFluidTank = this.workingFluidTank;
 
 		stat.pilotSeatPos = new HashedBlockPosition(this.pilotSeatPos.x, this.pilotSeatPos.y, this.pilotSeatPos.z);
 		stat.passengerSeats.addAll(passengerSeats);
-		stat.engineLoc = new ArrayList<Vector3F<Float>>(engineLoc);
-		stat.statTags = new HashMap<String, Object>(statTags);
+		stat.engineLoc = new ArrayList<>(engineLoc);
+		stat.statTags = new HashMap<>(statTags);
 		return stat;
-	}
-
-	/**
-	 * 
-	 * @param type type of fuel to check
-	 * @return the amount of fuel of the type currently contained in the stat
-	 */
-	public int getFuelAmount(FuelRegistry.FuelType type) {
-		switch(type) {
-		case WARP:
-			return fuelWarp;
-		case IMPULSE:
-			return fuelImpulse;
-		case ION:
-			return fuelIon;
-		case LIQUID:
-			return fuelLiquid;
-		case NUCLEAR:
-			return fuelNuclear;
-		}
-		return 0;
-	}
-
-	/**
-	 * 
-	 * @param type
-	 * @return the largest amount of fuel of the type that can be stored in the stat
-	 */
-	public int getFuelCapacity(FuelRegistry.FuelType type) {
-		switch(type) {
-		case WARP:
-			return fuelCapacityWarp;
-		case IMPULSE:
-			return fuelCapacityImpulse;
-		case ION:
-			return fuelCapacityIon;
-		case LIQUID:
-			return fuelCapacityLiquid;
-		case NUCLEAR:
-			return fuelCapacityNuclear;
-		}
-		return 0;
-	}
-
-	/**
-	 * @param type
-	 * @return the consumption rate of the fuel per tick
-	 */
-	public int getFuelRate(FuelRegistry.FuelType type) {
-
-		if(!ARConfiguration.getCurrentConfig().rocketRequireFuel.get())
-			return 0;
-
-		switch(type) {
-		case WARP:
-			return fuelRateWarp;
-		case IMPULSE:
-			return fuelRateImpulse;
-		case ION:
-			return fuelRateIon;
-		case LIQUID:
-			return fuelRateLiquid;
-		case NUCLEAR:
-			return fuelRateNuclear;
-		}
-		return 0;
-	}
-
-	/**
-	 * Sets the amount of a given fuel type in the stat
-	 * @param type
-	 * @param amt
-	 */
-	public void setFuelAmount(FuelRegistry.FuelType type, int amt) {
-		switch(type) {
-		case WARP:
-			fuelWarp = amt;
-			break;
-		case IMPULSE:
-			fuelImpulse = amt;
-			break;
-		case ION:
-			fuelIon = amt;
-			break;
-		case LIQUID:
-			fuelLiquid = amt;
-			break;
-		case NUCLEAR:
-			fuelNuclear = amt;
-		}
-	}
-
-	/**
-	 * Sets the fuel consumption rate per tick of the stat
-	 * @param type
-	 * @param amt
-	 */
-	public void setFuelRate(FuelRegistry.FuelType type, int amt) {
-		switch(type) {
-		case WARP:
-			fuelRateWarp = amt;
-			break;
-		case IMPULSE:
-			fuelRateImpulse = amt;
-			break;
-		case ION:
-			fuelRateIon = amt;
-			break;
-		case LIQUID:
-			fuelRateLiquid = amt;
-			break;
-		case NUCLEAR:
-			fuelRateNuclear = amt;
-		}
 	}
 
 	/**
@@ -261,53 +145,69 @@ public class StatsRocket {
 	 * @param type
 	 * @param amt
 	 */
-	public void setFuelCapacity(FuelRegistry.FuelType type, int amt) {
+	public void setFluidTank(@Nonnull FuelRegistry.FuelType type, int amt, int baseFuelRate) {
 		switch(type) {
-		case WARP:
-			fuelCapacityWarp = amt;
+		case LIQUID_MONOPROPELLANT:
+		case LIQUID_BIPROPELLANT:
+			fuelTank = new RocketFluidTank(amt, baseFuelRate, type);
 			break;
-		case IMPULSE:
-			fuelCapacityImpulse = amt;
+		case LIQUID_OXIDIZER:
+			oxidizerTank = new RocketFluidTank(amt, baseFuelRate, type);
 			break;
-		case ION:
-			fuelCapacityIon = amt;
-			break;
-		case LIQUID:
-			fuelCapacityLiquid = amt;
-			break;
-		case NUCLEAR:
-			fuelCapacityNuclear = amt;
+		case NUCLEAR_WORKING_FLUID:
+			workingFluidTank = new RocketFluidTank(amt, baseFuelRate, type);
 		}
 	}
 
 	/**
-	 * 
-	 * @param type type of fuel
-	 * @param amt amount of fuel to add
-	 * @return amount of fuel added
+	 * Gets the fuel tank of this rocket to access
+	 * @param type
+	 * @return the IFluidTank representation of the tank in the rocket
 	 */
-	public int addFuelAmount(FuelRegistry.FuelType type, int amt) {
-		//TODO: finish other ones
+	public RocketFluidTank getFluidTank(@Nonnull FuelRegistry.FuelType type) {
 		switch(type) {
-		case WARP:
-			fuelWarp += amt;
-			return fuelWarp;
-		case IMPULSE:
-			fuelImpulse += amt;
-			return fuelImpulse;
-		case ION:
-			fuelIon += amt;
-			return fuelIon;
-		case LIQUID:
-			int maxAdd = fuelCapacityLiquid - fuelLiquid;
-			int amountToAdd = Math.min(amt, maxAdd);
-			fuelLiquid += amountToAdd;
-			return amountToAdd;
-		case NUCLEAR:
-			fuelNuclear += amt;
-			return fuelNuclear;
+			case LIQUID_MONOPROPELLANT:
+			case LIQUID_BIPROPELLANT:
+				return fuelTank;
+			case LIQUID_OXIDIZER:
+				return oxidizerTank;
+			case NUCLEAR_WORKING_FLUID:
+				return workingFluidTank;
+		}
+		return new RocketFluidTank(0, 0, FuelType.LIQUID_BIPROPELLANT);
+	}
+
+	/**
+	 * Gets whether the rocket has any fuel to burn
+	 * @return boolean on whetehr the rocket can still burn fuel
+	 *  */
+	public boolean hasNonZeroFuel() {
+		return getFluidTank(FuelType.LIQUID_MONOPROPELLANT).getFluidAmount() > 0 || getFluidTank(FuelType.NUCLEAR_WORKING_FLUID).getFluidAmount() > 0;
+	}
+
+	public float getFuelFillPercentage(@Nonnull FuelRegistry.FuelType type) {
+		switch(type) {
+			case LIQUID_MONOPROPELLANT:
+			case LIQUID_BIPROPELLANT:
+				return fuelTank.getFluidAmount()/(float)fuelTank.getCapacity();
+			case LIQUID_OXIDIZER:
+				return oxidizerTank.getFluidAmount()/(float)oxidizerTank.getCapacity();
+			case NUCLEAR_WORKING_FLUID:
+				return workingFluidTank.getFluidAmount()/(float)workingFluidTank.getCapacity();
 		}
 		return 0;
+	}
+
+	/**
+	 * Gets the fuel tank of this rocket that the inserted fluid can fit into
+	 * @param fluid
+	 * @return the IFluidTank representation of the tank in the rocket
+	 */
+	public RocketFluidTank getFluidTank(@Nonnull FluidStack fluid) {
+		if (fuelTank.fill(fluid, IFluidHandler.FluidAction.SIMULATE) > 0 ) return fuelTank;
+		else if (oxidizerTank.fill(fluid, IFluidHandler.FluidAction.SIMULATE) > 0 ) return oxidizerTank;
+		else if (workingFluidTank.fill(fluid, IFluidHandler.FluidAction.SIMULATE) > 0 ) return workingFluidTank;
+		return new RocketFluidTank(0, 0, FuelType.LIQUID_BIPROPELLANT);
 	}
 
 	/**
@@ -325,13 +225,10 @@ public class StatsRocket {
 		weight = 0;
 		drillingPower = 0f;
 
-		for(FuelType type : FuelType.values()) {
-			setFuelAmount(type, 0);
-			setFuelRate(type, 0);
-			setFuelCapacity(type, 0);
-		}
+		fuelTank = new RocketFluidTank(0, 0, FuelType.LIQUID_BIPROPELLANT);
+		oxidizerTank = new RocketFluidTank(0, 0, FuelType.LIQUID_OXIDIZER);
+		workingFluidTank = new RocketFluidTank(0, 0, FuelType.NUCLEAR_WORKING_FLUID);
 
-		fuelLiquid = 0;
 		pilotSeatPos.x = INVALID_SEAT;
 		clearEngineLocations();
 		passengerSeats.clear();
@@ -339,11 +236,11 @@ public class StatsRocket {
 	}
 
 	public void setStatTag(String str, float value) {
-		statTags.put(str, new Float(value));
+		statTags.put(str, value);
 	}
 
 	public void setStatTag(String str, int value) {
-		statTags.put(str, new Integer(value));
+		statTags.put(str, value);
 	}
 
 	/**
@@ -374,23 +271,15 @@ public class StatsRocket {
 		stats.putInt("weight", this.weight);
 		stats.putFloat("drillingPower", this.drillingPower);
 
-		stats.putInt("fuelLiquid", this.fuelLiquid);
-		stats.putInt("fuelImpulse", this.fuelImpulse);
-		stats.putInt("fuelIon", this.fuelIon);
-		stats.putInt("fuelNuclear", this.fuelNuclear);
-		stats.putInt("fuelWarp", this.fuelWarp);
-
-		stats.putInt("fuelCapacityLiquid", this.fuelCapacityLiquid);
-		stats.putInt("fuelCapacityImpulse", this.fuelCapacityImpulse);
-		stats.putInt("fuelCapacityIon", this.fuelCapacityIon);
-		stats.putInt("fuelCapacityNuclear", this.fuelCapacityNuclear);
-		stats.putInt("fuelCapacityWarp", this.fuelCapacityWarp);
-
-		stats.putInt("fuelRateLiquid", this.fuelRateLiquid);
-		stats.putInt("fuelRateImpulse", this.fuelRateImpulse);
-		stats.putInt("fuelRateIon", this.fuelRateIon);
-		stats.putInt("fuelRateNuclear", this.fuelRateNuclear);
-		stats.putInt("fuelRateWarp", this.fuelRateWarp);
+		CompoundNBT fuel = new CompoundNBT();
+		CompoundNBT oxidizer = new CompoundNBT();
+		CompoundNBT workingfluid = new CompoundNBT();
+		fuelTank.writeToNBT(fuel);
+		oxidizerTank.writeToNBT(oxidizer);
+		workingFluidTank.writeToNBT(workingfluid);
+		stats.put("fuel", fuel);
+		stats.put("oxidizer", oxidizer);
+		stats.put("workingfluid", workingfluid);
 
 		CompoundNBT dynStats = new CompoundNBT();
 		for(String key : statTags.keySet()) {
@@ -402,14 +291,14 @@ public class StatsRocket {
 				dynStats.putInt(key, (int)obj);
 		}
 		if(!dynStats.isEmpty())
-			stats.put("dynStats", dynStats);
+			stats.put("dynamicstats", dynStats);
 
 		stats.putInt("playerXPos", pilotSeatPos.x);
 		stats.putInt("playerYPos", pilotSeatPos.y);
 		stats.putInt("playerZPos", pilotSeatPos.z);
 
 		if(!engineLoc.isEmpty()) {
-			int locs[] = new int[engineLoc.size()*3];
+			int[] locs = new int[engineLoc.size()*3];
 
 			for(int i=0 ; (i/3) < engineLoc.size(); i+=3) {
 				Vector3F<Float> vec = engineLoc.get(i/3);
@@ -417,11 +306,11 @@ public class StatsRocket {
 				locs[i + 1] = vec.y.intValue();
 				locs[i + 2] = vec.z.intValue();
 			}
-			stats.putIntArray("engineLoc", locs);
+			stats.putIntArray("enginelocations", locs);
 		}
 
 		if(!passengerSeats.isEmpty()) {
-			int locs[] = new int[passengerSeats.size()*3];
+			int[] locs = new int[passengerSeats.size()*3];
 
 			for(int i=0 ; (i/3) < passengerSeats.size(); i+=3) {
 				HashedBlockPosition vec = passengerSeats.get(i/3);
@@ -430,49 +319,37 @@ public class StatsRocket {
 				locs[i + 2] = vec.z;
 
 			}
-			stats.putIntArray("passengerSeats", locs);
+			stats.putIntArray("passengerseats", locs);
 		}
 
 		nbt.put(TAGNAME, stats);
 	}
 
 	public void readFromNBT(CompoundNBT nbt) {
-
 		if(nbt.contains(TAGNAME)) {
 			CompoundNBT stats = nbt.getCompound(TAGNAME);
 			this.thrust = stats.getInt("thrust");
 			this.weight = stats.getInt("weight");
 			this.drillingPower = stats.getFloat("drillingPower");
 
-			this.fuelLiquid = stats.getInt("fuelLiquid");
-			this.fuelImpulse = stats.getInt("fuelImpulse");
-			this.fuelIon = stats.getInt("fuelIon");
-			this.fuelNuclear = stats.getInt("fuelNuclear");
-			this.fuelWarp = stats.getInt("fuelWarp");
+			CompoundNBT fuel = stats.getCompound("fuel");
+			CompoundNBT oxidizer = stats.getCompound("oxidizer");
+			CompoundNBT workingfluid = stats.getCompound("workingfluid");
+			fuelTank = fuelTank.readFromNBT(fuel);
+			oxidizerTank = oxidizerTank.readFromNBT(oxidizer);
+			workingFluidTank = workingFluidTank.readFromNBT(workingfluid);
 
-			this.fuelCapacityLiquid = stats.getInt("fuelCapacityLiquid");
-			this.fuelCapacityImpulse = stats.getInt("fuelCapacityImpulse");
-			this.fuelCapacityIon = stats.getInt("fuelCapacityIon");
-			this.fuelCapacityNuclear = stats.getInt("fuelCapacityNuclear");
-			this.fuelCapacityWarp = stats.getInt("fuelCapacityWarp");
-
-			this.fuelRateLiquid = stats.getInt("fuelRateLiquid");
-			this.fuelRateImpulse = stats.getInt("fuelRateImpulse");
-			this.fuelRateIon = stats.getInt("fuelRateIon");
-			this.fuelRateNuclear = stats.getInt("fuelRateNuclear");
-			this.fuelRateWarp = stats.getInt("fuelRateWarp");
-
-			if(stats.contains("dynStats")) {
-				CompoundNBT dynStats = stats.getCompound("dynStats");
+			if(stats.contains("dynamicstats")) {
+				CompoundNBT dynStats = stats.getCompound("dynamicstats");
 
 
-				for(Object key : dynStats.keySet()) {
-					Object obj = dynStats.get((String)key);
+				for(String key : dynStats.keySet()) {
+					Object obj = dynStats.get(key);
 
 					if(obj instanceof FloatNBT)
-						setStatTag((String)key, dynStats.getFloat((String)key));
+						setStatTag(key, dynStats.getFloat(key));
 					else if(obj instanceof IntNBT)
-						setStatTag((String)key, dynStats.getInt((String)key));
+						setStatTag(key, dynStats.getInt(key));
 				}
 			}
 
@@ -480,8 +357,8 @@ public class StatsRocket {
 			pilotSeatPos.y = (short)stats.getInt("playerYPos");
 			pilotSeatPos.z = stats.getInt("playerZPos");
 
-			if(stats.contains("engineLoc")) {
-				int locations[] = stats.getIntArray("engineLoc");
+			if(stats.contains("enginelocations")) {
+				int[] locations = stats.getIntArray("enginelocations");
 
 				for(int i=0 ; i < locations.length; i+=3) {
 
@@ -489,8 +366,8 @@ public class StatsRocket {
 				}
 			}
 
-			if(stats.contains("passengerSeats")) {
-				int locations[] = stats.getIntArray("passengerSeats");
+			if(stats.contains("passengerseats")) {
+				int[] locations = stats.getIntArray("passengerseats");
 
 				for(int i=0 ; i < locations.length; i+=3) {
 

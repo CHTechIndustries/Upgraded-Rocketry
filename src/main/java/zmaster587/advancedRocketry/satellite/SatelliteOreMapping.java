@@ -19,16 +19,16 @@ import net.minecraft.world.chunk.AbstractChunkProvider;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.fml.network.NetworkHooks;
-import zmaster587.advancedRocketry.AdvancedRocketry;
 import zmaster587.advancedRocketry.api.AdvancedRocketryItems;
 import zmaster587.advancedRocketry.api.SatelliteRegistry;
 import zmaster587.advancedRocketry.api.satellite.SatelliteBase;
 import zmaster587.advancedRocketry.api.satellite.SatelliteProperties;
-import zmaster587.advancedRocketry.inventory.ContainerOreMappingSatallite;
+import zmaster587.advancedRocketry.inventory.ContainerOreMappingSatellite;
 import zmaster587.advancedRocketry.inventory.ContainerRegistry;
-import zmaster587.advancedRocketry.item.ItemOreScanner;
-import zmaster587.libVulpes.api.LibvulpesGuiRegistry;
+import zmaster587.advancedRocketry.item.tools.ItemOreScanner;
 
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -36,13 +36,12 @@ import java.util.List;
 public class SatelliteOreMapping extends SatelliteBase implements INamedContainerProvider {
 
 	int blockCenterX, blockCenterZ;
-	public static ArrayList<Item> oreList = new ArrayList<Item>();
+	public static ArrayList<Item> oreList = new ArrayList<>();
 
-	ItemStack inv;
-
-	int selectedSlot = -1;
+	private int selectedSlot = -1;
 
 	public SatelliteOreMapping() {
+		super();
 	}
 
 	public void setSelectedSlot(int i) { if(canFilterOre()) selectedSlot = i; }
@@ -54,146 +53,163 @@ public class SatelliteOreMapping extends SatelliteBase implements INamedContaine
 		return "Operational";
 	}
 
-	public boolean acceptsItemInConstruction(ItemStack item) {
+	public boolean acceptsItemInConstruction(@Nonnull ItemStack item) {
 		int flag = SatelliteRegistry.getSatelliteProperty(item).getPropertyFlag();
-		return SatelliteProperties.Property.MAIN.isOfType(flag) || SatelliteProperties.Property.POWER_GEN.isOfType(flag) || SatelliteProperties.Property.DATA.isOfType(flag);
+		return super.acceptsItemInConstruction(item) || SatelliteProperties.Property.DATA.isOfType(flag);
 	}
 
 	@Override
-	public boolean isAcceptableControllerItemStack(ItemStack stack) {
+	public boolean isAcceptableControllerItemStack(@Nonnull ItemStack stack) {
 		return !stack.isEmpty() && stack.getItem() instanceof ItemOreScanner;
 	}
 
 	@Override
-	public ItemStack getContollerItemStack(ItemStack satIdChip,
-			SatelliteProperties properties) {
+	@Nonnull
+	public ItemStack getControllerItemStack(@Nonnull ItemStack satIdChip,
+											SatelliteProperties properties) {
 		ItemStack stack = new ItemStack(AdvancedRocketryItems.itemOreScanner);
 		ItemOreScanner scanner = (ItemOreScanner)AdvancedRocketryItems.itemOreScanner;
 
 		scanner.setSatelliteID(stack, properties.getId());
-;
 		return stack;
 	}
 
 	@Override
 	public boolean performAction(PlayerEntity player, World world, BlockPos pos) {
-		NetworkHooks.openGui((ServerPlayerEntity)player, (INamedContainerProvider)this, (packet) -> { packet.writeBoolean(false); });
+		NetworkHooks.openGui((ServerPlayerEntity)player, this, (packet) -> packet.writeBoolean(false));
 		return true;
 	}
 
+	public boolean canBeginScan() {
+		return battery.extractEnergy(1000, true) == 1000;
+	}
 
-	public static int[][] scanChunk(World world, int offsetX, int offsetZ, int radius, int blocksPerPixel, ItemStack block) {
+	public int[][] scanChunk(World world, int offsetX, int offsetZ, int radius, int blocksPerPixel, @Nonnull ItemStack block, int zoomLevel) {
 		blocksPerPixel = Math.max(blocksPerPixel, 1);
 		int[][] ret = new int[(radius*2)/blocksPerPixel][(radius*2)/blocksPerPixel];
 
 		Chunk chunk = world.getChunk(offsetX << 4, offsetZ << 4);
 		AbstractChunkProvider provider = world.getChunkProvider();
 
+		if (canBeginScan() && battery.extractEnergy(375 * zoomLevel, false) == 375 * zoomLevel) {
+			//Base cost is 1000 per scan
+			battery.extractEnergy(1000, false);
+			//Modified by 375 * zoom level for a filtered scan
+			battery.extractEnergy(375 * zoomLevel, true);
+			//Now for the actual scanning
+			for(int z = -radius; z < radius; z+=blocksPerPixel){
+				for(int x = -radius; x < radius; x+=blocksPerPixel) {
+					int oreCount = 0, otherCount = 0;
 
-		for(int z = -radius; z < radius; z+=blocksPerPixel){
-			for(int x = -radius; x < radius; x+=blocksPerPixel) {
-				int oreCount = 0, otherCount = 0;
 
+					for(int y = world.getHeight(); y > 0; y--) {
+						for(int deltaY = 0; deltaY < blocksPerPixel; deltaY++) {
+							for(int deltaZ = 0; deltaZ < blocksPerPixel; deltaZ++) {
 
-				for(int y = world.getHeight(); y > 0; y--) {
-					for(int deltaY = 0; deltaY < blocksPerPixel; deltaY++) {
-						for(int deltaZ = 0; deltaZ < blocksPerPixel; deltaZ++) {
+								BlockPos pos = new BlockPos(x + offsetX, y, z + offsetZ);
+								if(world.isAirBlock(pos))
+									continue;
 
-							BlockPos pos = new BlockPos(x + offsetX, y, z + offsetZ);
-							if(world.isAirBlock(pos))
-								continue;
+								//Note:May not work with tileEntities (GT ores)
+								boolean found = false;
+								List<ItemStack> drops;
+								BlockState state = world.getBlockState(pos);
 
-							//Note:May not work with tileEntities (GT ores)
-							boolean found = false;
-							List<ItemStack> drops;
-							BlockState state = world.getBlockState(pos);
-
-							if((drops = state.getDrops(new Builder((ServerWorld) world))) != null)
-								for(ItemStack stack : drops) {
-									if(stack.getItem() == block.getItem() && stack.getDamage() == block.getDamage()) {
-										oreCount++;
-										found = true;
+                                if (!state.getDrops(new Builder((ServerWorld) world)).isEmpty()) {
+									drops = state.getDrops(new Builder((ServerWorld) world));
+									for (ItemStack stack : drops) {
+										if (stack.getItem() == block.getItem() && stack.getDamage() == block.getDamage()) {
+											oreCount++;
+											found = true;
+										}
 									}
+
 								}
 
-							if(!found)
-								otherCount++;
+								if (!found)
+									otherCount++;
+							}
 						}
 					}
+					oreCount /= Math.pow(blocksPerPixel, 2);
+					otherCount /= Math.pow(blocksPerPixel, 2);
+
+					if (Thread.interrupted())
+						return null;
+
+
+					ret[(x + radius) / blocksPerPixel][(z + radius) / blocksPerPixel] = (int) ((oreCount / (float) Math.max(otherCount, 1)) * 0xFFFF);
 				}
-				oreCount /= Math.pow(blocksPerPixel,2);
-				otherCount /= Math.pow(blocksPerPixel,2);
-
-				if(Thread.interrupted())
-					return null;
-
-
-				ret[(x+radius)/blocksPerPixel][(z+radius)/blocksPerPixel] = (int)((oreCount/(float)Math.max(otherCount,1))*0xFFFF);
 			}
 		}
-
 		return ret;
 	}
 	/**
 	 * Note: array returned will be [radius/blocksPerPixel][radius/blocksPerPixel]
 	 * @param world
 	 * @param offsetX
-	 * @param offsetY
+	 * @param offsetZ
 	 * @param radius in blocks
 	 * @param blocksPerPixel number of blocks squared (n*n) that take up one pixel
+	 * @param zoomLevel
 	 * @return array of ore vs other block values
 	 */
-	public static int[][] scanChunk(World world, int offsetX, int offsetZ, int radius, int blocksPerPixel) {
+	public int[][] scanChunk(World world, int offsetX, int offsetZ, int radius, int blocksPerPixel, int zoomLevel) {
 		blocksPerPixel = Math.max(blocksPerPixel, 1);
 		int[][] ret = new int[(radius*2)/blocksPerPixel][(radius*2)/blocksPerPixel];
 
 		Chunk chunk = world.getChunk(offsetX << 4, offsetZ << 4);
 		AbstractChunkProvider provider = world.getChunkProvider();
-
+		//Get all the ores we want to look for
 		if(oreList.isEmpty()) {
 			Collection<ResourceLocation> strings = ItemTags.getCollection().getRegisteredTags();
 			for(ResourceLocation loc : strings) {
 				String str = loc.getPath();
 				if(str.startsWith("ore") || str.startsWith("dust") || str.startsWith("gem"))
-					oreList.addAll(ItemTags.getCollection().get(loc).func_230236_b_());
+					oreList.addAll(ItemTags.getCollection().get(loc).getAllElements());
 			}
 		}
+		if (canBeginScan() && battery.extractEnergy(250 * zoomLevel, false) == 250 * zoomLevel) {
+			//Base cost is 1000 per scan
+			battery.extractEnergy(1000, false);
+			//Modified by 250 * zoom level for a basic, unfiltered scan
+			battery.extractEnergy(250 * zoomLevel, true);
+			for(int z = -radius; z < radius; z+=blocksPerPixel){
+				for(int x = -radius; x < radius; x+=blocksPerPixel) {
+					int oreCount = 0, otherCount = 0;
 
-		for(int z = -radius; z < radius; z+=blocksPerPixel){
-			for(int x = -radius; x < radius; x+=blocksPerPixel) {
-				int oreCount = 0, otherCount = 0;
 
+					for(int y = world.getHeight(); y > 0; y--) {
+						for(int deltaY = 0; deltaY < blocksPerPixel; deltaY++) {
+							for(int deltaZ = 0; deltaZ < blocksPerPixel; deltaZ++) {
 
-				for(int y = world.getHeight(); y > 0; y--) {
-					for(int deltaY = 0; deltaY < blocksPerPixel; deltaY++) {
-						for(int deltaZ = 0; deltaZ < blocksPerPixel; deltaZ++) {
-
-							BlockPos pos = new BlockPos(x + offsetX, y, z + offsetZ);
-							if(world.isAirBlock(pos))
-								continue;
-							boolean exists = false;
-							out:
+								BlockPos pos = new BlockPos(x + offsetX, y, z + offsetZ);
+								if(world.isAirBlock(pos))
+									continue;
+								boolean exists = false;
 								for(Item item : oreList) {
-									if(item == Item.getItemFromBlock(world.getBlockState(pos).getBlock())) {
+									if (item == Item.getItemFromBlock(world.getBlockState(pos).getBlock())) {
 										exists = true;
-										break out;
+										break;
 									}
 								}
-							if(exists)
-								oreCount++;
-							else
-								otherCount++;
+
+								if (exists)
+									oreCount++;
+								else
+									otherCount++;
+							}
 						}
 					}
+					oreCount /= Math.pow(blocksPerPixel, 2);
+					otherCount /= Math.pow(blocksPerPixel, 2);
+
+					if (Thread.interrupted())
+						return null;
+
+
+					ret[(x + radius) / blocksPerPixel][(z + radius) / blocksPerPixel] = (int) ((oreCount / (float) Math.max(otherCount, 1)) * 0xFFFF);
 				}
-				oreCount /= Math.pow(blocksPerPixel,2);
-				otherCount /= Math.pow(blocksPerPixel,2);
-
-				if(Thread.interrupted())
-					return null;
-
-
-				ret[(x+radius)/blocksPerPixel][(z+radius)/blocksPerPixel] = (int)((oreCount/(float)Math.max(otherCount,1))*0xFFFF);
 			}
 		}
 
@@ -208,17 +224,9 @@ public class SatelliteOreMapping extends SatelliteBase implements INamedContaine
 		return "Ore Mapper";
 	}
 
-	@Override
-	public boolean canTick() {
-		return false;
-	}
-
-	@Override
-	public void tickEntity() {		
-	}
 
 	public int getZoomRadius() {
-		return Math.min(satelliteProperties.getPowerGeneration(),7);
+		return Math.min(satelliteProperties.getPowerGeneration()/4,7);
 	}
 
 	public boolean canFilterOre() {
@@ -226,10 +234,12 @@ public class SatelliteOreMapping extends SatelliteBase implements INamedContaine
 	}
 
 	@Override
+	@ParametersAreNonnullByDefault
 	public Container createMenu(int id, PlayerInventory playerinv, PlayerEntity player) {
-		return new ContainerOreMappingSatallite(ContainerRegistry.CONTAINER_SATELLITE, id, this, playerinv, player);
+		return new ContainerOreMappingSatellite(ContainerRegistry.CONTAINER_SATELLITE, id, this, playerinv, player);
 	}
 
+	@Nonnull
 	@Override
 	public ITextComponent getDisplayName() {
 		return new StringTextComponent(getName());

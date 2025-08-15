@@ -9,22 +9,17 @@ import net.minecraft.util.Direction;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.AxisAlignedBB;
-import zmaster587.advancedRocketry.api.AdvancedRocketryBlocks;
-import zmaster587.advancedRocketry.api.AdvancedRocketryItems;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
 import zmaster587.advancedRocketry.api.AdvancedRocketryTileEntityType;
-import zmaster587.advancedRocketry.api.Constants;
 import zmaster587.advancedRocketry.inventory.TextureResources;
 import zmaster587.advancedRocketry.util.AudioRegistry;
-import zmaster587.libVulpes.LibVulpes;
 import zmaster587.libVulpes.api.LibVulpesBlocks;
-import zmaster587.libVulpes.api.LibVulpesItems;
 import zmaster587.libVulpes.api.material.Material;
 import zmaster587.libVulpes.api.material.MaterialRegistry;
 import zmaster587.libVulpes.block.BlockMeta;
 import zmaster587.libVulpes.client.util.ProgressBarImage;
 import zmaster587.libVulpes.inventory.modules.*;
-import zmaster587.libVulpes.recipe.NumberedOreDictStack;
-import zmaster587.libVulpes.recipe.RecipesMachine;
 import zmaster587.libVulpes.tile.multiblock.TileMultiBlock;
 import zmaster587.libVulpes.tile.multiblock.TileMultiblockMachine;
 import zmaster587.libVulpes.util.IconResource;
@@ -33,13 +28,13 @@ import java.util.List;
 
 public class TilePrecisionAssembler extends TileMultiblockMachine implements IModularInventory, IProgressBar {
 
-	public static final Object structure[][][] = new Object[][][]{ {{LibVulpesBlocks.blockStructureBlock, LibVulpesBlocks.blockStructureBlock, LibVulpesBlocks.blockStructureBlock, LibVulpesBlocks.blockStructureBlock}, 
-		{LibVulpesBlocks.blockStructureBlock, LibVulpesBlocks.blockStructureBlock, LibVulpesBlocks.blockStructureBlock, LibVulpesBlocks.blockStructureBlock},
-		{LibVulpesBlocks.blockStructureBlock, LibVulpesBlocks.blockStructureBlock, LibVulpesBlocks.blockStructureBlock, LibVulpesBlocks.blockStructureBlock}},
+	public static final Object[][][] structure = new Object[][][]{ {{LibVulpesBlocks.blockMachineStructure, LibVulpesBlocks.blockMachineStructure, LibVulpesBlocks.blockMachineStructure, LibVulpesBlocks.blockMachineStructure},
+		{LibVulpesBlocks.blockMachineStructure, LibVulpesBlocks.blockMachineStructure, LibVulpesBlocks.blockMachineStructure, LibVulpesBlocks.blockMachineStructure},
+		{LibVulpesBlocks.blockMachineStructure, LibVulpesBlocks.blockMachineStructure, LibVulpesBlocks.blockMachineStructure, LibVulpesBlocks.blockMachineStructure}},
 
-		{{LibVulpesBlocks.blockStructureBlock, Blocks.GLASS, Blocks.GLASS, LibVulpesBlocks.blockStructureBlock},
-			{LibVulpesBlocks.blockStructureBlock, Blocks.AIR, Blocks.AIR, LibVulpesBlocks.blockStructureBlock},
-			{LibVulpesBlocks.blockStructureBlock, LibVulpesBlocks.blockStructureBlock, LibVulpesBlocks.blockStructureBlock, LibVulpesBlocks.blockStructureBlock}},
+		{{LibVulpesBlocks.blockMachineStructure, Blocks.GLASS, Blocks.GLASS, LibVulpesBlocks.blockMachineStructure},
+			{LibVulpesBlocks.blockMachineStructure, Blocks.AIR, Blocks.AIR, LibVulpesBlocks.blockMachineStructure},
+			{LibVulpesBlocks.blockMachineStructure, LibVulpesBlocks.blockMachineStructure, LibVulpesBlocks.blockMachineStructure, LibVulpesBlocks.blockMachineStructure}},
 
 			{{'c', '*', '*', '*'},
 				{'*', new ResourceLocation("forge","coils"), new ResourceLocation("forge","coils"), '*'},
@@ -47,7 +42,7 @@ public class TilePrecisionAssembler extends TileMultiblockMachine implements IMo
 
 				
 				public TilePrecisionAssembler() {
-					super(AdvancedRocketryTileEntityType.TILE_PREC_ASS);
+					super(AdvancedRocketryTileEntityType.TILE_PRECISION_ASSEMBLER);
 				}
 				
 	@Override
@@ -75,7 +70,7 @@ public class TilePrecisionAssembler extends TileMultiblockMachine implements IMo
 	public List<BlockMeta> getAllowableWildCardBlocks() {
 		List<BlockMeta> list = super.getAllowableWildCardBlocks();
 
-		list.add(new BlockMeta(LibVulpesBlocks.blockStructureBlock, BlockMeta.WILDCARD));
+		list.add(new BlockMeta(LibVulpesBlocks.blockMachineStructure, BlockMeta.WILDCARD));
 		list.addAll(TileMultiBlock.getMapping('O'));
 		list.addAll(TileMultiBlock.getMapping('I'));
 		list.addAll(TileMultiBlock.getMapping('P'));
@@ -136,7 +131,13 @@ public class TilePrecisionAssembler extends TileMultiblockMachine implements IMo
 	public SoundEvent getSound() {
 		return AudioRegistry.precAss;
 	}
-	
+
+	@Override
+	public boolean shouldHideBlock(World world, BlockPos pos, BlockState tile) {
+		TileEntity tileEntity = world.getTileEntity(pos);
+		return tileEntity instanceof TilePrecisionAssembler;
+	}
+
 	@Override
 	public void setTotalProgress(int id, int progress) {
 		if(id == 0)
@@ -156,6 +157,6 @@ public class TilePrecisionAssembler extends TileMultiblockMachine implements IMo
 
 	@Override
 	public String getMachineName() {
-		return "container.precisionassemblingmachine";
+		return "block.advancedrocketry.precisionassembler";
 	}
 }

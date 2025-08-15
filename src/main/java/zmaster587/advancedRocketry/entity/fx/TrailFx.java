@@ -10,6 +10,9 @@ import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
+
 public class TrailFx extends InverseTrailFx {
 
 	
@@ -26,13 +29,14 @@ public class TrailFx extends InverseTrailFx {
         this.particleGreen = .4F + chroma;
         this.particleBlue = .4F + chroma;
         this.setSize(0.12F, 0.12F);
-        this.particleScale = (float)(this.rand.nextFloat() * 0.6F + 2F);
+        this.particleScale = this.rand.nextFloat() * 0.6F + 2F;
         this.motionX = motx;
         this.motionY = moty;
         this.motionZ = motz;
         this.maxAge = (int)(1000.0D);
 	}
 	
+	@Nonnull
 	@Override
 	public IParticleRenderType getRenderType() {
 		return IParticleRenderType.PARTICLE_SHEET_TRANSLUCENT;
@@ -64,6 +68,7 @@ public class TrailFx extends InverseTrailFx {
 			this.spriteSet = p_i50630_1_;
 		}
 
+		@ParametersAreNonnullByDefault
 		public Particle makeParticle(BasicParticleType typeIn, ClientWorld worldIn, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
 			TrailFx arc = new TrailFx(worldIn, x, y, z, xSpeed, ySpeed, zSpeed);
 			arc.selectSpriteWithAge(spriteSet);

@@ -39,13 +39,13 @@ public abstract class MissionResourceCollection extends SatelliteBase implements
 	protected LinkedList<HashedBlockPosition> infrastructureCoords;
 
 	public MissionResourceCollection(){
-		infrastructureCoords = new LinkedList<HashedBlockPosition>();
+		infrastructureCoords = new LinkedList<>();
 	}
 
 	public MissionResourceCollection(long duration, EntityRocket entity, LinkedList<IInfrastructure> infrastructureCoords) {
 		super();
 		missionPersistantNBT = new CompoundNBT();
-		entity.writeMissionPersistantNBT(missionPersistantNBT);
+		entity.writeMissionPersistentNBT(missionPersistantNBT);
 		
 		satelliteProperties.setId(zmaster587.advancedRocketry.dimension.DimensionManager.getInstance().getNextSatelliteId());
 
@@ -59,7 +59,7 @@ public abstract class MissionResourceCollection extends SatelliteBase implements
 		z = entity.getPosZ();
 		worldId = ZUtils.getDimensionIdentifier(entity.world);
 
-		this.infrastructureCoords = new LinkedList<HashedBlockPosition>();
+		this.infrastructureCoords = new LinkedList<>();
 
 		for(IInfrastructure tile : infrastructureCoords)
 			this.infrastructureCoords.add(new HashedBlockPosition(((TileEntity)tile).getPos()));
@@ -67,12 +67,12 @@ public abstract class MissionResourceCollection extends SatelliteBase implements
 
 	@Override
 	public double getProgress(World world) {
-		return (AdvancedRocketry.proxy.getWorldTimeUniversal() - startWorldTime) / (double)duration;
+		return Math.max((AdvancedRocketry.proxy.getWorldTimeUniversal() - startWorldTime) / (double)duration, 0);
 	}
 	
 	@Override
 	public int getTimeRemainingInSeconds() {
-		return (int)(( duration -AdvancedRocketry.proxy.getWorldTimeUniversal() + startWorldTime)/20);
+		return (int)Math.max((( duration -AdvancedRocketry.proxy.getWorldTimeUniversal() + startWorldTime)/20), 0);
 	}
 
 	@Override
@@ -134,12 +134,9 @@ public abstract class MissionResourceCollection extends SatelliteBase implements
 		nbt.putString("launchDim", launchDimension.toString());
 
 		ListNBT itemList = new ListNBT();
-		for(int i = 0; i < infrastructureCoords.size(); i++)
-		{
-			HashedBlockPosition inf = infrastructureCoords.get(i);
-
+		for (HashedBlockPosition inf : infrastructureCoords) {
 			CompoundNBT tag = new CompoundNBT();
-			tag.putIntArray("loc", new int[] {inf.x, inf.y, inf.z});
+			tag.putIntArray("loc", new int[]{inf.x, inf.y, inf.z});
 			itemList.add(tag);
 
 		}
@@ -170,7 +167,7 @@ public abstract class MissionResourceCollection extends SatelliteBase implements
 		infrastructureCoords.clear();
 
 		for (int i = 0; i < tagList.size(); i++) {
-			int coords[] = tagList.getCompound(i).getIntArray("loc");
+			int[] coords = tagList.getCompound(i).getIntArray("loc");
 			infrastructureCoords.add(new HashedBlockPosition(coords[0], coords[1], coords[2]));
 		}
 	}

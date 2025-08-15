@@ -2,13 +2,14 @@ package zmaster587.advancedRocketry.tile.multiblock;
 
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.tileentity.TileEntityType;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.biome.Biome;
 import zmaster587.advancedRocketry.AdvancedRocketry;
 import zmaster587.advancedRocketry.api.AdvancedRocketryBiomes;
+import zmaster587.advancedRocketry.api.AdvancedRocketryBlocks;
 import zmaster587.advancedRocketry.api.AdvancedRocketryTileEntityType;
 import zmaster587.advancedRocketry.api.stations.ISpaceObject;
 import zmaster587.advancedRocketry.dimension.DimensionManager;
@@ -22,6 +23,7 @@ import zmaster587.libVulpes.inventory.modules.ModuleImage;
 import zmaster587.libVulpes.inventory.modules.ModuleText;
 import zmaster587.libVulpes.tile.multiblock.TileMultiPowerConsumer;
 
+import javax.annotation.Nonnull;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -46,11 +48,11 @@ public class TileBiomeScanner extends TileMultiPowerConsumer {
 				{null, null, null, null, null},
 				{null, null, null, null, null}},
 
-				{	{null,Blocks.IRON_BLOCK,Blocks.IRON_BLOCK,Blocks.IRON_BLOCK,null}, 
-					{Blocks.IRON_BLOCK, Blocks.IRON_BLOCK, Blocks.IRON_BLOCK, Blocks.IRON_BLOCK, Blocks.IRON_BLOCK},
-					{Blocks.IRON_BLOCK, Blocks.IRON_BLOCK, Blocks.IRON_BLOCK, Blocks.IRON_BLOCK, Blocks.IRON_BLOCK},
-					{Blocks.IRON_BLOCK, Blocks.IRON_BLOCK, Blocks.IRON_BLOCK, Blocks.IRON_BLOCK, Blocks.IRON_BLOCK},
-					{null,Blocks.IRON_BLOCK,Blocks.IRON_BLOCK,Blocks.IRON_BLOCK,null}},
+				{	{null,new ResourceLocation("forge", "storage_blocks/aluminum"),new ResourceLocation("forge", "storage_blocks/aluminum"),new ResourceLocation("forge", "storage_blocks/aluminum"),null},
+					{new ResourceLocation("forge", "storage_blocks/aluminum"), new ResourceLocation("forge", "storage_blocks/aluminum"), AdvancedRocketryBlocks.blockStructureTower, new ResourceLocation("forge", "storage_blocks/aluminum"), new ResourceLocation("forge", "storage_blocks/aluminum")},
+					{new ResourceLocation("forge", "storage_blocks/aluminum"), AdvancedRocketryBlocks.blockStructureTower, LibVulpesBlocks.blockMachineStructure, AdvancedRocketryBlocks.blockStructureTower, new ResourceLocation("forge", "storage_blocks/aluminum")},
+					{new ResourceLocation("forge", "storage_blocks/aluminum"), new ResourceLocation("forge", "storage_blocks/aluminum"), AdvancedRocketryBlocks.blockStructureTower, new ResourceLocation("forge", "storage_blocks/aluminum"), new ResourceLocation("forge", "storage_blocks/aluminum")},
+					{null,new ResourceLocation("forge", "storage_blocks/aluminum"),new ResourceLocation("forge", "storage_blocks/aluminum"),new ResourceLocation("forge", "storage_blocks/aluminum"),null}},
 
 					{	{Blocks.AIR, Blocks.AIR, Blocks.AIR, Blocks.AIR, Blocks.AIR}, 
 						{Blocks.AIR, Blocks.AIR, Blocks.AIR, Blocks.AIR, Blocks.AIR},
@@ -66,7 +68,7 @@ public class TileBiomeScanner extends TileMultiPowerConsumer {
 
 	@Override
 	public List<ModuleBase> getModules(int ID, PlayerEntity player) {
-		List<ModuleBase> list = new LinkedList<ModuleBase>();//super.getModules(ID, player);
+		List<ModuleBase> list = new LinkedList<>();//super.getModules(ID, player);
 
 		boolean suitable = true;
 		for(int y = this.getPos().getY() - 4; y > 0; y--) {
@@ -83,7 +85,7 @@ public class TileBiomeScanner extends TileMultiPowerConsumer {
 			if(suitable && !SpaceObjectManager.WARPDIMID.equals(spaceObject.getOrbitingPlanetId())) {
 
 				DimensionProperties properties = DimensionManager.getInstance().getDimensionProperties(spaceObject.getOrbitingPlanetId());
-				List<ModuleBase> list2 = new LinkedList<ModuleBase>();
+				List<ModuleBase> list2 = new LinkedList<>();
 				if(properties.isGasGiant()) {
 					list2.add(new ModuleText(32, 16, LibVulpes.proxy.getLocalizedString("msg.biomescanner.gas"), 0x202020));
 				} 
@@ -102,15 +104,13 @@ public class TileBiomeScanner extends TileMultiPowerConsumer {
 						}
 					}
 					else {
-						Iterator<Biome> itr = properties.getBiomes().iterator();
-						while (itr.hasNext()) {
-							Biome biome = itr.next();
-							list2.add(new ModuleText(32, 16 + 12*(i++), AdvancedRocketry.proxy.getNameFromBiome(biome), 0x202020));
+						for (Biome biome : properties.getBiomes()) {
+							list2.add(new ModuleText(32, 16 + 12 * (i++), AdvancedRocketry.proxy.getNameFromBiome(biome), 0x202020));
 						}
 					}
 				}
 				//Relying on a bug, is this safe?
-				ModuleContainerPan pan = new ModuleContainerPan(0, 16, list2, new LinkedList<ModuleBase>(), null, 148, 110, 0, -64, 0, 1000);
+				ModuleContainerPan pan = new ModuleContainerPan(0, 16, list2, new LinkedList<>(), null, 148, 110, 0, -64, 0, 1000);
 				list.add(pan);
 			}
 			else
@@ -121,6 +121,7 @@ public class TileBiomeScanner extends TileMultiPowerConsumer {
 	}
 
 	@Override
+	@Nonnull
 	public AxisAlignedBB getRenderBoundingBox() {
 
 		return new AxisAlignedBB(pos.add(-5,-3,-5),pos.add(5,3,5));

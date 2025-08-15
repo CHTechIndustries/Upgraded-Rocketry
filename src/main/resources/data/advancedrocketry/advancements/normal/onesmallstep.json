@@ -4,17 +4,17 @@
             "item": "advancedrocketry:moonturf"
         },
         "title": {
-            "translate": "achievement.oneSmallStep"
+            "translate": "advancement.advancedrocketry.onesmallstep"
         },
         "description": {
-            "translate": "achievement.oneSmallStep.desc"
+            "translate": "advancement.advancedrocketry.onesmallstep.desc"
         },
         "frame": "challenge"
     },
     "parent": "advancedrocketry:normal/moonlanding",
     "criteria": {
         "onesmallstep": {
-            "trigger": "onesmallstep"
+            "trigger": "minecraft:impossible"
         }
     }
 }

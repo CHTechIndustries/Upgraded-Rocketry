@@ -8,19 +8,23 @@ import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.IPacket;
+import net.minecraft.network.PacketBuffer;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
-import net.minecraft.network.play.server.SSpawnObjectPacket;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
+import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
+import net.minecraftforge.fml.network.NetworkHooks;
 import zmaster587.advancedRocketry.api.AdvancedRocketryEntities;
 import zmaster587.libVulpes.network.PacketSpawnEntity;
 
-public class EntityItemAbducted extends Entity {
+import javax.annotation.Nonnull;
 
-	private static final DataParameter<ItemStack> ITEM = EntityDataManager.<ItemStack>createKey(ItemEntity.class, DataSerializers.ITEMSTACK);
-	public int lifespan = 6000;
+public class EntityItemAbducted extends Entity implements IEntityAdditionalSpawnData {
+
+	private static final DataParameter<ItemStack> ITEM = EntityDataManager.createKey(ItemEntity.class, DataSerializers.ITEMSTACK);
+	public int lifespan;
 	public int age = 0;
 	ItemEntity itemEntity;
 	
@@ -41,6 +45,10 @@ public class EntityItemAbducted extends Entity {
 		this.lifespan = 200;
 		this.setMotion(new Vector3d(0,2,0));
 	}
+
+    public int getAge() {
+        return age;
+    }
 	
 	@Override
     protected void registerData()
@@ -52,7 +60,7 @@ public class EntityItemAbducted extends Entity {
 	public void tick() {
 		ItemStack stack = this.getDataManager().get(ITEM);
 		
-        if (this.getEntityItem() == null)
+        if (this.getEntityItem().isEmpty())
         {
             this.remove();
         }
@@ -71,7 +79,7 @@ public class EntityItemAbducted extends Entity {
         	this.remove();
         }
 
-        if (stack != null && stack.getCount() <= 0)
+        if (!stack.isEmpty() && stack.getCount() <= 0)
         {
             this.remove();
         }
@@ -83,9 +91,9 @@ public class EntityItemAbducted extends Entity {
      */
     public ItemStack getEntityItem()
     {
-        ItemStack itemstack = (ItemStack)(this.getDataManager().get(ITEM));
+        ItemStack itemstack = this.getDataManager().get(ITEM);
 
-        if (itemstack == null)
+        if (itemstack.isEmpty())
         {
             return new ItemStack(Blocks.STONE);
         }
@@ -98,7 +106,7 @@ public class EntityItemAbducted extends Entity {
     /**
      * Sets the ItemStack for this entity
      */
-    public void setEntityItemStack( ItemStack stack)
+    public void setEntityItemStack(ItemStack stack)
     {
         this.getDataManager().set(ITEM, stack);
     }
@@ -113,7 +121,7 @@ public class EntityItemAbducted extends Entity {
         p_70014_1_.putInt("Lifespan", lifespan);
 
 
-        if (this.getEntityItem() != null)
+        if (!this.getEntityItem().isEmpty())
         {
             p_70014_1_.put("Item", this.getEntityItem().write(new CompoundNBT()));
         }
@@ -131,9 +139,9 @@ public class EntityItemAbducted extends Entity {
         CompoundNBT nbttagcompound1 = p_70037_1_.getCompound("Item");
         this.setEntityItemStack(ItemStack.read(nbttagcompound1));
 
-        ItemStack item = (ItemStack)(this.getDataManager().get(ITEM));
+        ItemStack stack = this.getDataManager().get(ITEM);
 
-        if (item == null || item.getCount() <= 0)
+        if (stack.isEmpty() || stack.getCount() <= 0)
         {
             this.remove();
         }
@@ -151,8 +159,21 @@ public class EntityItemAbducted extends Entity {
     	return itemEntity;
     }
 
-	@Override
+	@Nonnull
+    @Override
 	public IPacket<?> createSpawnPacket() {
-		return new PacketSpawnEntity(this);
+		return NetworkHooks.getEntitySpawningPacket(this);
+	}
+
+	@Override
+	public void writeSpawnData(PacketBuffer buffer) {
+		new PacketSpawnEntity(this).write(buffer);	
+	}
+
+	@Override
+	public void readSpawnData(PacketBuffer additionalData) {
+		PacketSpawnEntity packet = new PacketSpawnEntity();
+		packet.read(additionalData);
+		packet.execute(this);
 	}
 }

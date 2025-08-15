@@ -15,6 +15,7 @@ out
 
 # gradle
 build
+output
 .gradle
 
 # other
@@ -22,3 +23,11 @@ eclipse
 run
 refresh.bat
 AdvancedRocketry.txt
+changelog.html
+debug.log
+libs/
+logs/
+output/
+lasthash.txt
+libs
+*.bak

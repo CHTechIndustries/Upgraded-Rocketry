@@ -1,17 +1,13 @@
 package zmaster587.advancedRocketry.client.render.multiblocks;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.client.renderer.WorldRenderer;
 import net.minecraft.client.renderer.tileentity.TileEntityRenderer;
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher;
 import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Direction;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.vector.Quaternion;
-
-import org.lwjgl.opengl.GL11;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
@@ -21,17 +17,14 @@ import zmaster587.advancedRocketry.backwardCompat.WavefrontObject;
 import zmaster587.advancedRocketry.tile.multiblock.machine.TileCuttingMachine;
 import zmaster587.libVulpes.block.RotatableBlock;
 import zmaster587.libVulpes.render.RenderHelper;
-import zmaster587.libVulpes.tile.multiblock.TileMultiblockMachine;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.List;
 
 public class RendererCuttingMachine extends TileEntityRenderer<TileCuttingMachine> {
 
-	WavefrontObject model;
-
+	private WavefrontObject model;
 	public final static ResourceLocation texture = new ResourceLocation("advancedrocketry","textures/models/cuttingmachine.png");
-
-	//private final RenderItem dummyItem = Minecraft.getInstance().getRenderItem();
 
 	public RendererCuttingMachine(TileEntityRendererDispatcher tile) {
 		super(tile);
@@ -44,8 +37,8 @@ public class RendererCuttingMachine extends TileEntityRenderer<TileCuttingMachin
 	}
 
 	@Override
-	public void render(TileCuttingMachine tile, float partialTicks, MatrixStack matrix,
-			IRenderTypeBuffer buffer, int combinedLightIn, int combinedOverlayIn) {
+	@ParametersAreNonnullByDefault
+	public void render(TileCuttingMachine tile, float partialTicks, MatrixStack matrix, IRenderTypeBuffer buffer, int combinedLightIn, int combinedOverlayIn) {
 
 		if(!tile.canRender())
 			return;
@@ -74,18 +67,32 @@ public class RendererCuttingMachine extends TileEntityRenderer<TileCuttingMachin
 			float tray;
 			tray = 2.2f*progress;
 
+			List<ItemStack> inputList = tile.getInputs();
+			if(inputList != null && !inputList.isEmpty() && progress < 0.65) {
+				ItemStack inputStack = ItemStack.EMPTY;
+				for (ItemStack stack: inputList) {
+					if (!stack.isEmpty() && inputStack.isEmpty())
+						inputStack = stack;
+				}
+
+				matrix.push();
+				matrix.rotate(new Quaternion(90, 0, 0, true));
+				matrix.translate(1f, tray + .45, -1.05);
+				//RenderHelper.renderItem(tile, inputStack, Minecraft.getInstance().getItemRenderer());
+				matrix.pop();
+			}
 
 
-			/*List<ItemStack> outputList = tile.getOutputs();
-			if(outputList != null && !outputList.isEmpty()) {
+			List<ItemStack> outputList = tile.getOutputs();
+			if(outputList != null && !outputList.isEmpty() && progress >= 0.65) {
 				ItemStack stack = outputList.get(0);
 
 				matrix.push();
-				GL11.glRotatef(90, 1, 0, 0);
-				matrix.translate(1f, tray + .25, -1.05);
-				RenderHelper.renderItem(tile, stack, Minecraft.getInstance().getRenderItem());
+				matrix.rotate(new Quaternion(90, 0, 0, true));
+				matrix.translate(1f, tray + .45, -1.05);
+				//RenderHelper.renderItem(tile, stack, Minecraft.getInstance().getRenderItem());
 				matrix.pop();
-			}*/
+			}
 
 			model.tessellatePart(matrix, combinedLightIn, combinedOverlayIn,  entityTransparentBuilder, "Hull");
 

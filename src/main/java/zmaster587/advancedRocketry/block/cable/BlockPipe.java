@@ -1,18 +1,7 @@
 package zmaster587.advancedRocketry.block.cable;
 
 import net.minecraft.block.Block;
-import net.minecraft.block.material.Material;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Direction;
 import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import zmaster587.advancedRocketry.tile.cables.TileDataPipe;
-import zmaster587.advancedRocketry.tile.cables.TilePipe;
-
-import java.util.Random;
 
 public class BlockPipe extends Block {
 
@@ -51,8 +40,11 @@ public class BlockPipe extends Block {
 	}
 
 	@Override
+@ParametersAreNullableByDefault
 	public boolean shouldSideBeRendered(BlockState blockState,
 			IBlockAccess blockAccess, BlockPos pos, Direction side) {
+	public boolean shouldSideBeRendered(IBlockState blockState,
+			IBlockAccess blockAccess, BlockPos pos, EnumFacing side) {
 		return true;
 	}
 
@@ -62,7 +54,7 @@ public class BlockPipe extends Block {
 		super.updateTick(worldIn, pos, state, rand);
 		TilePipe pipe = ((TilePipe)worldIn.getTileEntity(pos));
 
-		if (!pipe.isInitialized()) {
+		if (pipe != null && !pipe.isInitialized()) {
 			pipe.onPlaced();
 			pipe.markDirty();
 		}
@@ -76,6 +68,7 @@ public class BlockPipe extends Block {
 
 
 	@Override
+    @ParametersAreNullableByDefault
 	public TileEntity createTileEntity(World world, BlockState state) {
 		return new TileDataPipe();
 	}

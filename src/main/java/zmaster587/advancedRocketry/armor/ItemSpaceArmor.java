@@ -12,13 +12,10 @@ import net.minecraft.item.ArmorMaterial;
 import net.minecraft.item.IDyeableArmorItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.nbt.ListNBT;
-import net.minecraft.util.DamageSource;
 import net.minecraft.util.Direction;
-import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.TextFormatting;
+import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
@@ -29,18 +26,19 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.common.util.Constants.NBT;
 import zmaster587.advancedRocketry.api.AdvancedRocketryItems;
 import zmaster587.advancedRocketry.api.IAtmosphere;
-import zmaster587.advancedRocketry.api.armor.IFillableArmor;
 import zmaster587.advancedRocketry.api.armor.IProtectiveArmor;
 import zmaster587.advancedRocketry.api.capability.CapabilitySpaceArmor;
 import zmaster587.advancedRocketry.atmosphere.AtmosphereType;
 import zmaster587.advancedRocketry.client.render.armor.RenderJetPack;
-import zmaster587.libVulpes.LibVulpes;
 import zmaster587.libVulpes.api.IArmorComponent;
 import zmaster587.libVulpes.api.IJetPack;
 import zmaster587.libVulpes.api.IModularArmor;
 import zmaster587.libVulpes.util.EmbeddedInventory;
 import zmaster587.libVulpes.util.IconResource;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -60,14 +58,14 @@ public class ItemSpaceArmor extends ArmorItem implements ICapabilityProvider, IP
 	}
 
 	@Override
-	public boolean canBeExternallyModified(ItemStack armor, int slot) {
+	public boolean canBeExternallyModified(@Nonnull ItemStack armor, int slot) {
 		return true;
 	}
 
 	@Override
-	public void addInformation(ItemStack stack, World p_77624_2_,
-			List list, ITooltipFlag p_77624_4_) {
-		super.addInformation(stack, p_77624_2_, list, p_77624_4_);
+	@ParametersAreNonnullByDefault
+	public void addInformation(@Nonnull ItemStack stack, @Nullable World world, List<ITextComponent> list, ITooltipFlag p_77624_4_) {
+		super.addInformation(stack, world, list, p_77624_4_);
 
 		list.add(new TranslationTextComponent("msg.modules"));
 
@@ -81,7 +79,7 @@ public class ItemSpaceArmor extends ArmorItem implements ICapabilityProvider, IP
 		return false;
 	}
 	@Override
-	public void setDamage(ItemStack stack, int damage) {
+	public void setDamage(@Nonnull ItemStack stack, int damage) {
 		//Dummy out
 	}
 	
@@ -100,7 +98,7 @@ public class ItemSpaceArmor extends ArmorItem implements ICapabilityProvider, IP
 		return super.getArmorModel(entityLiving, itemStack, armorSlot, _default);
 	}
 
-	public int getColor(ItemStack stack)
+	public int getColor(@Nonnull ItemStack stack)
 	{
 
 		CompoundNBT nbttagcompound = stack.getTag();
@@ -109,7 +107,7 @@ public class ItemSpaceArmor extends ArmorItem implements ICapabilityProvider, IP
 		{
 			CompoundNBT nbttagcompound1 = nbttagcompound.getCompound("display");
 
-			if (nbttagcompound1 != null && nbttagcompound1.contains("color", 3))
+			if (nbttagcompound1.contains("color", 3))
 			{
 				return nbttagcompound1.getInt("color");
 			}
@@ -136,7 +134,7 @@ public class ItemSpaceArmor extends ArmorItem implements ICapabilityProvider, IP
 		return new EmbeddedInventory(numModules);
 	}
 
-	protected void saveEmbeddedInventory(ItemStack stack, EmbeddedInventory inv) {
+	protected void saveEmbeddedInventory(@Nonnull ItemStack stack, EmbeddedInventory inv) {
 		if(stack.hasTag()) {
 			inv.write(stack.getTag());
 		}
@@ -148,7 +146,7 @@ public class ItemSpaceArmor extends ArmorItem implements ICapabilityProvider, IP
 	}
 	
 	@Override
-	public void onArmorTick(ItemStack armor, World world, PlayerEntity player) {
+	public void onArmorTick(@Nonnull  ItemStack armor, World world, PlayerEntity player) {
 		super.onArmorTick(armor, world, player);
 
 		if(armor.hasTag()) {
@@ -169,17 +167,17 @@ public class ItemSpaceArmor extends ArmorItem implements ICapabilityProvider, IP
 	}
 
 	@Override
-	public String getArmorTexture(ItemStack stack, Entity entity, EquipmentSlotType slot, String type) {
+	public String getArmorTexture(@Nonnull  ItemStack stack, Entity entity, EquipmentSlotType slot, String type) {
 
 		if(type != null) {
-			if(stack.getItem() == AdvancedRocketryItems.itemSpaceSuit_Leggings)
-				return "advancedRocketry:textures/armor/spaceSuit_layer1_overlay.png";//super.getArmorTexture(stack, entity, slot, type);
-			return "advancedRocketry:textures/armor/spaceSuit_layer2_overlay.png";
+			if(stack.getItem() == AdvancedRocketryItems.itemSpaceSuitLeggings)
+				return "advancedrocketry:textures/armor/spacesuit_layer1_overlay.png";//super.getArmorTexture(stack, entity, slot, type);
+			return "advancedrocketry:textures/armor/spacesuit_layer2_overlay.png";
 		}
 
-		if(stack.getItem() == AdvancedRocketryItems.itemSpaceSuit_Leggings)
-			return "advancedRocketry:textures/armor/spaceSuit_layer1.png";//super.getArmorTexture(stack, entity, slot, type);
-		return "advancedRocketry:textures/armor/spaceSuit_layer2.png";
+		if(stack.getItem() == AdvancedRocketryItems.itemSpaceSuitLeggings)
+			return "advancedrocketry:textures/armor/spacesuit_layer1.png";//super.getArmorTexture(stack, entity, slot, type);
+		return "advancedrocketry:textures/armor/spacesuit_layer2.png";
 	}
 
 	@Override
@@ -209,7 +207,7 @@ public class ItemSpaceArmor extends ArmorItem implements ICapabilityProvider, IP
 	}*/
 
 	@Override
-	public void addArmorComponent(World world, ItemStack armor, ItemStack component, int slot) {
+	public void addArmorComponent(World world, @Nonnull ItemStack armor, @Nonnull ItemStack component, int slot) {
 
 		EmbeddedInventory inv = loadEmbeddedInventory(armor);
 
@@ -222,6 +220,7 @@ public class ItemSpaceArmor extends ArmorItem implements ICapabilityProvider, IP
 
 
 
+	@Nonnull
 	public ItemStack removeComponent(World world, ItemStack armor, int index) {
 		CompoundNBT nbt;
 		ListNBT componentList;
@@ -249,9 +248,9 @@ public class ItemSpaceArmor extends ArmorItem implements ICapabilityProvider, IP
 		return stack;
 	}
 
-	public List<ItemStack> getComponents(ItemStack armor) {
+	public List<ItemStack> getComponents(@Nonnull ItemStack armor) {
 
-		List<ItemStack> list = new LinkedList<ItemStack>();
+		List<ItemStack> list = new LinkedList<>();
 		CompoundNBT nbt;
 		ListNBT componentList;
 
@@ -268,38 +267,40 @@ public class ItemSpaceArmor extends ArmorItem implements ICapabilityProvider, IP
 	}
 
 	@Override
-	public boolean protectsFromSubstance(IAtmosphere atmosphere, ItemStack stack, boolean commitProtection) {
+	public boolean protectsFromSubstance(IAtmosphere atmosphere, @Nonnull ItemStack stack, boolean commitProtection) {
 		return (atmosphere == AtmosphereType.SUPERHIGHPRESSURE || atmosphere == AtmosphereType.HIGHPRESSURE || atmosphere == AtmosphereType.VACUUM || atmosphere == AtmosphereType.VERYHOT || atmosphere == AtmosphereType.SUPERHEATED || atmosphere == AtmosphereType.LOWOXYGEN || atmosphere == AtmosphereType.SUPERHIGHPRESSURENOO2 || atmosphere == AtmosphereType.HIGHPRESSURENOO2 || atmosphere == AtmosphereType.VERYHOTNOO2|| atmosphere == AtmosphereType.SUPERHEATEDNOO2  || atmosphere == AtmosphereType.NOO2);
 	}
 
 	@Override
-	public int getNumSlots(ItemStack stack) {
+	public int getNumSlots(@Nonnull ItemStack stack) {
 		return loadEmbeddedInventory(stack).getSizeInventory();
 	}
 
 	@Override
-	public ItemStack getComponentInSlot(ItemStack stack, int slot) {
+	@Nonnull
+	public ItemStack getComponentInSlot(@Nonnull ItemStack stack, int slot) {
 		return loadEmbeddedInventory(stack).getStackInSlot(slot);
 	}
 
 	@Override
-	public IInventory loadModuleInventory(ItemStack stack) {
+	public IInventory loadModuleInventory(@Nonnull ItemStack stack) {
 		return loadEmbeddedInventory(stack);
 	}
 
 	@Override
-	public void saveModuleInventory(ItemStack stack, IInventory inv) {
+	public void saveModuleInventory(@Nonnull ItemStack stack, IInventory inv) {
 		saveEmbeddedInventory(stack, (EmbeddedInventory)inv);
 	}
 
+	@Nonnull
 	@Override
-	public <T> LazyOptional<T> getCapability(Capability<T> capability, Direction facing) {
+	public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> capability, Direction facing) {
 		if(capability == CapabilitySpaceArmor.PROTECTIVEARMOR)
 			return LazyOptional.of(() -> this).cast();
 		return LazyOptional.empty();
 	}
 
-	public boolean isItemValidForSlot(ItemStack stack, int slot) {
+	public boolean isItemValidForSlot(@Nonnull ItemStack stack, int slot) {
 		return true;	
 	}
 

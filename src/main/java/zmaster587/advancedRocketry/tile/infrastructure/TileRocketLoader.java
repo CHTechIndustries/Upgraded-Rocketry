@@ -1,6 +1,5 @@
 package zmaster587.advancedRocketry.tile.infrastructure;
 
-import io.netty.buffer.ByteBuf;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.PlayerEntity;
@@ -15,13 +14,11 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.tileentity.TileEntityType;
 import net.minecraft.util.Direction;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
-import zmaster587.advancedRocketry.api.AdvancedRocketryBlocks;
 import zmaster587.advancedRocketry.api.AdvancedRocketryTileEntityType;
 import zmaster587.advancedRocketry.api.EntityRocketBase;
 import zmaster587.advancedRocketry.api.IInfrastructure;
@@ -29,19 +26,20 @@ import zmaster587.advancedRocketry.api.IMission;
 import zmaster587.advancedRocketry.block.multiblock.BlockARHatch;
 import zmaster587.advancedRocketry.entity.EntityRocket;
 import zmaster587.advancedRocketry.tile.TileGuidanceComputer;
-import zmaster587.advancedRocketry.tile.TileRocketBuilder;
+import zmaster587.advancedRocketry.tile.TileRocketAssembler;
 import zmaster587.libVulpes.LibVulpes;
 import zmaster587.libVulpes.inventory.modules.*;
 import zmaster587.libVulpes.items.ItemLinker;
 import zmaster587.libVulpes.network.PacketHandler;
 import zmaster587.libVulpes.network.PacketMachine;
+import zmaster587.libVulpes.tile.ISidedRedstoneTile;
 import zmaster587.libVulpes.tile.multiblock.hatch.TileInventoryHatch;
 import zmaster587.libVulpes.util.INetworkMachine;
 import zmaster587.libVulpes.util.ZUtils.RedstoneState;
 
 import java.util.List;
 
-public class TileRocketLoader extends TileInventoryHatch implements IInfrastructure, ITickableTileEntity,  IButtonInventory, INetworkMachine, IGuiCallback  {
+public class TileRocketLoader extends TileInventoryHatch implements IInfrastructure, ITickableTileEntity,  IButtonInventory, INetworkMachine, IGuiCallback, ISidedRedstoneTile {
 
 	EntityRocket rocket;
 	ModuleRedstoneOutputButton redstoneControl;
@@ -50,7 +48,7 @@ public class TileRocketLoader extends TileInventoryHatch implements IInfrastruct
 	RedstoneState inputstate;
 	ModuleBlockSideSelector sideSelectorModule;
 
-	private static int ALLOW_REDSTONEOUT = 2;
+	private final static int ALLOW_REDSTONEOUT = 2;
 
 	public TileRocketLoader() {
 		this(AdvancedRocketryTileEntityType.TILE_ROCKET_LOADER);
@@ -64,33 +62,41 @@ public class TileRocketLoader extends TileInventoryHatch implements IInfrastruct
 		super(type);
 		redstoneControl = new ModuleRedstoneOutputButton(174, 4, "", this, LibVulpes.proxy.getLocalizedString("msg.rocketLoader.loadingState"));
 		state = RedstoneState.ON;
-		inputRedstoneControl = new ModuleRedstoneOutputButton(174, 32, "", this, LibVulpes.proxy.getLocalizedString("msg.rocketLoader.allowLoading"));
+		inputRedstoneControl = new ModuleRedstoneOutputButton(174, 32, "", this, LibVulpes.proxy.getLocalizedString("msg.rocketloader.allowloading"));
 		inputstate = RedstoneState.OFF;
 		inputRedstoneControl.setRedstoneState(inputstate);
-		sideSelectorModule = new ModuleBlockSideSelector(90, 15, this, new String[] {LibVulpes.proxy.getLocalizedString("msg.rocketLoader.none"), LibVulpes.proxy.getLocalizedString("msg.rocketLoader.allowredstoneoutput"), LibVulpes.proxy.getLocalizedString("msg.rocketLoader.allowredstoneinput")});
+		sideSelectorModule = new ModuleBlockSideSelector(90, 15, this, LibVulpes.proxy.getLocalizedString("msg.rocketloader.none"), LibVulpes.proxy.getLocalizedString("msg.rocketLoader.allowredstoneoutput"), LibVulpes.proxy.getLocalizedString("msg.rocketLoader.allowredstoneinput"));
 	}
 
 	public TileRocketLoader(TileEntityType<?> type, int size) {
 		super(type, size);
-		redstoneControl = new ModuleRedstoneOutputButton(174, 4, "", this, LibVulpes.proxy.getLocalizedString("msg.rocketLoader.loadingState"));
+		redstoneControl = new ModuleRedstoneOutputButton(174, 4, "", this, LibVulpes.proxy.getLocalizedString("msg.rocketloader.loadingstate"));
+		inventory.setCanInsertSlot(0, true);
+		inventory.setCanInsertSlot(1, true);
+		inventory.setCanInsertSlot(2, true);
+		inventory.setCanInsertSlot(3, true);
+		inventory.setCanExtractSlot(0, false);
+		inventory.setCanExtractSlot(1, false);
+		inventory.setCanExtractSlot(2, false);
+		inventory.setCanExtractSlot(3, false);
 		state = RedstoneState.ON;
-		inputRedstoneControl = new ModuleRedstoneOutputButton(174, 32, "", this, LibVulpes.proxy.getLocalizedString("msg.rocketLoader.allowLoading"));
+		inputRedstoneControl = new ModuleRedstoneOutputButton(174, 32, "", this, LibVulpes.proxy.getLocalizedString("msg.rocketloader.allowloading"));
 		inputstate = RedstoneState.OFF;
 		inputRedstoneControl.setRedstoneState(inputstate);
-		sideSelectorModule = new ModuleBlockSideSelector(90, 15, this, new String[] {LibVulpes.proxy.getLocalizedString("msg.rocketLoader.none"), LibVulpes.proxy.getLocalizedString("msg.rocketLoader.allowredstoneoutput"), LibVulpes.proxy.getLocalizedString("msg.rocketLoader.allowredstoneinput")});
+		sideSelectorModule = new ModuleBlockSideSelector(90, 15, this, LibVulpes.proxy.getLocalizedString("msg.rocketloader.none"), LibVulpes.proxy.getLocalizedString("msg.rocketLoader.allowredstoneoutput"), LibVulpes.proxy.getLocalizedString("msg.rocketLoader.allowredstoneinput"));
 
 	}
 
 	@Override
 	public void remove() {
 		super.remove();
-		if(getMasterBlock() instanceof TileRocketBuilder)
-			((TileRocketBuilder)getMasterBlock()).removeConnectedInfrastructure(this);
+		if(getMasterBlock() instanceof TileRocketAssembler)
+			((TileRocketAssembler)getMasterBlock()).removeConnectedInfrastructure(this);
 	}
 
 	@Override
 	public String getModularInventoryName() {
-		return "tile.loader.3.name";
+		return "block.advancedrocketry.rocketloader";
 	}
 
 	@Override
@@ -248,7 +254,7 @@ public class TileRocketLoader extends TileInventoryHatch implements IInfrastruct
 		}
 
 		if(player.world.isRemote)
-			Minecraft.getInstance().ingameGUI.getChatGUI().printChatMessage(new TranslationTextComponent("%s %s",new TranslationTextComponent("msg.rocketLoader.link"), ": " + getPos().getX() + " " + getPos().getY() + " " + getPos().getZ()));
+			Minecraft.getInstance().ingameGUI.getChatGUI().printChatMessage(new TranslationTextComponent("%s %s",new TranslationTextComponent("msg.rocketloader.link"), ": " + getPos().getX() + " " + getPos().getY() + " " + getPos().getZ()));
 		return true;
 	}
 
@@ -256,7 +262,7 @@ public class TileRocketLoader extends TileInventoryHatch implements IInfrastruct
 	public boolean onLinkComplete(ItemStack item, TileEntity entity,
 			PlayerEntity player, World world) {
 		if(player.world.isRemote)
-			Minecraft.getInstance().ingameGUI.getChatGUI().printChatMessage(new TranslationTextComponent("msg.linker.error.firstMachine"));
+			Minecraft.getInstance().ingameGUI.getChatGUI().printChatMessage(new TranslationTextComponent("msg.linker.error.firstmachine"));
 		return false;
 	}
 
@@ -290,7 +296,7 @@ public class TileRocketLoader extends TileInventoryHatch implements IInfrastruct
 	}
 
 	@Override
-	public boolean linkMission(IMission misson) {
+	public boolean linkMission(IMission mission) {
 		return false;
 	}
 
@@ -309,8 +315,8 @@ public class TileRocketLoader extends TileInventoryHatch implements IInfrastruct
 	}
 
 	@Override
-	public void func_230337_a_(BlockState blkstate, CompoundNBT nbt) {
-		super.func_230337_a_(blkstate, nbt);
+	public void read(BlockState blkstate, CompoundNBT nbt) {
+		super.read(blkstate, nbt);
 
 		state = RedstoneState.values()[nbt.getByte("redstoneState")];
 		redstoneControl.setRedstoneState(state);
@@ -353,7 +359,7 @@ public class TileRocketLoader extends TileInventoryHatch implements IInfrastruct
 		nbt.putByte("state", in.readByte());
 		nbt.putByte("inputstate", in.readByte());
 
-		byte bytes[] = new byte[6];
+		byte[] bytes = new byte[6];
 		for(int i = 0; i < 6; i++)
 			bytes[i] = in.readByte();
 		nbt.putByteArray("bytes", bytes);
@@ -365,7 +371,7 @@ public class TileRocketLoader extends TileInventoryHatch implements IInfrastruct
 		state = RedstoneState.values()[nbt.getByte("state")];
 		inputstate = RedstoneState.values()[nbt.getByte("inputstate")];
 
-		byte bytes[] = nbt.getByteArray("bytes");
+		byte[] bytes = nbt.getByteArray("bytes");
 		for(int i = 0; i < 6; i++)
 			sideSelectorModule.setStateForSide(i, bytes[i]);
 

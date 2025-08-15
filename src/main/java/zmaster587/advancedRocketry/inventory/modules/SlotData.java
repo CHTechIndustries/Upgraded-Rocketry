@@ -3,7 +3,9 @@ package zmaster587.advancedRocketry.inventory.modules;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.container.Slot;
 import net.minecraft.item.ItemStack;
-import zmaster587.advancedRocketry.item.ItemData;
+import zmaster587.advancedRocketry.item.ItemDataChip;
+
+import javax.annotation.Nonnull;
 
 public class SlotData extends Slot {
 
@@ -14,8 +16,8 @@ public class SlotData extends Slot {
 	}
 
 	@Override
-	public boolean isItemValid(ItemStack stack) {
-		if(stack == null || stack.getItem() instanceof ItemData)
+	public boolean isItemValid(@Nonnull ItemStack stack) {
+		if(stack.isEmpty() || stack.getItem() instanceof ItemDataChip)
 			return super.isItemValid(stack);
 		return false;
 	}

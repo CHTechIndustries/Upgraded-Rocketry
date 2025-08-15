@@ -3,25 +3,21 @@ package zmaster587.advancedRocketry.client.render.entity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererManager;
-import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.RayTraceResult;
 import net.minecraftforge.fml.client.registry.IRenderFactory;
-import org.lwjgl.opengl.GL11;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
 
 import zmaster587.advancedRocketry.api.dimension.solar.StellarBody;
-import zmaster587.advancedRocketry.client.render.multiblocks.RendererWarpCore;
 import zmaster587.advancedRocketry.dimension.DimensionProperties;
 import zmaster587.advancedRocketry.entity.EntityUIStar;
 import zmaster587.advancedRocketry.inventory.TextureResources;
 import zmaster587.libVulpes.render.RenderHelper;
+
+import javax.annotation.ParametersAreNonnullByDefault;
 
 public class RenderStarUIEntity extends EntityRenderer<EntityUIStar> implements IRenderFactory<EntityUIStar> {
 
@@ -36,35 +32,30 @@ public class RenderStarUIEntity extends EntityRenderer<EntityUIStar> implements 
 	}
 
 	@Override
+	@ParametersAreNonnullByDefault
 	public ResourceLocation getEntityTexture(EntityUIStar entity) {
 		return DimensionProperties.PlanetIcons.EARTHLIKE.getResource();
 	}
 
 	@Override
-	public void render(EntityUIStar entity, float entityYaw, float partialTicks, MatrixStack matrix,
-			IRenderTypeBuffer bufferIn, int packedLightIn) {
+	@ParametersAreNonnullByDefault
+	public void render(EntityUIStar entity, float entityYaw, float partialTicks, MatrixStack matrix, IRenderTypeBuffer bufferIn, int packedLightIn) {
 		
 		StellarBody body = entity.getStarProperties();
 		if(body == null)
 			return;
 		float sizeScale = entity.getScale();
-		matrix.push();
 		matrix.scale(sizeScale,sizeScale,sizeScale);
+		matrix.push();
+		matrix.scale(.1f, .1f, .1f);
+		matrix.translate(0, 2.5f, 0);
 		
-		//RenderHelper.setupPlayerFacingMatrix(Minecraft.getInstance().player.getDistanceSq(entity), 0,-.45,0);
+		matrix.rotate(Minecraft.getInstance().getRenderManager().getCameraOrientation());
+		
 		
 		IVertexBuilder translucentBuffer = bufferIn.getBuffer(RenderHelper.getTranslucentTexturedManualRenderType(TextureResources.locationSunNew));
-		
-		
-		GL11.glColor3d(body.getColor()[0], body.getColor()[1], body.getColor()[2]);
-		//GL11.glColor3ub((byte)(body.getColorRGB8() & 0xff), (byte)((body.getColorRGB8() >>> 8) & 0xff), (byte)((body.getColorRGB8() >>> 16) & 0xff));
-		//GlStateManager.color4f();
-		
 		RenderHelper.renderNorthFaceWithUV(matrix, translucentBuffer, 0, -5, -5, 5, 5, 0, 1, 0, 1, body.getColor()[0], body.getColor()[1], body.getColor()[2], 1f);
-		Tessellator.getInstance().draw();
-		
-		
-		RenderHelper.cleanupPlayerFacingMatrix();
+		matrix.pop();
 		
 		
 		//Render hololines
@@ -78,7 +69,6 @@ public class RenderStarUIEntity extends EntityRenderer<EntityUIStar> implements 
 			myTime = ((i*4 + entity.world.getGameTime() & 0xF)/16f);
 			RenderHelper.renderTopFace(matrix, buf, myTime, -.5f, -.5f, .5f, .5f, 0, 1f, 1f, .2f*(1-myTime));
 			RenderHelper.renderBottomFace(matrix, buf, myTime - 0.5, -.5f, -.5f, .5f, .5f, 0, 1f, 1f, .2f*(1-myTime));
-			Tessellator.getInstance().draw();
 		}
 	
 		
@@ -100,7 +90,6 @@ public class RenderStarUIEntity extends EntityRenderer<EntityUIStar> implements 
 			GlStateManager.enableTexture();
 		}*/
 		
-		matrix.pop();
 		matrix.pop();
 		
 		/*RayTraceResult hitObj = Minecraft.getInstance().objectMouseOver;
@@ -141,29 +130,23 @@ public class RenderStarUIEntity extends EntityRenderer<EntityUIStar> implements 
 	}
 	
 	protected void renderMassIndicator(MatrixStack matrix, BufferBuilder buffer, float percent) {
-		buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
 		
 		float maxUV = (1-percent)*0.5f;
 		
 		RenderHelper.renderNorthFaceWithUV(matrix, buffer, 0, -20, -5 + 41*(1-percent), 20, 36, .5f, 0f, .5f, maxUV,1f,1f,1f,1f);
-		Tessellator.getInstance().draw();
 	}
 	
 	protected void renderATMIndicator(MatrixStack matrix, BufferBuilder buffer, float percent) {
-		buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
 		
 		float maxUV = (1-percent)*0.406f + .578f;
 		//Offset by 15 for Y
 		RenderHelper.renderNorthFaceWithUV(matrix, buffer, 0, 6, 20 + (1-percent)*33, 39, 53, .5624f, .984f, .984f, maxUV,1f,1f,1f,1f);
-		Tessellator.getInstance().draw();
 	}
 	
 	protected void renderTemperatureIndicator(MatrixStack matrix, BufferBuilder buffer, float percent) {
-		buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
 		
 		float maxUV = (1-percent)*0.406f + .578f;
 		//Offset by 15 for Y
 		RenderHelper.renderNorthFaceWithUV(matrix, buffer, 0, -38, 21.4f + (1-percent)*33, -4, 53, .016f, .4376f, .984f, maxUV,1f,1f,1f,1f);
-		Tessellator.getInstance().draw();
 	}
 }

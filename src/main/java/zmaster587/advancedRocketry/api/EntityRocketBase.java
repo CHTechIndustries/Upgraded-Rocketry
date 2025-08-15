@@ -5,10 +5,14 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraftforge.common.MinecraftForge;
+import zmaster587.advancedRocketry.api.fuel.FuelRegistry;
 import zmaster587.advancedRocketry.api.stations.ISpaceObject;
+import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.libVulpes.util.HashedBlockPosition;
 import zmaster587.libVulpes.util.ZUtils;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.LinkedList;
 import java.util.Set;
 
@@ -27,7 +31,11 @@ public abstract class EntityRocketBase extends Entity {
 
 	//Stores other info about the rocket such as fuel and acceleration properties
 	public StatsRocket stats;
-	
+
+	public EntityRocketBase(World world) {
+		this(AdvancedRocketryEntities.ENTITY_ROCKET, world);
+	}
+
 	public EntityRocketBase(EntityType<?> type, World world) {
 		super(type, world);
 	}
@@ -38,15 +46,8 @@ public abstract class EntityRocketBase extends Entity {
 	}
 	
 	/**
-	 * AttempTs to add amt fuel points to the rocket
-	 * @param amt
-	 * @return the amount of fuel actually added to the rocket
-	 */
-	public abstract int addFuelAmount(int amt);
-
-	/**
 	 * Unlinks the given infrastructure
-	 * @param infrastructure
+	 * @param tile the tile to unlink
 	 */
 	public void unlinkInfrastructure(IInfrastructure tile) {
 		connectedInfrastructure.remove(tile);
@@ -54,7 +55,7 @@ public abstract class EntityRocketBase extends Entity {
 
 	/**
 	 * Links the supplied IInfrastructure with the rocket
-	 * @param tile
+	 * @param tile the tile to link
 	 */
 	public void linkInfrastructure(IInfrastructure tile) {
 		if(!connectedInfrastructure.contains(tile) && tile.linkRocket(this))
@@ -72,14 +73,10 @@ public abstract class EntityRocketBase extends Entity {
 	public abstract void launch();
 
 	/**
-	 * @return the amount of fuel points in the rocket
+	 * @return the fuel type that this rocket uses, null if the rocket does not use any
 	 */
-	public abstract int getFuelAmount();
-
-	/**
-	 * @return the total fuel capacity of the rocket
-	 */
-	public abstract int getFuelCapacity();
+	@Nullable
+	public abstract FuelRegistry.FuelType getRocketFuelType();
 
 	/**
 	 * @return the location of the rocket in the world
@@ -95,20 +92,15 @@ public abstract class EntityRocketBase extends Entity {
 		return "";
 	}
 	
-	/**
-	 * @return the stats used to represent the rocket
-	 */
-	public abstract StatsRocket getRocketStats();
-	
 	/**Called when orbit is reached by a rocket*/
 	public void onOrbitReached() {
 		MinecraftForge.EVENT_BUS.post(new RocketEvent.RocketReachesOrbitEvent(this));
 		
-		if(ARConfiguration.GetSpaceDimId().equals(ZUtils.getDimensionIdentifier(this.world)) ) {
+		if(DimensionManager.spaceId.equals(ZUtils.getDimensionIdentifier(this.world)) ) {
 			ISpaceObject station = AdvancedRocketryAPI.spaceObjectManager.getSpaceStationFromBlockCoords(new BlockPos(this.getPositionVec()));
-			
-			if(station instanceof ISpaceObject) {
-				((ISpaceObject)station).setPadStatus((int)Math.floor(this.getPosX()), (int)Math.floor(this.getPosZ()), false);
+
+			if(station != null) {
+				station.setPadStatus((int)Math.floor(this.getPosX()), (int)Math.floor(this.getPosZ()), false);
 			}
 		}
 	}

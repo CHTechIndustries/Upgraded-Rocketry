@@ -1,7 +1,5 @@
 package zmaster587.advancedRocketry.backwardCompat;
 
-import net.minecraft.client.renderer.BufferBuilder;
-import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.vertex.VertexFormat;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -13,7 +11,7 @@ import com.mojang.blaze3d.vertex.IVertexBuilder;
 public class GroupObject
 {
     public String name;
-    public ArrayList<Face> faces = new ArrayList<Face>();
+    public ArrayList<Face> faces = new ArrayList<>();
     public int glDrawingMode;
     public VertexFormat drawMode;
 
@@ -59,6 +57,18 @@ public class GroupObject
             for (Face face : faces)
             {
                 face.addFaceForRender(matrix, tessellator);
+            }
+        }
+    }
+    
+    @OnlyIn(value=Dist.CLIENT)
+    public void render(MatrixStack matrix, IVertexBuilder tessellator, float r, float g, float b, float a)
+    {
+        if (faces.size() > 0)
+        {
+            for (Face face : faces)
+            {
+                face.addFaceForRender(matrix, tessellator, r, g, b, a);
             }
         }
     }

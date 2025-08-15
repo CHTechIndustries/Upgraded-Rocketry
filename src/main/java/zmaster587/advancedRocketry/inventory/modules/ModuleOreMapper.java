@@ -42,14 +42,17 @@ public class ModuleOreMapper extends ModuleBase {
 	private int mouseValue;
 	private int scanSize = 32;
 	private int radius = 1;
+	private int zoomScale = 1;
+	private int maxZoom = 1;
 	private int xSelected, zSelected, xCenter, zCenter;
 	private static final ResourceLocation backdrop = new ResourceLocation("advancedrocketry", "textures/gui/VideoSatallite.png");
 	int[][] oreMap;
 	World world;
 	SatelliteOreMapping tile;
 	ItemStack selectedStack;
+	SatelliteOreMapping satellite;
 	
-	public ModuleOreMapper(int offsetX, int offsetY) {
+	public ModuleOreMapper(int offsetX, int offsetY, SatelliteOreMapping satellite) {
 		super(offsetX, offsetY);
 		world = Minecraft.getInstance().world;
 
@@ -58,6 +61,16 @@ public class ModuleOreMapper extends ModuleBase {
 		//masterConsole = tile;
 		//xCenter = tile.getBlockCenterX();
 		//zCenter = tile.getBlockCenterZ();
+		
+		//Max zoom is 128
+		if(satellite != null) {
+			maxZoom = (int) Math.pow(2, satellite.getZoomRadius());
+			zoomScale = satellite.getZoomRadius();
+		}
+
+		if(maxZoom == 1)
+			this.satellite = null;
+		scanSize = maxZoom;
 		
 		prevWorldTickTime = world.getGameTime();
 		
@@ -68,10 +81,8 @@ public class ModuleOreMapper extends ModuleBase {
 	Runnable mapper = new Runnable() {
 		@Override
 		public void run() {
-			oreMap = SatelliteOreMapping.scanChunk(world, xCenter, zCenter, scanSize/2, radius);
-			if(oreMap != null)
-				merged = true;
-			else merged = false;
+			oreMap = satellite.scanChunk(world, xCenter, zCenter, scanSize/2, radius, zoomScale);
+			merged = oreMap != null && !Thread.interrupted();
 		}
 	};
 
@@ -86,24 +97,21 @@ public class ModuleOreMapper extends ModuleBase {
 
 		@Override
 		public void run() {
-			oreMap = SatelliteOreMapping.scanChunk(world, xCenter, zCenter, scanSize/2, radius, myBlock);
-			if(oreMap != null)
-				merged = true;
-			else merged = false;
+			oreMap = satellite.scanChunk(world, xCenter, zCenter, scanSize/2, radius, myBlock, zoomScale);
+			merged = oreMap != null;
 		}
-	};
-	
+	}
+
 	private void runMapperWithSelection() {
 		currentMapping.interrupt();
 		resetTexture();
 		if(prevSlot == -1) {
 			currentMapping = new Thread(mapper);
-			currentMapping.setName("Ore Scan");
 		}
 		else {
 			//currentMapping = new Thread(new ItemMapper(inventorySlots.getSlot(prevSlot).getStack()));//TODO
-			currentMapping.setName("Ore Scan");
 		}
+		currentMapping.setName("Ore Scan");
 		currentMapping.start();
 	}
 	
@@ -124,17 +132,17 @@ public class ModuleOreMapper extends ModuleBase {
 		GlStateManager.disableTexture();
 		buffer.color(0f, 0.8f, 0f, 1f);
 		buffer.begin(GL11.GL_QUADS, buffer.getVertexFormat());
-		buffer.pos(-21, 82 + fancyScanOffset, (double)zLevel).endVertex();
-		buffer.pos(0, 84 + fancyScanOffset, (double)zLevel).endVertex();
-		buffer.pos(0, 81 + fancyScanOffset, (double)zLevel).endVertex();
-		buffer.pos(-21, 81 + fancyScanOffset, (double)zLevel).endVertex();
+		buffer.pos(-21, 82 + fancyScanOffset, zLevel).endVertex();
+		buffer.pos(0, 84 + fancyScanOffset, zLevel).endVertex();
+		buffer.pos(0, 81 + fancyScanOffset, zLevel).endVertex();
+		buffer.pos(-21, 81 + fancyScanOffset, zLevel).endVertex();
 		buffer.finishDrawing();
 		
 		buffer.begin(GL11.GL_QUADS, buffer.getVertexFormat());
-		buffer.pos(-21, 82 - fancyScanOffset + FANCYSCANMAXSIZE, (double)zLevel).endVertex();
-		buffer.pos(0, 84 - fancyScanOffset + FANCYSCANMAXSIZE, (double)zLevel).endVertex();
-		buffer.pos(0, 81 - fancyScanOffset + FANCYSCANMAXSIZE, (double)zLevel).endVertex();
-		buffer.pos(-21, 81 - fancyScanOffset + FANCYSCANMAXSIZE, (double)zLevel).endVertex();
+		buffer.pos(-21, 82 - fancyScanOffset + FANCYSCANMAXSIZE, zLevel).endVertex();
+		buffer.pos(0, 84 - fancyScanOffset + FANCYSCANMAXSIZE, zLevel).endVertex();
+		buffer.pos(0, 81 - fancyScanOffset + FANCYSCANMAXSIZE, zLevel).endVertex();
+		buffer.pos(-21, 81 - fancyScanOffset + FANCYSCANMAXSIZE, zLevel).endVertex();
 		buffer.finishDrawing();
 		
 		
@@ -143,7 +151,7 @@ public class ModuleOreMapper extends ModuleBase {
 		GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_DST_ALPHA);
 		buffer.color(0.5f, 0.5f, 0.0f,0.3f + ((float)Math.sin(Math.PI*(fancyScanOffset/(float)FANCYSCANMAXSIZE))/3f));
 		buffer.begin(GL11.GL_QUADS, buffer.getVertexFormat());
-		RenderHelper.renderNorthFace(matrix, buffer, (double)zLevel, 173, 82, 194, 141,1,1,1,1);
+		RenderHelper.renderNorthFace(matrix, buffer, zLevel, 173, 82, 194, 141,1,1,1,1);
 		buffer.finishDrawing();
 		
 		GlStateManager.enableTexture();
@@ -197,7 +205,7 @@ public class ModuleOreMapper extends ModuleBase {
 		//Render the background then render
 		GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
 		Minecraft.getInstance().getTextureManager().bindTexture(backdrop);
-		gui.func_238474_b_(matrix, x, y, 0, 0, 240, 192);
+		gui.blit(matrix, x, y, 0, 0, 240, 192);
 
 
 		//NOTE: if the controls are rendered first the display never shows up
@@ -213,17 +221,17 @@ public class ModuleOreMapper extends ModuleBase {
 		//Render sliders and controls
 		Minecraft.getInstance().getTextureManager().bindTexture(backdrop);
 
-		gui.func_238474_b_(matrix, 197 + x, 31 + y, 0, 192, 32, 14);
+		gui.blit(matrix, 197 + x, 31 + y, 0, 192, 32, 14);
 		
 		//TODO replace with thing
 		//gui.drawVerticalLine((int)(32*VulpineMath.log2(scanSize-1)/8F) + 199 + x, 34 + y, 45 + y, 0xFFC00F0F);
 
-		font.func_243246_a(matrix, new StringTextComponent("Zoom"), 198 + x, 22 + y, 0xF0F0F0);
+		font.drawTextWithShadow(matrix, new StringTextComponent("Zoom"), 198 + x, 22 + y, 0xF0F0F0);
 
-		font.func_243246_a(matrix, new StringTextComponent("X: " + xSelected), 6 + x, 33 + y, 0xF0F0F0);
-		font.func_243246_a(matrix, new StringTextComponent("Z: " + zSelected), 6 + x, 49 + y, 0xF0F0F0);
-		font.func_243246_a(matrix, new StringTextComponent("Value: "), 6 + x, 65 + y, 0xF0F0F0);
-		font.func_243246_a(matrix, new StringTextComponent(String.valueOf(mouseValue)), 6 + x, 79 + y, 0xF0F0F0);
+		font.drawTextWithShadow(matrix, new StringTextComponent("X: " + xSelected), 6 + x, 33 + y, 0xF0F0F0);
+		font.drawTextWithShadow(matrix, new StringTextComponent("Z: " + zSelected), 6 + x, 49 + y, 0xF0F0F0);
+		font.drawTextWithShadow(matrix, new StringTextComponent("Value: "), 6 + x, 65 + y, 0xF0F0F0);
+		font.drawTextWithShadow(matrix, new StringTextComponent(String.valueOf(mouseValue)), 6 + x, 79 + y, 0xF0F0F0);
 	}
 	
 }

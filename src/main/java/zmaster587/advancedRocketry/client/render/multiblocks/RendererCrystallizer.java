@@ -1,35 +1,30 @@
 package zmaster587.advancedRocketry.client.render.multiblocks;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.client.renderer.WorldRenderer;
 import net.minecraft.client.renderer.tileentity.TileEntityRenderer;
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher;
 import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Direction;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.vector.Quaternion;
 
-import org.lwjgl.opengl.GL11;
-
 import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
 
 import zmaster587.advancedRocketry.backwardCompat.ModelFormatException;
 import zmaster587.advancedRocketry.backwardCompat.WavefrontObject;
+import zmaster587.advancedRocketry.tile.multiblock.machine.TileCrystallizer;
 import zmaster587.libVulpes.block.RotatableBlock;
 import zmaster587.libVulpes.render.RenderHelper;
-import zmaster587.libVulpes.tile.multiblock.TileMultiblockMachine;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.List;
 
-public class RendererCrystallizer extends TileEntityRenderer {
+public class RendererCrystallizer extends TileEntityRenderer<TileCrystallizer> {
 
 	WavefrontObject model;
-
 	ResourceLocation texture = new ResourceLocation("advancedrocketry","textures/models/crystallizer.png");
 
 
@@ -39,17 +34,15 @@ public class RendererCrystallizer extends TileEntityRenderer {
 		try {
 			model =  new WavefrontObject(new ResourceLocation("advancedrocketry","models/crystallizer.obj"));
 		} catch (ModelFormatException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
 	@Override
-	public void render(TileEntity tile, float partialTicks, MatrixStack matrix,
-			IRenderTypeBuffer buffer, int combinedLightIn, int combinedOverlayIn) {
-		TileMultiblockMachine multiBlockTile = (TileMultiblockMachine)tile;
+	@ParametersAreNonnullByDefault
+	public void render(TileCrystallizer tile, float partialTicks, MatrixStack matrix, IRenderTypeBuffer buffer, int combinedLightIn, int combinedOverlayIn) {
 
-		if(!multiBlockTile.canRender())
+		if(!tile.canRender())
 			return;
 
 		if (tile.getWorld() != null) {
@@ -67,13 +60,13 @@ public class RendererCrystallizer extends TileEntityRenderer {
 		matrix.translate(-.5f, 0, -1.5f);
 		IVertexBuilder entityTransparentBuilder = buffer.getBuffer(RenderHelper.getTranslucentEntityModelRenderType(texture));
 		
-		if(multiBlockTile.isRunning()) {
+		if(tile.isRunning()) {
 
-			float progress = multiBlockTile.getProgress(0)/(float)multiBlockTile.getTotalProgress(0);
+			float progress = tile.getProgress(0)/(float)tile.getTotalProgress(0);
 			
 			model.tessellatePart(matrix, combinedLightIn, combinedOverlayIn,  entityTransparentBuilder, "Hull");
 
-			List<ItemStack> outputList = multiBlockTile.getOutputs();
+			List<ItemStack> outputList = tile.getOutputs();
 			if(outputList != null && !outputList.isEmpty()) {
 				ItemStack stack = outputList.get(0);
 				ItemEntity entity = new ItemEntity(tile.getWorld(), 0,0,0);
@@ -128,8 +121,7 @@ public class RendererCrystallizer extends TileEntityRenderer {
 				model.renderOnly(matrix, combinedLightIn, combinedOverlayIn, entityTransparentBuilder, "Liquid");
 				matrix.pop();
 			}
-		}
-		else {
+		} else {
 			model.tessellatePart(matrix, combinedLightIn, combinedOverlayIn,  entityTransparentBuilder, "Hull");
 		}
 		matrix.pop();

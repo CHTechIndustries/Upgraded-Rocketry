@@ -1,6 +1,5 @@
 package zmaster587.advancedRocketry.network;
 
-import io.netty.buffer.ByteBuf;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -12,7 +11,6 @@ import zmaster587.advancedRocketry.dimension.DimensionProperties;
 import zmaster587.advancedRocketry.util.SpawnListEntryNBT;
 import zmaster587.libVulpes.network.BasePacket;
 
-import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -27,7 +25,7 @@ public class PacketDimInfo extends BasePacket {
 	String customIcon;
 
 	public PacketDimInfo() {
-		artifacts = new LinkedList<ItemStack>();
+		artifacts = new LinkedList<>();
 		customIcon = "";
 	}
 
@@ -128,7 +126,7 @@ public class PacketDimInfo extends BasePacket {
 				dimProperties.getRequiredArtifacts().clear();
 				dimProperties.getRequiredArtifacts().addAll(artifacts);
 				
-				List<SpawnListEntryNBT> list = new LinkedList<SpawnListEntryNBT>(DimensionManager.getInstance().getDimensionProperties(dimNumber).getSpawnListEntries());
+				List<SpawnListEntryNBT> list = new LinkedList<>(DimensionManager.getInstance().getDimensionProperties(dimNumber).getSpawnListEntries());
 				dimProperties.getSpawnListEntries().clear();
 				dimProperties.getSpawnListEntries().addAll(list);
 				

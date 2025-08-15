@@ -1,12 +1,10 @@
 package zmaster587.advancedRocketry.api.capability;
 
-import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.INBT;
 import net.minecraft.util.Direction;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.CapabilityInject;
 import net.minecraftforge.common.capabilities.CapabilityManager;
-import zmaster587.advancedRocketry.api.IAtmosphere;
 import zmaster587.advancedRocketry.api.armor.IProtectiveArmor;
 
 public class CapabilitySpaceArmor {
@@ -19,14 +17,7 @@ public class CapabilitySpaceArmor {
 
 	public static IProtectiveArmor generateArmor()
 	{
-		return new IProtectiveArmor() {
-
-			@Override
-			public boolean protectsFromSubstance(IAtmosphere atmosphere,
-					ItemStack stack, boolean commitProtection) {
-				return false;
-			}
-		};
+		return (atmosphere, stack, commitProtection) -> false;
 	}
 
 	public static void register() { CapabilityManager.INSTANCE.register(IProtectiveArmor.class, new Capability.IStorage<IProtectiveArmor>() 
@@ -40,7 +31,6 @@ public class CapabilitySpaceArmor {
 				public void readNBT(Capability<IProtectiveArmor> capability, IProtectiveArmor instance, Direction side,
 						INBT nbt) {
 					// TODO Auto-generated method stub
-					
 				}
 			}, CapabilitySpaceArmor::generateArmor );
 	}

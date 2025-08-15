@@ -1,42 +1,26 @@
 package zmaster587.advancedRocketry.tile.multiblock.energy;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.Set;
-
-import io.netty.buffer.ByteBuf;
 import net.minecraft.block.BlockState;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.IInventory;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.network.play.server.SUpdateTileEntityPacket;
 import net.minecraft.tileentity.ITickableTileEntity;
-import net.minecraft.util.Direction;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
-import zmaster587.advancedRocketry.AdvancedRocketry;
 import zmaster587.advancedRocketry.api.AdvancedRocketryBlocks;
 import zmaster587.advancedRocketry.api.AdvancedRocketryTileEntityType;
 import zmaster587.advancedRocketry.api.ARConfiguration;
-import zmaster587.advancedRocketry.api.satellite.SatelliteBase;
 import zmaster587.advancedRocketry.api.stations.ISpaceObject;
 import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.dimension.DimensionProperties;
-import zmaster587.advancedRocketry.item.ItemSatelliteIdentificationChip;
 import zmaster587.advancedRocketry.stations.SpaceObjectManager;
 import zmaster587.libVulpes.LibVulpes;
-import zmaster587.libVulpes.api.IUniversalEnergyTransmitter;
 import zmaster587.libVulpes.api.LibVulpesBlocks;
 import zmaster587.libVulpes.block.BlockMeta;
 import zmaster587.libVulpes.inventory.modules.ModuleBase;
@@ -46,45 +30,45 @@ import zmaster587.libVulpes.network.PacketMachine;
 import zmaster587.libVulpes.tile.multiblock.TileMultiBlock;
 import zmaster587.libVulpes.tile.multiblock.TileMultiPowerProducer;
 import zmaster587.libVulpes.util.MultiBattery;
-import zmaster587.libVulpes.util.Vector3F;
 import zmaster587.libVulpes.util.ZUtils;
 
-public class TileBlackHoleGenerator extends TileMultiPowerProducer implements ITickableTileEntity {
+import java.util.List;
+import java.util.Map.Entry;
+
+public class TileBlackHoleGenerator extends TileMultiPowerProducer {
 	static final Object[][][] structure = new Object[][][] {
 		{
 			{null, null, null},
-			{null, LibVulpesBlocks.blockAdvStructureBlock, null},
+			{null, LibVulpesBlocks.blockAdvancedMachineStructure, null},
 			{null, null, null}
 		},
 		{
 			{null, 'c', null},
-			{'*', LibVulpesBlocks.blockAdvStructureBlock, '*'},
+			{'*', LibVulpesBlocks.blockAdvancedMachineStructure, '*'},
 			{null, '*', null},
 		},
 		{
-			{null, LibVulpesBlocks.blockAdvStructureBlock, null},
-			{null, LibVulpesBlocks.blockAdvStructureBlock, null},
+			{null, LibVulpesBlocks.blockAdvancedMachineStructure, null},
+			{null, LibVulpesBlocks.blockAdvancedMachineStructure, null},
 			{null, null, null}
 		},
 		{
 			{null, null, null},
-			{null, LibVulpesBlocks.blockAdvStructureBlock, null},
+			{null, LibVulpesBlocks.blockAdvancedMachineStructure, null},
 			{null, null, null}
 		},
 		{
 			{null, null, null},
-			{null, LibVulpesBlocks.blockAdvStructureBlock, null},
+			{null, LibVulpesBlocks.blockAdvancedMachineStructure, null},
 			{null, null, null}
 		}};
 
-		int powerMadeLastTick, prevPowerMadeLastTick;
-		ModuleText textModule;
-		boolean initialCheck;
+		private int powerMadeLastTick, prevPowerMadeLastTick;
+		private ModuleText textModule;
 		private long last_usage;
 
 		public TileBlackHoleGenerator() {
 			super(AdvancedRocketryTileEntityType.TILE_BLACK_HOLE_GENERATOR);
-			initialCheck = false;
 			textModule = new ModuleText(40, 20, LibVulpes.proxy.getLocalizedString("msg.microwaverec.notgenerating"), 0x2b2b2b);
 		}
 
@@ -116,7 +100,7 @@ public class TileBlackHoleGenerator extends TileMultiPowerProducer implements IT
 		public List<BlockMeta> getAllowableWildCardBlocks() {
 			List<BlockMeta> blocks = super.getAllowableWildCardBlocks();
 			blocks.addAll(TileMultiBlock.getMapping('I'));
-			blocks.add(new BlockMeta( LibVulpesBlocks.blockAdvStructureBlock));
+			blocks.add(new BlockMeta( LibVulpesBlocks.blockAdvancedMachineStructure));
 			blocks.addAll(TileMultiBlock.getMapping('p'));
 
 			return blocks;
@@ -126,9 +110,6 @@ public class TileBlackHoleGenerator extends TileMultiPowerProducer implements IT
 		public String getMachineName() {
 			return "block.advancedrocketry.blackholegenerator";
 		}
-		public int getPowerMadeLastTick() {
-			return powerMadeLastTick;
-		}
 
 		@Override
 		public void onInventoryUpdated() {
@@ -136,16 +117,12 @@ public class TileBlackHoleGenerator extends TileMultiPowerProducer implements IT
 			attemptFire();
 		}
 
-		private ItemStack consumeItem()
-		{
-			for (IInventory i : getItemInPorts())
-			{
-				for(int slot = 0; slot < i.getSizeInventory(); slot++)
-				{
+		private ItemStack consumeItem() {
+			for (IInventory i : getItemInPorts()) {
+				for(int slot = 0; slot < i.getSizeInventory(); slot++) {
 					ItemStack stack = i.getStackInSlot(slot);
 
-					if(!stack.isEmpty())
-					{
+					if(!stack.isEmpty()) {
 						return i.decrStackSize(slot, 1);
 					}
 				}
@@ -153,8 +130,7 @@ public class TileBlackHoleGenerator extends TileMultiPowerProducer implements IT
 			return ItemStack.EMPTY;
 		}
 
-		private int getTimeFromStack(ItemStack stack)
-		{
+		private int getTimeFromStack(ItemStack stack) {
 			for(Entry<ItemStack, Integer>  i : ARConfiguration.getCurrentConfig().blackHoleGeneratorBlocks.entrySet()) {
 				if(i.getKey().getItem() == stack.getItem() && i.getKey().getDamage() == stack.getDamage())
 					return i.getValue();
@@ -162,13 +138,11 @@ public class TileBlackHoleGenerator extends TileMultiPowerProducer implements IT
 			return ARConfiguration.getCurrentConfig().defaultItemTimeBlackHole.get();
 		}
 
-		private void attemptFire()
-		{
+		private void attemptFire() {
 			if(enabled && isAroundBlackHole()) {
 				if(last_usage <= this.world.getGameTime() && !isEnergyFull()) {
 					ItemStack stack = consumeItem();
-					if(!stack.isEmpty())
-					{
+					if(!stack.isEmpty()) {
 						last_usage = this.world.getGameTime() + getTimeFromStack(stack);
 					}
 				}
@@ -184,15 +158,11 @@ public class TileBlackHoleGenerator extends TileMultiPowerProducer implements IT
 			return powerMadeLastTick > 0;
 		}
 
-		private boolean isAroundBlackHole()
-		{
-
-			if(ARConfiguration.GetSpaceDimId().equals(ZUtils.getDimensionIdentifier(world)))
-			{
-				ISpaceObject obj = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(this.pos);
-				if(obj != null)
-				{
-					DimensionProperties properties = (DimensionProperties) obj.getProperties().getParentProperties();
+		private boolean isAroundBlackHole() {
+			if(DimensionManager.spaceId.equals(ZUtils.getDimensionIdentifier(world))) {
+				ISpaceObject spaceObject = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(this.pos);
+				if(spaceObject != null) {
+					DimensionProperties properties = (DimensionProperties) spaceObject.getProperties().getParentProperties();
 					return properties != null && (properties.isStar() && properties.getStarData().isBlackHole());
 				}
 			}
@@ -202,21 +172,14 @@ public class TileBlackHoleGenerator extends TileMultiPowerProducer implements IT
 
 		@Override
 		public void tick() {
-
-			if(!initialCheck && !world.isRemote) {
-				completeStructure = attemptCompleteStructure(world.getBlockState(pos));
-				onInventoryUpdated();
-				initialCheck = true;
-			}
+			super.tick();
 
 			if(!isComplete())
 				return;
 
 			if(!world.isRemote) {
-				if(isAroundBlackHole())
-				{
-					float energyRecieved = 0;
-
+				if(isAroundBlackHole()) {
+					float energyRecieved;
 
 					//Check to see if we're ready for another injection
 					attemptFire();
@@ -227,7 +190,6 @@ public class TileBlackHoleGenerator extends TileMultiPowerProducer implements IT
 					if(powerMadeLastTick != prevPowerMadeLastTick) {
 						prevPowerMadeLastTick = powerMadeLastTick;
 						PacketHandler.sendToNearby(new PacketMachine(this, (byte)1), world, pos, 128);
-
 					}
 					producePower(powerMadeLastTick);
 				}
@@ -242,7 +204,6 @@ public class TileBlackHoleGenerator extends TileMultiPowerProducer implements IT
 		@Override
 		public SUpdateTileEntityPacket getUpdatePacket() {
 			CompoundNBT nbt = new CompoundNBT();
-			nbt.putBoolean("canRender", canRender);
 			nbt.putInt("amtPwr", powerMadeLastTick);
 			writeNetworkData(nbt);
 			return new SUpdateTileEntityPacket(pos, 0, nbt);
@@ -252,7 +213,6 @@ public class TileBlackHoleGenerator extends TileMultiPowerProducer implements IT
 		public void onDataPacket(NetworkManager net, SUpdateTileEntityPacket pkt) {
 			CompoundNBT nbt = pkt.getNbtCompound();
 
-			canRender = nbt.getBoolean("canRender");
 			powerMadeLastTick = nbt.getInt("amtPwr");
 			readNetworkData(nbt);
 		}
@@ -260,7 +220,6 @@ public class TileBlackHoleGenerator extends TileMultiPowerProducer implements IT
 		@Override
 		public CompoundNBT getUpdateTag() {
 			CompoundNBT nbt = new CompoundNBT();
-			nbt.putBoolean("canRender", canRender);
 			nbt.putInt("amtPwr", powerMadeLastTick);
 			write(nbt);
 			return nbt;
@@ -268,7 +227,6 @@ public class TileBlackHoleGenerator extends TileMultiPowerProducer implements IT
 
 		@Override
 		public void handleUpdateTag(BlockState state, CompoundNBT nbt) {
-			powerMadeLastTick = nbt.getInt("amtPwr");
 			canRender = nbt.getBoolean("canRender");
 			readNetworkData(nbt);
 		}
@@ -285,8 +243,7 @@ public class TileBlackHoleGenerator extends TileMultiPowerProducer implements IT
 		}
 
 		@Override
-		public void readDataFromNetwork(PacketBuffer in, byte packetId,
-				CompoundNBT nbt) {
+		public void readDataFromNetwork(PacketBuffer in, byte packetId, CompoundNBT nbt) {
 			super.readDataFromNetwork(in, packetId, nbt);	
 
 			if(packetId == 1) {
@@ -295,8 +252,7 @@ public class TileBlackHoleGenerator extends TileMultiPowerProducer implements IT
 		}
 
 		@Override
-		public void useNetworkData(PlayerEntity player, Dist side, byte id,
-				CompoundNBT nbt) {
+		public void useNetworkData(PlayerEntity player, Dist side, byte id, CompoundNBT nbt) {
 			super.useNetworkData(player, side, id, nbt);
 
 			if(id == 1) {

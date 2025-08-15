@@ -14,6 +14,7 @@ import zmaster587.advancedRocketry.api.ARConfiguration;
 import zmaster587.advancedRocketry.api.stations.ISpaceObject;
 import zmaster587.advancedRocketry.backwardCompat.ModelFormatException;
 import zmaster587.advancedRocketry.backwardCompat.WavefrontObject;
+import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.stations.SpaceStationObject;
 import zmaster587.advancedRocketry.tile.multiblock.TileWarpCore;
 import zmaster587.advancedRocketry.stations.SpaceObjectManager;
@@ -21,10 +22,11 @@ import zmaster587.libVulpes.block.RotatableBlock;
 import zmaster587.libVulpes.render.RenderHelper;
 import zmaster587.libVulpes.util.ZUtils;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
 public class RendererWarpCore extends TileEntityRenderer<TileWarpCore> {
 
 	public static WavefrontObject model;
-
 	ResourceLocation texture = new ResourceLocation("advancedrocketry","textures/models/warpcore.png");
 
 	//private final RenderItem dummyItem = Minecraft.getInstance().getRenderItem();
@@ -39,8 +41,8 @@ public class RendererWarpCore extends TileEntityRenderer<TileWarpCore> {
 	}
 
 	@Override
-	public void render(TileWarpCore tile, float partialTicks, MatrixStack matrix,
-			IRenderTypeBuffer buffer, int combinedLightIn, int combinedOverlayIn)  {
+	@ParametersAreNonnullByDefault
+	public void render(TileWarpCore tile, float partialTicks, MatrixStack matrix, IRenderTypeBuffer buffer, int combinedLightIn, int combinedOverlayIn)  {
 
 		if(!tile.canRender())
 			return;
@@ -65,8 +67,8 @@ public class RendererWarpCore extends TileEntityRenderer<TileWarpCore> {
 		matrix.pop();
 		
 		
-		if(ARConfiguration.GetSpaceDimId().equals(ZUtils.getDimensionIdentifier(tile.getWorld()))) {
-			
+		if(DimensionManager.spaceId.equals(ZUtils.getDimensionIdentifier(tile.getWorld()))) {
+
 			ISpaceObject obj = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(tile.getPos());
 			if(obj instanceof SpaceStationObject && ((SpaceStationObject)obj).getFuelAmount() > 50) {
 				IVertexBuilder entityTranslucentBuilder = buffer.getBuffer(RenderHelper.getTranslucentEntityModelRenderType(texture));

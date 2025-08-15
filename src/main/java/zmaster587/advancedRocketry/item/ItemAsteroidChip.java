@@ -3,11 +3,15 @@ package zmaster587.advancedRocketry.item;
 import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.World;
 import zmaster587.libVulpes.LibVulpes;
+
+import javax.annotation.Nonnull;
+import java.util.List;
 
 public class ItemAsteroidChip  extends ItemMultiData {
 
@@ -47,7 +51,7 @@ public class ItemAsteroidChip  extends ItemMultiData {
 		nbt.putLong(uuidIdentifier,uuid);
 		stack.setTag(nbt);
 	}
-	
+
 	public String getType(ItemStack stack) {
 		if(stack.hasTag())
 			return stack.getTag().getString(astType);
@@ -66,7 +70,7 @@ public class ItemAsteroidChip  extends ItemMultiData {
 	}
 
 	@Override
-	public void addInformation(ItemStack stack, World player, java.util.List list, ITooltipFlag bool) {
+	public void addInformation(@Nonnull ItemStack stack, World player, List<ITextComponent> list, ITooltipFlag bool) {
 
 		if(!stack.hasTag()) {
 			list.add(new TranslationTextComponent("msg.unprogrammed"));
@@ -74,7 +78,7 @@ public class ItemAsteroidChip  extends ItemMultiData {
 		else {
 			if(stack.getDamage()  == 0) {
 
-				list.add(new StringTextComponent(LibVulpes.proxy.getLocalizedString("msg.asteroidChip.asteroid") + "-" + TextFormatting.DARK_GREEN  + getUUID(stack)));
+				list.add(new StringTextComponent(LibVulpes.proxy.getLocalizedString("msg.asteroidchip.asteroid") + "-" + TextFormatting.DARK_GREEN  + getUUID(stack)));
 
 				super.addInformation(stack, player, list, bool);
 

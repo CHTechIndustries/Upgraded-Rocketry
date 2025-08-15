@@ -1,18 +1,5 @@
 package zmaster587.advancedRocketry.asm;
 
-
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.*;
-
-import zmaster587.advancedRocketry.AdvancedRocketry;
-
-import java.util.AbstractMap.SimpleEntry;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-
 /*public class ClassTransformer implements IClassTransformer {
 
 
@@ -63,7 +50,7 @@ import java.util.List;
 	private static final String FIELD_RIDINGENTITY = "net.minecraft.entity.Entity.ridingEntity";
 	private static final String FIELD_PROVIDER = CLASS_KEY_WORLD + "provider";
 
-	private static final HashMap<String, SimpleEntry<String, String>> entryMap = new HashMap<String, SimpleEntry<String, String>>();
+	private static final HashMap<String, SimpleEntry<String, String>> entryMap = new HashMap<>();
 
 
 
@@ -90,7 +77,10 @@ import java.util.List;
 		//entryMap.put(CLASS_KEY_ENTITYRENDERER, new SimpleEntry<String, String>("net/minecraft/client/renderer/EntityRenderer", "blt"));
 		entryMap.put(CLASS_KEY_ENTITYLIVEINGBASE, new SimpleEntry<String, String>("net/minecraft/entity/LivingEntity", "vp"));
 		//entryMap.put(CLASS_KEY_ENTITYLIVINGRENDERER, new SimpleEntry<String, String>("net/minecraft/client/renderer/entity/RendererLivingEntity", ""));
-		entryMap.put(CLASS_KEY_ENTITY, new SimpleEntry<String, String>("net/minecraft/entity/Entity","vg"));
+		entryMap.put(CLASS_KEY_ENTITY, new SimpleEntry<>("net/minecraft/entity/Entity", "vg"));
+		entryMap.put(CLASS_KEY_ENTITY_FALLING_BLOCK, new SimpleEntry<>("net/minecraft/entity/item/EntityFallingBlock", "ack"));
+		entryMap.put(CLASS_KEY_ENTITY_MINECART, new SimpleEntry<>("net/minecraft/entity/item/EntityMinecart", "afe"));
+		entryMap.put(CLASS_KEY_ENTITY_TNT, new SimpleEntry<>("net/minecraft/entity/item/EntityTNTPrimed", "acm"));
 		//entryMap.put(CLASS_KEY_ENTITY_PLAYER_SP, new SimpleEntry<String, String>("net/minecraft/client/entity/EntityPlayerSP",""));
 		entryMap.put(CLASS_KEY_ENTITY_PLAYER_MP, new SimpleEntry<String, String>("net/minecraft/entity/player/ServerPlayerEntity","oq"));
 		entryMap.put(CLASS_KEY_ENTITY_PLAYER, new SimpleEntry<String, String>("net/minecraft/entity/player/PlayerEntity","aed"));
@@ -118,13 +108,13 @@ import java.util.List;
 		//entryMap.put(METHOD_KEY_TRAVEL, new SimpleEntry<String, String>("travel","g"));
 		//entryMap.put(METHOD_KEY_MOVEFLYING, new SimpleEntry<String, String>("moveFlying",""));
 		//entryMap.put(METHOD_KEY_ONLIVINGUPDATE, new SimpleEntry<String, String>("onLivingUpdate","e"));
-		entryMap.put(METHOD_KEY_ONUPDATE, new SimpleEntry<String, String>("onUpdate","B_"));
+		entryMap.put(METHOD_KEY_ONUPDATE, new SimpleEntry<>("onUpdate", "B_"));
 		//entryMap.put(METHOD_KEY_MOUNTENTITY, new SimpleEntry<String, String>("mountEntity", "a"));
 		//entryMap.put(METHOD_KEY_JUMP, new SimpleEntry<String, String>("jump",""));
-		entryMap.put(METHOD_KEY_SETBLOCKSTATE, new SimpleEntry<String, String>("setBlockState", "a"));
+		entryMap.put(METHOD_KEY_SETBLOCKSTATE, new SimpleEntry<>("setBlockState", "a"));
 		//entryMap.put(METHOD_KEY_SETBLOCKMETADATAWITHNOTIFY, new SimpleEntry<String, String>("setBlockMetadataWithNotify", "a"));
-		entryMap.put(METHOD_KEY_SETUPTERRAIN, new SimpleEntry<String, String>("setupTerrain", "a"));
-		entryMap.put(METHOD_KEY_ONBLOCKACTIVATED, new SimpleEntry<String, String>("onBlockActivated", "a"));
+		entryMap.put(METHOD_KEY_SETUPTERRAIN, new SimpleEntry<>("setupTerrain", "a"));
+		entryMap.put(METHOD_KEY_ONBLOCKACTIVATED, new SimpleEntry<>("onBlockActivated", "a"));
 
 		//entryMap.put(FIELD_YAW, new SimpleEntry<String, String>("rotationYaw", "blt"));
 		//entryMap.put(FIELD_PITCH, new SimpleEntry <String, String>("rotationPitch", "blt"));
@@ -133,7 +123,7 @@ import java.util.List;
 		//entryMap.put(FIELD_PLAYERENTITY, new SimpleEntry<String, String>("playerEntity", ""));
 		//entryMap.put(FIELD_HASMOVED, new SimpleEntry<String, String>("hasMoved", ""));
 		//entryMap.put(FIELD_RIDINGENTITY, new SimpleEntry<String,String>("ridingEntity", "m"));
-		entryMap.put(FIELD_PROVIDER, new SimpleEntry<String,String>("provider", "s"));
+		entryMap.put(FIELD_PROVIDER, new SimpleEntry<>("provider", "s"));
 	}
 
 	@Override
@@ -584,12 +574,12 @@ import java.util.List;
 				final InsnList nodeAdd = new InsnList();
 
 				AbstractInsnNode pos1 = null;
-				AbstractInsnNode pos3 = null;
+				AbstractInsnNode pos3;
 				AbstractInsnNode pos2 = null;
 
 				int ifnull = 3;
 				int aload = 3;
-				int indexPos1 = 0;;
+				int indexPos1 = 0;
 
 				for(int i = setupTerrain.instructions.size() - 1; i >= 0; i--) {
 					AbstractInsnNode ain = setupTerrain.instructions.get(i);
@@ -641,7 +631,7 @@ import java.util.List;
 			if(onUpdate != null) {
 				final InsnList nodeAdd = new InsnList();
 				LabelNode label = new LabelNode();
-				AbstractInsnNode pos = null;
+				AbstractInsnNode pos;
 				AbstractInsnNode ain = null;
 				int numSpec = 1;
 				int numAload = 7;
@@ -684,7 +674,7 @@ import java.util.List;
 			if(onUpdate != null) {
 				final InsnList nodeAdd = new InsnList();
 				LabelNode label = new LabelNode();
-				AbstractInsnNode pos = null;
+				AbstractInsnNode pos;
 				AbstractInsnNode ain = null;
 				int numSpec = 1;
 				int numAload = 7;
@@ -723,52 +713,34 @@ import java.util.List;
 			return finishInjection(cn);
 		}
 
-		//Allows items to be affected by gravity
-		//Why isn't this handled by the onEntityUpdate call?
-		if(changedName.equals(getName(CLASS_KEY_ENTITY_ITEM))) {
+		//Allows things OTHER than living things to be affected by gravity
+		//Why isn't this handled by the onEntityUpdate call by default?
+		//Regardless, NONE of minecart || TNT || sand actually every _call_ their super, so we need to ASM all three
+		if(changedName.equals(getName(CLASS_KEY_ENTITY)) || changedName.equals(getName(CLASS_KEY_ENTITY_FALLING_BLOCK)) || changedName.equals(getName(CLASS_KEY_ENTITY_MINECART)) || changedName.equals(getName(CLASS_KEY_ENTITY_TNT))) {
 			ClassNode cn = startInjection(bytes);
 
 			MethodNode onUpdate = getMethod(cn, getName(METHOD_KEY_ONUPDATE), "()V");
 
 			if(onUpdate != null) {
 				final InsnList nodeAdd = new InsnList();
-				AbstractInsnNode pos = null;
-				List<AbstractInsnNode> removeNodes = new LinkedList<AbstractInsnNode>();
-				int numALoadsInARow = 0;
-				int firstALoadIndex = 0;
+				AbstractInsnNode pos;
+				int lastReturnIndex = 0;
 				AbstractInsnNode ain;
 
-				for(int i = 0; i < onUpdate.instructions.size(); i++) {
+				for(int i = 0; i <  onUpdate.instructions.size() ; i++) {
 					ain = onUpdate.instructions.get(i);
-					if(ain.getOpcode() == Opcodes.GETFIELD) {
-						if(numALoadsInARow == 0)
-							firstALoadIndex = i;
-						numALoadsInARow++;
-						if(numALoadsInARow == 2) {
-							pos = ain;
-							break;
-						}
+					if(ain.getOpcode() == Opcodes.ALOAD) {
+						lastReturnIndex = i;
+
+						break;
 					}
-					else
-						numALoadsInARow = 0;
 				}
-				int i = firstALoadIndex;
-				while((ain = onUpdate.instructions.get(--i)).getOpcode() != Opcodes.PUTFIELD);
 
-
-				while((ain = onUpdate.instructions.get(i--)).getOpcode() != Opcodes.ALOAD) {
-					removeNodes.add(ain);
-				}
-				removeNodes.add(ain);
-
-				pos = onUpdate.instructions.get(i);
-
-				for(AbstractInsnNode node : removeNodes)
-					onUpdate.instructions.remove(node);
+				pos = onUpdate.instructions.get(lastReturnIndex);
 
 				nodeAdd.add(new VarInsnNode(Opcodes.ALOAD, 0));
 				nodeAdd.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "zmaster587/advancedRocketry/util/GravityHandler", "applyGravity", "(L" + getName(CLASS_KEY_ENTITY) + ";)V", false));
-				onUpdate.instructions.insert(pos, nodeAdd);
+				onUpdate.instructions.insertBefore(pos, nodeAdd);
 			}
 
 			return finishInjection(cn);

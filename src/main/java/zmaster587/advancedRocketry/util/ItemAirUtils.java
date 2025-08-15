@@ -1,16 +1,19 @@
 package zmaster587.advancedRocketry.util;
 
-import net.minecraft.enchantment.Enchantment;
 import net.minecraft.inventory.EquipmentSlotType;
 import net.minecraft.item.ArmorItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.nbt.ListNBT;
-import zmaster587.advancedRocketry.api.AdvancedRocketryAPI;
+import net.minecraft.util.ResourceLocation;
 import zmaster587.advancedRocketry.api.ARConfiguration;
+import zmaster587.advancedRocketry.api.AdvancedRocketryAPI;
 import zmaster587.advancedRocketry.api.IAtmosphere;
 import zmaster587.advancedRocketry.api.armor.IFillableArmor;
 import zmaster587.advancedRocketry.api.armor.IProtectiveArmor;
+
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
 
 public class ItemAirUtils implements IFillableArmor {
 
@@ -22,7 +25,7 @@ public class ItemAirUtils implements IFillableArmor {
 	 * @return the amount of air in the stack
 	 */
 	@Override
-	public int getAirRemaining(ItemStack stack) {
+	public int getAirRemaining(@Nonnull ItemStack stack) {
 
 		if(stack.hasTag()) {
 			return stack.getTag().getInt("air");
@@ -60,7 +63,7 @@ public class ItemAirUtils implements IFillableArmor {
 	 * @return The amount of air extracted from the suit
 	 */
 	@Override
-	public int decrementAir(ItemStack stack, int amt) {
+	public int decrementAir(@Nonnull ItemStack stack, int amt) {
 
 		CompoundNBT nbt;
 		if(stack.hasTag()) {
@@ -85,7 +88,7 @@ public class ItemAirUtils implements IFillableArmor {
 	 * @return The amount of air inserted into the suit
 	 */
 	@Override
-	public int increment(ItemStack stack, int amt) {
+	public int increment(@Nonnull ItemStack stack, int amt) {
 
 		CompoundNBT nbt;
 		if(stack.hasTag()) {
@@ -107,13 +110,13 @@ public class ItemAirUtils implements IFillableArmor {
 	 * @return the maximum amount of air allowed in this suit
 	 */
 	@Override
-	public int getMaxAir(ItemStack stack) {
+	public int getMaxAir(@Nonnull ItemStack stack) {
 
 		return ARConfiguration.getCurrentConfig().spaceSuitOxygenTime.get()*1200; //30 minutes;
 	}
 
-	public boolean isStackValidAirContainer(ItemStack stack) {
-		if(stack == null)
+	public boolean isStackValidAirContainer(@Nonnull ItemStack stack) {
+		if(stack.isEmpty())
 			return false;
 
 		//Check for enchantment
@@ -122,7 +125,7 @@ public class ItemAirUtils implements IFillableArmor {
 		if(enchList != null) {
 			for(int i = 0 ; i < enchList.size(); i++) {
 				CompoundNBT compound = enchList.getCompound(i);
-				isEnchanted = Enchantment.getEnchantmentByID(compound.getShort("id"))== (AdvancedRocketryAPI.enchantmentSpaceProtection);
+				isEnchanted = AdvancedRocketryAPI.enchantmentSpaceProtection.getRegistryName().equals(ResourceLocation.tryCreate(compound.getString("id")));
 				if(isEnchanted)
 					break;
 			}
@@ -133,39 +136,39 @@ public class ItemAirUtils implements IFillableArmor {
 	public static class ItemAirWrapper implements IFillableArmor, IProtectiveArmor {
 		ItemStack stack;
 		
-		public ItemAirWrapper(ItemStack myStack) {
+		public ItemAirWrapper(@Nonnull ItemStack myStack) {
 			stack = myStack;
 		}
 
 		@Override
-		public int getAirRemaining(ItemStack stack) {
+		public int getAirRemaining(@Nonnull ItemStack stack) {
 			return ItemAirUtils.INSTANCE.getAirRemaining(this.stack);
 		}
 
 		@Override
-		public void setAirRemaining(ItemStack stack, int amt) {
+		public void setAirRemaining(@Nonnull ItemStack stack, int amt) {
 			ItemAirUtils.INSTANCE.setAirRemaining(this.stack,amt);
 		}
 
 		@Override
-		public int decrementAir(ItemStack stack, int amt) {
+		public int decrementAir(@Nonnull ItemStack stack, int amt) {
 			return ItemAirUtils.INSTANCE.decrementAir(this.stack, amt);
 		}
 
 		@Override
-		public int increment(ItemStack stack, int amt) {
+		public int increment(@Nonnull ItemStack stack, int amt) {
 			return ItemAirUtils.INSTANCE.increment(this.stack, amt);
 		}
 
 		@Override
-		public int getMaxAir(ItemStack stack) {
+		public int getMaxAir(@Nonnull ItemStack stack) {
 			return ItemAirUtils.INSTANCE.getMaxAir(this.stack);
 		}
 
 		@Override
-		public boolean protectsFromSubstance(IAtmosphere atmosphere,
-				ItemStack stack, boolean commitProtection) {
-			if(stack != null && stack.getItem() instanceof ArmorItem) {
+		@ParametersAreNonnullByDefault
+		public boolean protectsFromSubstance(IAtmosphere atmosphere, ItemStack stack, boolean commitProtection) {
+			if(stack.getItem() instanceof ArmorItem) {
 				if(((ArmorItem) stack.getItem()).getEquipmentSlot() == EquipmentSlotType.CHEST )
 					return decrementAir(stack, 1) == 1;
 				

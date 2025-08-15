@@ -1,75 +1,36 @@
 package zmaster587.advancedRocketry.entity;
 
-import java.util.LinkedList;
-import java.util.ListIterator;
-
-import io.netty.buffer.ByteBuf;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MoverType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.nbt.ListNBT;
 import net.minecraft.network.IPacket;
 import net.minecraft.network.PacketBuffer;
-import net.minecraft.network.datasync.DataParameter;
-import net.minecraft.network.datasync.DataSerializers;
-import net.minecraft.network.datasync.EntityDataManager;
-import net.minecraft.network.play.server.SSpawnObjectPacket;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ActionResultType;
 import net.minecraft.util.DamageSource;
-import net.minecraft.util.Direction;
 import net.minecraft.util.Hand;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.common.MinecraftForge;
-import zmaster587.advancedRocketry.AdvancedRocketry;
+import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
+import net.minecraftforge.fml.network.NetworkHooks;
 import zmaster587.advancedRocketry.api.AdvancedRocketryItems;
-import zmaster587.advancedRocketry.api.ARConfiguration;
 import zmaster587.advancedRocketry.api.AdvancedRocketryEntities;
-import zmaster587.advancedRocketry.api.IInfrastructure;
-import zmaster587.advancedRocketry.api.RocketEvent;
-import zmaster587.advancedRocketry.api.fuel.FuelRegistry.FuelType;
-import zmaster587.advancedRocketry.api.stations.ISpaceObject;
-import zmaster587.advancedRocketry.client.SoundRocketEngine;
-import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.entity.EntityRocket.PacketType;
-import zmaster587.advancedRocketry.item.ItemPlanetIdentificationChip;
-import zmaster587.advancedRocketry.stations.SpaceObjectManager;
-import zmaster587.advancedRocketry.util.AudioRegistry;
-import zmaster587.advancedRocketry.util.StorageChunk;
-import zmaster587.libVulpes.LibVulpes;
 import zmaster587.libVulpes.interfaces.INetworkEntity;
-import zmaster587.libVulpes.inventory.GuiHandler;
 import zmaster587.libVulpes.network.PacketEntity;
 import zmaster587.libVulpes.network.PacketHandler;
 import zmaster587.libVulpes.network.PacketSpawnEntity;
 import zmaster587.libVulpes.util.EmbeddedInventory;
-import zmaster587.libVulpes.util.HashedBlockPosition;
-import zmaster587.libVulpes.util.Vector3F;
 
-public class EntityHoverCraft extends Entity implements IInventory, INetworkEntity {
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
 
-
-	public enum VehicleType {
-		submarine,
-		blimp
-	}
-
-	protected double speedMultiplier;
-	public boolean cruiseControl;
-	protected float fanLoc;
-	protected int freshBurnTime;
-	protected int currentBurnTime;
+public class EntityHoverCraft extends Entity implements IInventory, INetworkEntity, IEntityAdditionalSpawnData {
 	//Used to calculate rendering stuffs
 	protected EmbeddedInventory inv;
 	private boolean turningLeft, turningRight, turningUp, turningDownforWhat;
@@ -86,7 +47,7 @@ public class EntityHoverCraft extends Entity implements IInventory, INetworkEnti
 
 		//System.out.println(localBoundingBox);
 
-		this.setPosition(par2, par4 + (double)this.getYOffset(), par6);
+		this.setPosition(par2, par4 + this.getYOffset(), par6);
 		this.prevPosX = par2;
 		this.prevPosY = par4;
 		this.prevPosZ = par6;
@@ -112,14 +73,6 @@ public class EntityHoverCraft extends Entity implements IInventory, INetworkEnti
 	@Override
 	public void markDirty() {
 
-	}
-
-	public void updateRiderPosition()
-	{
-		if (!this.getPassengers().isEmpty())
-		{
-			
-		}
 	}
 
 	/**
@@ -149,7 +102,9 @@ public class EntityHoverCraft extends Entity implements IInventory, INetworkEnti
 	/**
 	 * First layer of player interaction
 	 */
+	@Nonnull
 	@Override
+	@ParametersAreNonnullByDefault
 	public ActionResultType processInitialInteract(PlayerEntity player, Hand hand)
 	{
 		if(this.getPassengers().isEmpty()/* || (this.riddenByEntity != null && this.riddenByEntity instanceof PlayerEntity && this.riddenByEntity != player)*/) {
@@ -159,14 +114,14 @@ public class EntityHoverCraft extends Entity implements IInventory, INetworkEnti
 		return ActionResultType.SUCCESS;
 	}
 	@Override
-	public boolean attackEntityFrom(DamageSource par1DamageSource, float par2)
+	public boolean attackEntityFrom(@Nonnull DamageSource par1DamageSource, float par2)
 	{
 		if(!this.world.isRemote && this.isAlive() && par1DamageSource.getImmediateSource() instanceof PlayerEntity && !this.getPassengers().contains(par1DamageSource.getImmediateSource()))
 		{
-			for(ItemStack i : getItemsDropOnDeath())
+			for(ItemStack stack : getItemsDropOnDeath())
 			{
-				if(i != null)
-					this.entityDropItem(i, 0.0F);
+				if(!stack.isEmpty())
+					this.entityDropItem(stack, 0.0F);
 			}
 
 			this.remove();
@@ -174,16 +129,10 @@ public class EntityHoverCraft extends Entity implements IInventory, INetworkEnti
 		}
 		return false;
 	}
-
-	@Override
-	public AxisAlignedBB getRenderBoundingBox() {
-		return super.getRenderBoundingBox();
-	}
 	
 	public ItemStack[] getItemsDropOnDeath()
 	{
-		ItemStack[] stack = { inv.getStackInSlot(0), new ItemStack(AdvancedRocketryItems.itemHovercraft) };
-		return stack;
+		return new ItemStack[]{ inv.getStackInSlot(0), new ItemStack(AdvancedRocketryItems.itemHovercraft) };
 	}
 
 	public float getMaxHeight()
@@ -191,19 +140,7 @@ public class EntityHoverCraft extends Entity implements IInventory, INetworkEnti
 		return 250;
 	}
 
-	public double getMaxVelocity()
-	{
-		return 0.75;
-	}
-
-	public double getMaxVerticalSpeed()
-	{
-		return 0.1D;
-	}
-
-
 	public double getMaxAcceleration() {
-		// TODO Auto-generated method stub
 		return 0.05D;
 	}
 
@@ -213,38 +150,40 @@ public class EntityHoverCraft extends Entity implements IInventory, INetworkEnti
 	}
 
 	@Override
+	@Nonnull
 	public ItemStack decrStackSize(int slot, int amt) {
 		return inv.decrStackSize(slot, amt);
 	}
 
 	@Override
+	@Nonnull
 	public ItemStack getStackInSlot(int i) {
 		return inv.getStackInSlot(i);
 	}
 
 	@Override
-	public void setInventorySlotContents(int slot, ItemStack itemstack) {
+	public void setInventorySlotContents(int slot, @Nonnull ItemStack itemstack) {
 		inv.setInventorySlotContents(slot, itemstack);
 	}
 	
 	public void onTurnRight(boolean state) {
 		turningRight = state;
-		PacketHandler.sendToServer(new PacketEntity((INetworkEntity) this, (byte)EntityRocket.PacketType.TURNUPDATE.ordinal()));
+		PacketHandler.sendToServer(new PacketEntity(this, (byte)EntityRocket.PacketType.TURNUPDATE.ordinal()));
 	}
 	
 	public void onTurnLeft(boolean state) {
 		turningLeft = state;
-		PacketHandler.sendToServer(new PacketEntity((INetworkEntity) this, (byte)EntityRocket.PacketType.TURNUPDATE.ordinal()));
+		PacketHandler.sendToServer(new PacketEntity(this, (byte)EntityRocket.PacketType.TURNUPDATE.ordinal()));
 	}
 	
 	public void onUp(boolean state) {
 		turningUp = state;
-		PacketHandler.sendToServer(new PacketEntity((INetworkEntity) this, (byte)EntityRocket.PacketType.TURNUPDATE.ordinal()));
+		PacketHandler.sendToServer(new PacketEntity(this, (byte)EntityRocket.PacketType.TURNUPDATE.ordinal()));
 	}
 	
 	public void onDown(boolean state) {
 		turningDownforWhat = state;
-		PacketHandler.sendToServer(new PacketEntity((INetworkEntity) this, (byte)EntityRocket.PacketType.TURNUPDATE.ordinal()));
+		PacketHandler.sendToServer(new PacketEntity(this, (byte)EntityRocket.PacketType.TURNUPDATE.ordinal()));
 	}
 
 	@Override
@@ -262,12 +201,14 @@ public class EntityHoverCraft extends Entity implements IInventory, INetworkEnti
 		
 		float friction = 0.9f;
 		float motionYMult = 1f;
-		
+
 		if (this.getPosY() > getMaxHeight()*1.1)
 			motionYMult = 0;
 		else if (this.getPosY() > getMaxHeight())
 			motionYMult *= 0.1;
-		
+
+		if (this.getRidingEntity() != null)
+		    this.getRidingEntity().fallDistance = 0;
 		
 		Vector3d newMotion = new Vector3d(friction*(motion.x + acc*MathHelper.sin(-yawAngle)), 
 				motionYMult*friction*( motion.y + (turningUp ? getMaxAcceleration() : 0) - (turningDownforWhat ? getMaxAcceleration() : 0)),
@@ -330,6 +271,7 @@ public class EntityHoverCraft extends Entity implements IInventory, INetworkEnti
 	}
 
 	@Override
+	@Nonnull
 	public ItemStack removeStackFromSlot(int index) {
 		return inv.removeStackFromSlot(index);
 	}
@@ -340,22 +282,25 @@ public class EntityHoverCraft extends Entity implements IInventory, INetworkEnti
 	}
 
 	@Override
+	@ParametersAreNonnullByDefault
 	public boolean isUsableByPlayer(PlayerEntity player) {
 		return false;
 	}
 
 	@Override
+	@ParametersAreNonnullByDefault
 	public void openInventory(PlayerEntity player) {
 		inv.openInventory(player);
 	}
 
 	@Override
+	@ParametersAreNonnullByDefault
 	public void closeInventory(PlayerEntity player) {
 		inv.closeInventory(player);
 	}
 
 	@Override
-	public boolean isItemValidForSlot(int index, ItemStack stack) {
+	public boolean isItemValidForSlot(int index, @Nonnull ItemStack stack) {
 		return inv.isItemValidForSlot(index, stack);
 	}
 
@@ -369,18 +314,32 @@ public class EntityHoverCraft extends Entity implements IInventory, INetworkEnti
 	}
 	
 	@Override
+	@ParametersAreNonnullByDefault
 	protected void readAdditional(CompoundNBT compound) {
 		inv.readFromNBT(compound);
 	}
-	
 
 	@Override
+	@ParametersAreNonnullByDefault
 	protected void writeAdditional(CompoundNBT compound) {
 		inv.write(compound);
 	}
 
+	@Nonnull
 	@Override
 	public IPacket<?> createSpawnPacket() {
-		return new PacketSpawnEntity(this);
+		return NetworkHooks.getEntitySpawningPacket(this);
+	}
+
+	@Override
+	public void writeSpawnData(PacketBuffer buffer) {
+		new PacketSpawnEntity(this).write(buffer);	
+	}
+
+	@Override
+	public void readSpawnData(PacketBuffer additionalData) {
+		PacketSpawnEntity packet = new PacketSpawnEntity();
+		packet.read(additionalData);
+		packet.execute(this);
 	}
 }

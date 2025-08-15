@@ -4,12 +4,9 @@ import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.client.renderer.WorldRenderer;
 import net.minecraft.client.renderer.tileentity.TileEntityRenderer;
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Direction;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.vector.Quaternion;
-
-import org.lwjgl.opengl.GL11;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
@@ -20,11 +17,12 @@ import zmaster587.advancedRocketry.tile.multiblock.TileObservatory;
 import zmaster587.libVulpes.block.RotatableBlock;
 import zmaster587.libVulpes.render.RenderHelper;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
 public class RendererObservatory  extends TileEntityRenderer<TileObservatory> {
 
 	WavefrontObject model;
-
-	ResourceLocation texture = new ResourceLocation("advancedrocketry","textures/models/t1observatory.png");
+	ResourceLocation texture = new ResourceLocation("advancedrocketry","textures/models/observatory.png");
 
 	public RendererObservatory(TileEntityRendererDispatcher tile) {
 		super(tile);
@@ -36,8 +34,8 @@ public class RendererObservatory  extends TileEntityRenderer<TileObservatory> {
 	}
 	
 	@Override
-	public void render(TileObservatory tile, float partialTicks, MatrixStack matrix,
-			IRenderTypeBuffer buffer, int combinedLightIn, int combinedOverlayIn)  {
+	@ParametersAreNonnullByDefault
+	public void render(TileObservatory tile, float partialTicks, MatrixStack matrix, IRenderTypeBuffer buffer, int combinedLightIn, int combinedOverlayIn)  {
 
 		if(!tile.canRender())
 			return;
@@ -71,12 +69,12 @@ public class RendererObservatory  extends TileEntityRenderer<TileObservatory> {
 			model.tessellatePart(matrix, combinedLightIn, combinedOverlayIn,  entityTransparentBuilder, "Axis");
 
 			matrix.push();
-			matrix.translate(0, 0, -offset);
+			matrix.translate(0, 0, -offset* 1.125f);
 			model.renderOnly(matrix, combinedLightIn, combinedOverlayIn, entityTransparentBuilder, "CasingXMinus");
 			matrix.pop();
 
 			matrix.push();
-			matrix.translate(0,0,offset);
+			matrix.translate(0,0,offset * 1.125f);
 			model.renderOnly(matrix, combinedLightIn, combinedOverlayIn, entityTransparentBuilder, "CasingXPlus");
 			matrix.pop();
 

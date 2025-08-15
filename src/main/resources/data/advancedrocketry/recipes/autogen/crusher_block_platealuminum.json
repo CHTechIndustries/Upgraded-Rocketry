@@ -1,0 +1,18 @@
+{
+"type": "advancedrocketry:smallplatepress",
+    "itemingredients":
+    [
+        
+        {
+            "tag": "forge:storage_blocks/aluminum"
+        }
+    ],
+    "time": 300,
+    "energy": 20,
+    "itemresults":
+    {
+            "tag":
+"forge:plates/aluminum",
+            "count": 4
+    }
+}

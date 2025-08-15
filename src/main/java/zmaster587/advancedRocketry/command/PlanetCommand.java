@@ -25,19 +25,18 @@ import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.fml.server.ServerLifecycleHooks;
-import zmaster587.advancedRocketry.api.ARConfiguration;
 import zmaster587.advancedRocketry.api.AdvancedRocketryItems;
+import zmaster587.advancedRocketry.api.Constants;
 import zmaster587.advancedRocketry.api.DataStorage.DataType;
 import zmaster587.advancedRocketry.api.dimension.solar.StellarBody;
 import zmaster587.advancedRocketry.api.stations.ISpaceObject;
 import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.dimension.DimensionProperties;
-import zmaster587.advancedRocketry.item.ItemData;
+import zmaster587.advancedRocketry.item.ItemDataChip;
 import zmaster587.advancedRocketry.item.ItemMultiData;
 import zmaster587.advancedRocketry.item.ItemStationChip;
 import zmaster587.advancedRocketry.network.PacketDimInfo;
 import zmaster587.advancedRocketry.stations.SpaceObjectManager;
-import zmaster587.advancedRocketry.world.util.TeleporterNoPortalSeekBlock;
 import zmaster587.libVulpes.network.PacketHandler;
 import zmaster587.libVulpes.util.HashedBlockPosition;
 import zmaster587.libVulpes.util.ZUtils;
@@ -47,76 +46,76 @@ public class PlanetCommand {
 	public static void register(CommandDispatcher<CommandSource> dispatcher) {
 		
 
-		dispatcher.register(Commands.literal("advRocketry").then(Commands.literal("planet")
-				.executes((value) -> { return commandPlanetHelp(value.getSource()); } )
-				.then(Commands.literal("reset").executes((value) -> { return commandPlanetReset(value.getSource(), null); } )
-				.then(Commands.argument("dim", DimensionArgument.getDimension())).executes((value) -> { return commandPlanetReset(value.getSource(), DimensionArgument.getDimensionArgument(value, "dim")); } ) )
+		dispatcher.register(Commands.literal("advancedrocketry").then(Commands.literal("planet")
+				.executes((value) -> commandPlanetHelp(value.getSource()))
+				.then(Commands.literal("reset").executes((value) -> commandPlanetReset(value.getSource(), null))
+				.then(Commands.argument("dim", DimensionArgument.getDimension())).executes((value) -> commandPlanetReset(value.getSource(), DimensionArgument.getDimensionArgument(value, "dim"))) )
 				
-				.then(Commands.literal("list").executes((value) -> {return commandPlanetList(value.getSource()); } ))
+				.then(Commands.literal("list").executes((value) -> commandPlanetList(value.getSource())))
 				
-				.then(Commands.literal("delete").then(Commands.argument("dim", DimensionArgument.getDimension()).executes((value) -> { return commandPlanetDelete(value.getSource(), DimensionArgument.getDimensionArgument(value, "dim")); } )) )
+				.then(Commands.literal("delete").then(Commands.argument("dim", DimensionArgument.getDimension()).executes((value) -> commandPlanetDelete(value.getSource(), DimensionArgument.getDimensionArgument(value, "dim")))) )
 				
 				
 				.then(Commands.literal("generate").then( Commands.literal("moon").then(Commands.argument("dim", DimensionArgument.getDimension())
 						// generate moon dim atm dist gravity
-						.then(Commands.argument("atm", IntegerArgumentType.integer(0)).then(Commands.argument("dist", IntegerArgumentType.integer(0)).then(Commands.argument("gravity", FloatArgumentType.floatArg(0)).executes((value) -> { return commandMoonGenerate(value.getSource(), false, null, DimensionArgument.getDimensionArgument(value, "dim"), IntegerArgumentType.getInteger(value, "atm"), IntegerArgumentType.getInteger(value, "dist"), IntegerArgumentType.getInteger(value, "grav")); } ) ) ) )
+						.then(Commands.argument("atm", IntegerArgumentType.integer(0)).then(Commands.argument("dist", IntegerArgumentType.integer(0)).then(Commands.argument("gravity", FloatArgumentType.floatArg(0)).executes((value) -> commandMoonGenerate(value.getSource(), false, null, DimensionArgument.getDimensionArgument(value, "dim"), IntegerArgumentType.getInteger(value, "atm"), IntegerArgumentType.getInteger(value, "dist"), IntegerArgumentType.getInteger(value, "grav"))) ) ) )
 						
 						// generate moon dim name atm dist gravity		
-						.then(Commands.argument("name", StringArgumentType.word()).then(Commands.argument("atm", IntegerArgumentType.integer(0)).then(Commands.argument("dist", IntegerArgumentType.integer(0)).then(Commands.argument("gravity", FloatArgumentType.floatArg(0)).executes((value) -> { return commandMoonGenerate(value.getSource(), false, StringArgumentType.getString(value, "name"), DimensionArgument.getDimensionArgument(value, "dim"), IntegerArgumentType.getInteger(value, "atm"), IntegerArgumentType.getInteger(value, "dist"), IntegerArgumentType.getInteger(value, "grav")); } ) ) )) )
+						.then(Commands.argument("name", StringArgumentType.word()).then(Commands.argument("atm", IntegerArgumentType.integer(0)).then(Commands.argument("dist", IntegerArgumentType.integer(0)).then(Commands.argument("gravity", FloatArgumentType.floatArg(0)).executes((value) -> commandMoonGenerate(value.getSource(), false, StringArgumentType.getString(value, "name"), DimensionArgument.getDimensionArgument(value, "dim"), IntegerArgumentType.getInteger(value, "atm"), IntegerArgumentType.getInteger(value, "dist"), IntegerArgumentType.getInteger(value, "grav"))) ) )) )
 						
 						.then(Commands.literal("gas")
 								// generate moon dim gas atm dist gravity
-								.then(Commands.argument("atm", IntegerArgumentType.integer(0)).then(Commands.argument("dist", IntegerArgumentType.integer(0)).then(Commands.argument("gravity", FloatArgumentType.floatArg(0)).executes((value) -> { return commandMoonGenerate(value.getSource(), true, null, DimensionArgument.getDimensionArgument(value, "dim"), IntegerArgumentType.getInteger(value, "atm"), IntegerArgumentType.getInteger(value, "dist"), IntegerArgumentType.getInteger(value, "grav")); } ) ) ) )
+								.then(Commands.argument("atm", IntegerArgumentType.integer(0)).then(Commands.argument("dist", IntegerArgumentType.integer(0)).then(Commands.argument("gravity", FloatArgumentType.floatArg(0)).executes((value) -> commandMoonGenerate(value.getSource(), true, null, DimensionArgument.getDimensionArgument(value, "dim"), IntegerArgumentType.getInteger(value, "atm"), IntegerArgumentType.getInteger(value, "dist"), IntegerArgumentType.getInteger(value, "grav"))) ) ) )
 						
 								// generate moon dim gas name atm dist gravity		
-								.then(Commands.argument("name", StringArgumentType.word()).then(Commands.argument("atm", IntegerArgumentType.integer(0)).then(Commands.argument("dist", IntegerArgumentType.integer(0)).then(Commands.argument("gravity", FloatArgumentType.floatArg(0)).executes((value) -> { return commandMoonGenerate(value.getSource(), true, StringArgumentType.getString(value, "name"), DimensionArgument.getDimensionArgument(value, "dim"), IntegerArgumentType.getInteger(value, "atm"), IntegerArgumentType.getInteger(value, "dist"), IntegerArgumentType.getInteger(value, "grav")); } ) )) )) )
+								.then(Commands.argument("name", StringArgumentType.word()).then(Commands.argument("atm", IntegerArgumentType.integer(0)).then(Commands.argument("dist", IntegerArgumentType.integer(0)).then(Commands.argument("gravity", FloatArgumentType.floatArg(0)).executes((value) -> commandMoonGenerate(value.getSource(), true, StringArgumentType.getString(value, "name"), DimensionArgument.getDimensionArgument(value, "dim"), IntegerArgumentType.getInteger(value, "atm"), IntegerArgumentType.getInteger(value, "dist"), IntegerArgumentType.getInteger(value, "grav"))) )) )) )
 						))
 						
 				.then(Commands.argument("starName", StarArgument.getStar())
 						// generate starId atm dist gravity
-						.then(Commands.argument("atm", IntegerArgumentType.integer(0)).then(Commands.argument("dist", IntegerArgumentType.integer(0)).then(Commands.argument("gravity", FloatArgumentType.floatArg(0)).executes((value) -> { return commandPlanetGenerate(value.getSource(), false, null, StarArgument.getStarArgument(value, "starName"), IntegerArgumentType.getInteger(value, "atm"), IntegerArgumentType.getInteger(value, "dist"), IntegerArgumentType.getInteger(value, "grav")); } ) ) ) )
+						.then(Commands.argument("atm", IntegerArgumentType.integer(0)).then(Commands.argument("dist", IntegerArgumentType.integer(0)).then(Commands.argument("gravity", FloatArgumentType.floatArg(0)).executes((value) -> commandPlanetGenerate(value.getSource(), false, null, StarArgument.getStarArgument(value, "starName"), IntegerArgumentType.getInteger(value, "atm"), IntegerArgumentType.getInteger(value, "dist"), IntegerArgumentType.getInteger(value, "grav"))) ) ) )
 						
 						// generate starId name atm dist gravity		
-						.then(Commands.argument("name", StringArgumentType.word()).then(Commands.argument("atm", IntegerArgumentType.integer(0)).then(Commands.argument("dist", IntegerArgumentType.integer(0)).then(Commands.argument("gravity", FloatArgumentType.floatArg(0)).executes((value) -> { return commandPlanetGenerate(value.getSource(), false, StringArgumentType.getString(value, "name"), StarArgument.getStarArgument(value, "starName"), IntegerArgumentType.getInteger(value, "atm"), IntegerArgumentType.getInteger(value, "dist"), IntegerArgumentType.getInteger(value, "grav")); } ) ) )) )
+						.then(Commands.argument("name", StringArgumentType.word()).then(Commands.argument("atm", IntegerArgumentType.integer(0)).then(Commands.argument("dist", IntegerArgumentType.integer(0)).then(Commands.argument("gravity", FloatArgumentType.floatArg(0)).executes((value) -> commandPlanetGenerate(value.getSource(), false, StringArgumentType.getString(value, "name"), StarArgument.getStarArgument(value, "starName"), IntegerArgumentType.getInteger(value, "atm"), IntegerArgumentType.getInteger(value, "dist"), IntegerArgumentType.getInteger(value, "grav"))) ) )) )
 						
 						// generate starId atm dist gravity
 						.then(Commands.literal("gas")
 								// generate starId gas atm dist gravity
-								.then(Commands.argument("atm", IntegerArgumentType.integer(0)).then(Commands.argument("dist", IntegerArgumentType.integer(0)).then(Commands.argument("gravity", FloatArgumentType.floatArg(0)).executes((value) -> { return commandPlanetGenerate(value.getSource(), true, null, StarArgument.getStarArgument(value, "starName"), IntegerArgumentType.getInteger(value, "atm"), IntegerArgumentType.getInteger(value, "dist"), IntegerArgumentType.getInteger(value, "grav")); } ) ) ) )
+								.then(Commands.argument("atm", IntegerArgumentType.integer(0)).then(Commands.argument("dist", IntegerArgumentType.integer(0)).then(Commands.argument("gravity", FloatArgumentType.floatArg(0)).executes((value) -> commandPlanetGenerate(value.getSource(), true, null, StarArgument.getStarArgument(value, "starName"), IntegerArgumentType.getInteger(value, "atm"), IntegerArgumentType.getInteger(value, "dist"), IntegerArgumentType.getInteger(value, "grav"))) ) ) )
 								
 								// generate starId gas name atm dist gravity	
-								.then(Commands.argument("name", StringArgumentType.word()).then(Commands.argument("atm", IntegerArgumentType.integer(0)).then(Commands.argument("dist", IntegerArgumentType.integer(0)).then(Commands.argument("gravity", FloatArgumentType.floatArg(0)).executes((value) -> { return commandPlanetGenerate(value.getSource(), true, StringArgumentType.getString(value, "name"), StarArgument.getStarArgument(value, "starName"), IntegerArgumentType.getInteger(value, "atm"), IntegerArgumentType.getInteger(value, "dist"), IntegerArgumentType.getInteger(value, "grav")); } ) ) )) )
+								.then(Commands.argument("name", StringArgumentType.word()).then(Commands.argument("atm", IntegerArgumentType.integer(0)).then(Commands.argument("dist", IntegerArgumentType.integer(0)).then(Commands.argument("gravity", FloatArgumentType.floatArg(0)).executes((value) -> commandPlanetGenerate(value.getSource(), true, StringArgumentType.getString(value, "name"), StarArgument.getStarArgument(value, "starName"), IntegerArgumentType.getInteger(value, "atm"), IntegerArgumentType.getInteger(value, "dist"), IntegerArgumentType.getInteger(value, "grav"))) ) )) )
 								)
 						))
 				// set varName value
-				.then(Commands.literal("set").then(Commands.argument("varName", ReflectionArgument.getReflected(DimensionProperties.class)).then(Commands.argument("value", StringArgumentType.word() ).executes((value) -> { return commandPlanetSet(value.getSource(), null, ReflectionArgument.getReflectionArgument(value, "varName", DimensionProperties.class), StringArgumentType.getString(value, "value")); } ) ) )
+				.then(Commands.literal("set").then(Commands.argument("varName", ReflectionArgument.getReflected(DimensionProperties.class)).then(Commands.argument("value", StringArgumentType.word() ).executes((value) -> commandPlanetSet(value.getSource(), null, ReflectionArgument.getReflectionArgument(value, "varName", DimensionProperties.class), StringArgumentType.getString(value, "value"))) ) )
 				
 						// set dim varName value
-						.then(Commands.argument("dim", DimensionArgument.getDimension()).then(Commands.argument("varName", ReflectionArgument.getReflected(DimensionProperties.class)).then(Commands.argument("value", StringArgumentType.word() ).executes((value) -> { return commandPlanetSet(value.getSource(), DimensionArgument.getDimensionArgument(value, "dim"), ReflectionArgument.getReflectionArgument(value, "varName", DimensionProperties.class), StringArgumentType.getString(value, "value")); } ) ) ) )
+						.then(Commands.argument("dim", DimensionArgument.getDimension()).then(Commands.argument("varName", ReflectionArgument.getReflected(DimensionProperties.class)).then(Commands.argument("value", StringArgumentType.word() ).executes((value) -> commandPlanetSet(value.getSource(), DimensionArgument.getDimensionArgument(value, "dim"), ReflectionArgument.getReflectionArgument(value, "varName", DimensionProperties.class), StringArgumentType.getString(value, "value"))) ) ) )
 						)
 				// get dimvarName
-				.then(Commands.literal("get").then(Commands.argument("varName", ReflectionArgument.getReflected(DimensionProperties.class)).executes((value) -> { return commandPlanetGet(value.getSource(), null, ReflectionArgument.getReflectionArgument(value, "varName", DimensionProperties.class)); } ))
+				.then(Commands.literal("get").then(Commands.argument("varName", ReflectionArgument.getReflected(DimensionProperties.class)).executes((value) -> commandPlanetGet(value.getSource(), null, ReflectionArgument.getReflectionArgument(value, "varName", DimensionProperties.class))))
 						// get dim varName
-						.then(Commands.argument("dim", DimensionArgument.getDimension()).then(Commands.argument("varName", ReflectionArgument.getReflected(DimensionProperties.class)).then(Commands.argument("value", StringArgumentType.word() ).executes((value) -> { return commandPlanetGet(value.getSource(), DimensionArgument.getDimensionArgument(value, "dim"), ReflectionArgument.getReflectionArgument(value, "varName", DimensionProperties.class)); } ) ) ))
+						.then(Commands.argument("dim", DimensionArgument.getDimension()).then(Commands.argument("varName", ReflectionArgument.getReflected(DimensionProperties.class)).then(Commands.argument("value", StringArgumentType.word() ).executes((value) -> commandPlanetGet(value.getSource(), DimensionArgument.getDimensionArgument(value, "dim"), ReflectionArgument.getReflectionArgument(value, "varName", DimensionProperties.class))) ) ))
 						)
-				.then(Commands.literal("delete").then(Commands.argument("dim", DimensionArgument.getDimension()).executes((value) -> {return commandPlanetDelete(value.getSource(), DimensionArgument.getDimensionArgument(value, "dim")); } ) ))
-				.then(Commands.literal("reset").then(Commands.argument("dim", DimensionArgument.getDimension()).executes((value) -> {return commandPlanetReset(value.getSource(), DimensionArgument.getDimensionArgument(value, "dim")); } ) ))
-				.then(Commands.literal("help").executes((value) -> {return commandPlanetHelp(value.getSource()); } ))
+				.then(Commands.literal("delete").then(Commands.argument("dim", DimensionArgument.getDimension()).executes((value) -> commandPlanetDelete(value.getSource(), DimensionArgument.getDimensionArgument(value, "dim"))) ))
+				.then(Commands.literal("reset").then(Commands.argument("dim", DimensionArgument.getDimension()).executes((value) -> commandPlanetReset(value.getSource(), DimensionArgument.getDimensionArgument(value, "dim"))) ))
+				.then(Commands.literal("help").executes((value) -> commandPlanetHelp(value.getSource())))
 				)
-				.then(Commands.literal("goto").then(Commands.argument("dim", DimensionArgument.getDimension()).executes((value -> {return commandGoto(value.getSource(), DimensionArgument.getDimensionArgument(value, "dim"));})))
-				.then(Commands.literal("station").then(Commands.argument("stationid", IntegerArgumentType.integer(1)).executes((value) -> {return commandGotoStation(value.getSource(), IntegerArgumentType.getInteger(value, "stationid"));} )))
+				.then(Commands.literal("goto").then(Commands.argument("dim", DimensionArgument.getDimension()).executes((value -> commandGoto(value.getSource(), DimensionArgument.getDimensionArgument(value, "dim")))))
+				.then(Commands.literal("station").then(Commands.argument("stationid", IntegerArgumentType.integer(1)).executes((value) -> commandGotoStation(value.getSource(), IntegerArgumentType.getInteger(value, "stationid")))))
 				)
 				// giveStation ID
-				.then(Commands.literal("giveStation").then(Commands.argument("stationId", StringArgumentType.string()).executes((value) -> { return commandGiveStation(value.getSource(), null, StringArgumentType.getString(value, "stationId"));})
+				.then(Commands.literal("giveStation").then(Commands.argument("stationId", StringArgumentType.string()).executes((value) -> commandGiveStation(value.getSource(), null, StringArgumentType.getString(value, "stationId")))
 				//giveStation ID player
-					.then(Commands.argument("player", EntityArgument.player()).executes((value) -> {return commandGiveStation(value.getSource(), EntityArgument.getPlayer(value, "player"), StringArgumentType.getString(value, "stationId")); } ))))
+					.then(Commands.argument("player", EntityArgument.player()).executes((value) -> commandGiveStation(value.getSource(), EntityArgument.getPlayer(value, "player"), StringArgumentType.getString(value, "stationId"))))))
 				
 				// filldata Type
-				.then(Commands.literal("fillData").then( Commands.argument("dataType", StringArgumentType.word()).executes( (value) -> { return commandFillData(value.getSource(), StringArgumentType.getString(value, "dataType"), -1); } )
+				.then(Commands.literal("fillData").then( Commands.argument("dataType", StringArgumentType.word()).executes( (value) -> commandFillData(value.getSource(), StringArgumentType.getString(value, "dataType"), -1))
 				// filldata type amount
-						.then(Commands.argument("amount", IntegerArgumentType.integer(0)).executes( (value) -> { return commandFillData(value.getSource(), StringArgumentType.getString(value, "dataType"), IntegerArgumentType.getInteger(value, "amount")); } ) )  ))
+						.then(Commands.argument("amount", IntegerArgumentType.integer(0)).executes( (value) -> commandFillData(value.getSource(), StringArgumentType.getString(value, "dataType"), IntegerArgumentType.getInteger(value, "amount"))) )  ))
 				// star stuff, good star lord there's a lot here, and more to come
-				.then(Commands.literal("star").then(Commands.literal("list").executes((value) -> {return commandListStars(value.getSource());}  ) ))
+				.then(Commands.literal("star").then(Commands.literal("list").executes((value) -> commandListStars(value.getSource())) ))
 				);
 	}
 	
@@ -144,13 +143,13 @@ public class PlanetCommand {
 	{
 		PlayerEntity player;
 		ResourceLocation stationId = new ResourceLocation(SpaceObjectManager.STATION_NAMESPACE, String.valueOf(stationIdStr));
-		ServerWorld world = ZUtils.getWorld(ARConfiguration.GetSpaceDimId());
+		ServerWorld world = ZUtils.getWorld(DimensionManager.spaceId);
 		if(sender.getEntity() != null && (player = (PlayerEntity) sender.getEntity()) != null) {
 			ISpaceObject object = SpaceObjectManager.getSpaceManager().getSpaceStation(stationId);
 
 			if(object != null) {
 				HashedBlockPosition vec = object.getSpawnLocation();
-				if(!ARConfiguration.GetSpaceDimId().equals(ZUtils.getDimensionIdentifier(player.world)))
+				if(!DimensionManager.spaceId.equals(ZUtils.getDimensionIdentifier(player.world)))
 					((ServerPlayerEntity) player).teleport(world, vec.x, vec.y, vec.z, 0, 0);
 				
 				player.setPositionAndUpdate(vec.x, vec.y, vec.z);
@@ -170,10 +169,10 @@ public class PlanetCommand {
 		
 		ItemStack stack;
 		if(sender.getEntity() != null ) {
-			stack = ((PlayerEntity)sender.asPlayer()).getHeldItem(Hand.MAIN_HAND);
+			stack = sender.asPlayer().getHeldItem(Hand.MAIN_HAND);
 
-			if(stack != null && stack.getItem() instanceof ItemData) {
-				ItemData item = (ItemData) stack.getItem();
+			if(!stack.isEmpty() && stack.getItem() instanceof ItemDataChip) {
+				ItemDataChip item = (ItemDataChip) stack.getItem();
 				int dataAmount = item.getMaxData(stack);
 				DataType dataType = null;
 
@@ -182,10 +181,10 @@ public class PlanetCommand {
 						dataType = DataType.valueOf(dataTypeStr.toUpperCase(Locale.ENGLISH));
 					} catch (IllegalArgumentException e) {
 						sender.sendFeedback(new StringTextComponent("Not a valid datatype"), false);
-						String value = "";
+						StringBuilder value = new StringBuilder();
 						for(DataType data : DataType.values())
 							if(!data.name().equals("UNDEFINED"))
-								value += data.name().toLowerCase() + ", ";
+								value.append(data.name().toLowerCase()).append(", ");
 
 						sender.sendFeedback(new StringTextComponent("Try " + value), false);
 
@@ -204,7 +203,7 @@ public class PlanetCommand {
 				}
 				sender.sendFeedback(new StringTextComponent("Data filled!"), false);
 			}
-			else if(stack != null && stack.getItem() instanceof ItemMultiData) {
+			else if(stack.isEmpty() && stack.getItem() instanceof ItemMultiData) {
 				ItemMultiData item = (ItemMultiData) stack.getItem();
 				int dataAmount = item.getMaxData(stack);
 				DataType dataType = null;
@@ -245,9 +244,8 @@ public class PlanetCommand {
 		return 0;
 	}
 	
-	private static int commandGiveStation(CommandSource sender, @Nullable PlayerEntity player, String stationIdStr)
-	{
-		ResourceLocation stationId = new ResourceLocation(stationIdStr);
+	private static int commandGiveStation(CommandSource sender, @Nullable PlayerEntity player, String stationIdStr) {
+		ResourceLocation stationId = new ResourceLocation(Constants.modId, stationIdStr);
 		if(player == null && sender.getEntity() != null)
 			try {
 				player = sender.asPlayer();
@@ -265,8 +263,7 @@ public class PlanetCommand {
 		return 0;
 	}
 
-	private static int commandPlanetDelete(CommandSource sender, ServerWorld world)
-	{
+	private static int commandPlanetDelete(CommandSource sender, ServerWorld world) {
 
 		ResourceLocation deletedDimId = ZUtils.getDimensionIdentifier(world);
 
@@ -367,7 +364,7 @@ public class PlanetCommand {
 				if(field.getType().isArray()) {
 
 					if(Float.TYPE == field.getType().getComponentType()) {
-						float var[] = (float[])field.get(properties);
+						float[] var = (float[])field.get(properties);
 
 						if(cmdString.length == var.length) {
 
@@ -384,7 +381,7 @@ public class PlanetCommand {
 					}
 
 					if(Integer.TYPE == field.getType().getComponentType()) {
-						int var[] = (int[])field.get(properties);
+						int[] var = (int[])field.get(properties);
 
 						if(cmdString.length == var.length) {
 

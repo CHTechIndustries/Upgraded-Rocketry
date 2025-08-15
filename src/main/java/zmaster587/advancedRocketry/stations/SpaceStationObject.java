@@ -2,7 +2,6 @@ package zmaster587.advancedRocketry.stations;
 
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.nbt.ListNBT;
-import net.minecraft.nbt.NBTTypes;
 import net.minecraft.nbt.StringNBT;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Direction;
@@ -10,7 +9,6 @@ import net.minecraft.util.Direction.Axis;
 import net.minecraft.util.Direction.AxisDirection;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.vector.Matrix4f;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants.NBT;
 import net.minecraftforge.fml.common.thread.EffectiveSide;
@@ -37,9 +35,9 @@ import zmaster587.libVulpes.network.PacketHandler;
 import zmaster587.libVulpes.util.HashedBlockPosition;
 import zmaster587.libVulpes.util.ZUtils;
 
+import javax.annotation.Nonnull;
 import java.util.*;
 import java.util.Map.Entry;
-
 
 public class SpaceStationObject implements ISpaceObject, IPlanetDefiner {
 	private int launchPosX, launchPosZ, posX, posZ;
@@ -55,22 +53,31 @@ public class SpaceStationObject implements ISpaceObject, IPlanetDefiner {
 	private Set<ResourceLocation> knownPlanetList;
 	private HashMap<HashedBlockPosition, String> dockingPoints;
 	private long transitionEta;
-	private Direction direction;
-	private double rotation[];
-	private double angularVelocity[];
+	private boolean isAnchored = false;
+	private double[] rotation;
+	private double[] angularVelocity;
 	private long lastTimeModification = 0;
 	private DimensionProperties properties;
 	public boolean hasWarpCores = false;
+	private Direction direction;
+
+	public int targetOrbitalDistance;
+	public int targetGravity;
+	public int[] targetRotationsPerHour;
 
 	public SpaceStationObject() {
 		properties = (DimensionProperties) zmaster587.advancedRocketry.dimension.DimensionManager.defaultSpaceDimensionProperties.clone();
-		spawnLocations = new LinkedList<StationLandingLocation>();
-		warpCoreLocation = new LinkedList<HashedBlockPosition>(); 
-		dockingPoints = new HashMap<HashedBlockPosition, String>();
+		orbitalDistance = 4.0f;
+		targetOrbitalDistance = 4;
+		targetRotationsPerHour = new int[]{0, 0, 0};
+		targetGravity = 10;
+		spawnLocations = new LinkedList<>();
+		warpCoreLocation = new LinkedList<>();
+		dockingPoints = new HashMap<>();
 		transitionEta = -1;
 		destinationDimId = DimensionManager.overworldProperties.getId();
 		created = false;
-		knownPlanetList = new HashSet<ResourceLocation>();
+		knownPlanetList = new HashSet<>();
 		angularVelocity = new double[3];
 		rotation = new double[3];
 	}
@@ -87,8 +94,16 @@ public class SpaceStationObject implements ISpaceObject, IPlanetDefiner {
 		created = true;
 	}
 
+	public boolean isWarping() {
+		return getOrbitingPlanetId() == SpaceObjectManager.WARPDIMID;
+	}
+
 	public long getTransitionTime() {
 		return transitionEta;
+	}
+
+	public void setTargetRotationsPerHour(int index, int rotations) {
+		targetRotationsPerHour[index] = rotations;
 	}
 
 	public void discoverPlanet(ResourceLocation pid) {
@@ -100,12 +115,20 @@ public class SpaceStationObject implements ISpaceObject, IPlanetDefiner {
 	 * @return dimension properties of the object
 	 */
 	@Override
+	@Nonnull
 	public DimensionProperties getProperties() {
 		return properties;
 	}
+	
+	/**
+	 * @return the insolation relative to Earth ground of the station - returns 0 for warping!
+	 */
+	public double getInsolationMultiplier() {
+		return (isWarping()) ? 0.0 : getOrbitingPlanet().getPeakInsolationMultiplierWithoutAtmosphere();
+	}
 
 	@OnlyIn(value=Dist.CLIENT)
-	public void setProperties(IDimensionProperties properties) {
+	public void setProperties(@Nonnull IDimensionProperties properties) {
 		this.properties = (DimensionProperties)properties;
 	}
 
@@ -142,6 +165,20 @@ public class SpaceStationObject implements ISpaceObject, IPlanetDefiner {
 			return Direction.NORTH;
 		return direction;
 	}
+
+	/**
+	 * @return if the object is anchored in place by anything
+	 */
+	@Override
+	public boolean isAnchored() {
+		return isAnchored;}
+
+	/**
+	 * Sets if the object is anchored or not
+	 */
+	@Override
+	public void setIsAnchored(boolean anchored) {isAnchored = anchored; }
+
 	/**
 	 * @return the altitude above the parent DIM the object currently is
 	 */
@@ -155,6 +192,22 @@ public class SpaceStationObject implements ISpaceObject, IPlanetDefiner {
 	public double getRotation(Direction dir) {
 
 		return (rotation[getIDFromDir(dir)] + getDeltaRotation(dir)*(getWorldTime() - lastTimeModification)) % (360D);
+	}
+
+	/**
+	 * @return whether the bottom of the station is facing the planet or not, this is if a laser would hit the planet at all if shined straight down
+	 */
+	public boolean isStationFacingPlanet () {
+		//They use 0 to 1.0 so we need to convert to that, and to to check angle <150 degrees
+		return Math.abs(rotation[0] - (int)rotation[0] - 0.5) > 0.40 && Math.abs(rotation[2] - (int)rotation[2] - 0.5) > 0.40;
+	}
+
+	/**
+	 * @return whether the station's current rotation would break the tether
+	 */
+	public boolean wouldStationBreakTether () {
+		//0.47 here is approximately between 10 and 15 degrees from the horizontal
+		return 0.47 > Math.abs(rotation[0] - (int)rotation[0] - 0.5) || 0.47 > Math.abs(rotation[2] - (int)rotation[2] - 0.5) || Math.abs(getDeltaRotation(Direction.UP)) > 0 || Math.abs(getDeltaRotation(Direction.NORTH)) > 0 || Math.abs(getDeltaRotation(Direction.EAST)) > 0;
 	}
 
 	private int getIDFromDir(Direction facing){
@@ -184,10 +237,12 @@ public class SpaceStationObject implements ISpaceObject, IPlanetDefiner {
 	 * @param rotation anglarVelocity of the station in degrees per tick
 	 */
 	public void setDeltaRotation(double rotation, Direction facing) {
-		this.rotation[getIDFromDir(facing)] = getRotation(facing);
-		this.lastTimeModification = getWorldTime();
+		if (!isAnchored()) {
+			this.rotation[getIDFromDir(facing)] = getRotation(facing);
+			this.lastTimeModification = getWorldTime();
 
-		this.angularVelocity[getIDFromDir(facing)] = rotation;
+			this.angularVelocity[getIDFromDir(facing)] = rotation;
+		}
 	}
 
 	public double getMaxRotationalAcceleration() {
@@ -250,7 +305,7 @@ public class SpaceStationObject implements ISpaceObject, IPlanetDefiner {
 		int stationCount = stations.size();
 		int myIndex = stations.indexOf(this);
 
-		float theta = myIndex*(360/stationCount);
+		float theta = myIndex*(360f/stationCount);
 
 		return new SpacePosition().getFromSpherical(properties.getRenderSizePlanetView()*2f, theta);
 	}
@@ -327,11 +382,8 @@ public class SpaceStationObject implements ISpaceObject, IPlanetDefiner {
 	public void setLandingPadAutoLandStatus(int x, int z, boolean status) {
 		HashedBlockPosition pos = new HashedBlockPosition(x, 0, z);
 
-		Iterator<StationLandingLocation> itr = spawnLocations.iterator();
-
-		while(itr.hasNext()) {
-			StationLandingLocation loc = itr.next();
-			if(loc.getPos().equals(pos))
+		for (StationLandingLocation loc : spawnLocations) {
+			if (loc.getPos().equals(pos))
 				loc.setAllowedForAutoLand(status);
 		}
 	}
@@ -365,21 +417,14 @@ public class SpaceStationObject implements ISpaceObject, IPlanetDefiner {
 	public void removeLandingPad(int x, int z) {
 		HashedBlockPosition pos = new HashedBlockPosition(x, 0, z);
 
-		Iterator<StationLandingLocation> itr = spawnLocations.iterator();
-
-		while(itr.hasNext()) {
-			StationLandingLocation loc = itr.next();
-			if(loc.getPos().equals(pos))
-				itr.remove();
-		}
+		spawnLocations.removeIf(loc -> loc.getPos().equals(pos));
 		//spawnLocations.remove(pos);
 	}
 
 	/**
 	 * Adds a docking location to the station
-	 * @param x
-	 * @param y
-	 * @param z
+	 * @param pos
+	 * @param str
 	 */
 	public void addDockingPosition(BlockPos pos, String str) {
 		HashedBlockPosition pos2 = new HashedBlockPosition(pos);
@@ -387,9 +432,7 @@ public class SpaceStationObject implements ISpaceObject, IPlanetDefiner {
 	}
 	/**
 	 * Removes a docking location from the station
-	 * @param x
-	 * @param y
-	 * @param z
+	 * @param pos
 	 */
 	public void removeDockingPosition(BlockPos pos) {
 		HashedBlockPosition pos2 = new HashedBlockPosition(pos);
@@ -433,7 +476,7 @@ public class SpaceStationObject implements ISpaceObject, IPlanetDefiner {
 	public StationLandingLocation getPadAtLocation(HashedBlockPosition pos) {
 		pos.y = 0;
 		for(StationLandingLocation loc : spawnLocations) {
-			if(loc.equals(pos))
+			if(loc.getPos().equals(pos))
 				return loc;
 		}
 		return null;
@@ -536,21 +579,21 @@ public class SpaceStationObject implements ISpaceObject, IPlanetDefiner {
 	 */
 	public void onModuleUnpack(IStorageChunk chunk) {
 
-		if(ZUtils.isWorldLoaded(ARConfiguration.GetSpaceDimId()) && ZUtils.getWorld(ARConfiguration.GetSpaceDimId()) == null)
-			ZUtils.initDimension(ARConfiguration.GetSpaceDimId());
-		World worldObj = ZUtils.getWorld(ARConfiguration.GetSpaceDimId());
+		if(ZUtils.isWorldLoaded(DimensionManager.spaceId) && ZUtils.getWorld(DimensionManager.spaceId) == null)
+			ZUtils.initDimension(DimensionManager.spaceId);
+		World worldObj = ZUtils.getWorld(DimensionManager.spaceId);
 		if(!created) {
 			chunk.pasteInWorld(worldObj, spawnLocation.x - chunk.getSizeX()/2, spawnLocation.y - chunk.getSizeY()/2, spawnLocation.z - chunk.getSizeZ()/2);
 
 			created = true;
-			setLaunchPos((int)posX, (int)posZ);
-			setPos((int)posX, (int)posZ);
+			setLaunchPos(posX, posZ);
+			setPos(posX, posZ);
 		}
 		else {
 			List<TileEntity> tiles = chunk.getTileEntityList();
-			List<String> targetIds = new LinkedList<String>();
-			List<TileEntity> myPoss = new LinkedList<TileEntity>();
-			HashedBlockPosition pos = null;
+			List<String> targetIds = new LinkedList<>();
+			List<TileEntity> myPoss = new LinkedList<>();
+			HashedBlockPosition pos;
 			TileDockingPort destTile = null;
 			TileDockingPort srcTile = null;
 
@@ -715,6 +758,7 @@ public class SpaceStationObject implements ISpaceObject, IPlanetDefiner {
 		nbt.putString("id", getId().toString());
 		nbt.putInt("launchposX", launchPosX);
 		nbt.putInt("launchposY", launchPosZ);
+		nbt.putBoolean("isAnchored", isAnchored);
 		nbt.putInt("posX", posX);
 		nbt.putInt("posY", posZ);
 		nbt.putBoolean("created", created);
@@ -724,6 +768,12 @@ public class SpaceStationObject implements ISpaceObject, IPlanetDefiner {
 		nbt.putInt("spawnZ", spawnLocation.z);
 		nbt.putString("destinationDimId", destinationDimId.toString());
 		nbt.putInt("fuel", fuelAmount);
+		nbt.putFloat("orbitalDistance", orbitalDistance);
+		nbt.putInt("targetOrbitalDistance", targetOrbitalDistance);
+		nbt.putInt("targetGravity", targetGravity);
+		nbt.putInt("targetRotationX", targetRotationsPerHour[0]);
+		nbt.putInt("targetRotationY", targetRotationsPerHour[1]);
+		nbt.putInt("targetRotationZ", targetRotationsPerHour[2]);
 		nbt.putDouble("rotationX", rotation[0]);
 		nbt.putDouble("rotationY", rotation[1]);
 		nbt.putDouble("rotationZ", rotation[2]);
@@ -780,10 +830,8 @@ public class SpaceStationObject implements ISpaceObject, IPlanetDefiner {
 	public void readFromNbt(CompoundNBT nbt) {
 		properties.readFromNBT(nbt);
 
-		if((int)orbitalDistance != properties.getParentOrbitalDistance())
-			orbitalDistance = properties.getParentOrbitalDistance();
-
 		destinationDimId = new ResourceLocation(nbt.getString("destinationDimId"));
+		isAnchored = nbt.getBoolean("isAnchored");
 		launchPosX = nbt.getInt("launchposX");
 		launchPosZ = nbt.getInt("launchposY");
 		posX = nbt.getInt("posX");
@@ -791,6 +839,12 @@ public class SpaceStationObject implements ISpaceObject, IPlanetDefiner {
 		created = nbt.getBoolean("created");
 		altitude = nbt.getInt("altitude");
 		fuelAmount = nbt.getInt("fuel");
+		orbitalDistance = nbt.getFloat("orbitalDistance");
+		targetOrbitalDistance = nbt.getInt("targetOrbitalDistance");
+		targetRotationsPerHour[0] = nbt.getInt("targetRotationX");
+		targetRotationsPerHour[1] = nbt.getInt("targetRotationY");
+		targetRotationsPerHour[2] = nbt.getInt("targetRotationZ");
+		targetGravity = nbt.getInt("targetGravity");
 		spawnLocation = new HashedBlockPosition(nbt.getInt("spawnX"), nbt.getInt("spawnY"), nbt.getInt("spawnZ"));
 		properties.setId(new ResourceLocation(nbt.getString("id")));
 		rotation[0] = nbt.getDouble("rotationX");
@@ -821,7 +875,7 @@ public class SpaceStationObject implements ISpaceObject, IPlanetDefiner {
 			StationLandingLocation loc = new StationLandingLocation(pos, tag.getString("name"));
 			spawnLocations.add(loc);
 			loc.setOccupied(tag.getBoolean("occupied"));
-			loc.setAllowedForAutoLand( tag.contains("occupied") ? tag.getBoolean("occupied") : true);
+			loc.setAllowedForAutoLand(!tag.contains("occupied") || tag.getBoolean("occupied"));
 		}
 
 		list = nbt.getList("warpCorePositions", NBT.TAG_COMPOUND);
@@ -862,9 +916,9 @@ public class SpaceStationObject implements ISpaceObject, IPlanetDefiner {
 
 	@Override
 	public void setOrbitalDistance(float finalVel) {
-		if((int)orbitalDistance != properties.getParentOrbitalDistance())
-			properties.setParentOrbitalDistance((int)orbitalDistance);
-		orbitalDistance = finalVel;
+		if (!isAnchored()) {
+			orbitalDistance = Math.max(4.0f, finalVel);
+		}
 	}
 
 	@Override

@@ -1,8 +1,6 @@
 package zmaster587.advancedRocketry.tile.multiblock;
 
-import io.netty.buffer.ByteBuf;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.IInventory;
@@ -13,27 +11,23 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Direction;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundCategory;
-import net.minecraft.util.Unit;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
-import net.minecraft.world.server.Ticket;
-import net.minecraft.world.server.TicketType;
 import net.minecraftforge.api.distmarker.Dist;
-import zmaster587.advancedRocketry.AdvancedRocketry;
 import zmaster587.advancedRocketry.api.AdvancedRocketryTileEntityType;
 import zmaster587.advancedRocketry.api.Constants;
+import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.entity.EntityItemAbducted;
 import zmaster587.advancedRocketry.util.AudioRegistry;
+import zmaster587.advancedRocketry.util.PlanetaryTravelHelper;
 import zmaster587.libVulpes.LibVulpes;
 import zmaster587.libVulpes.api.LibVulpesBlocks;
-import zmaster587.libVulpes.block.BlockMeta;
 import zmaster587.libVulpes.block.RotatableBlock;
 import zmaster587.libVulpes.interfaces.ILinkableTile;
 import zmaster587.libVulpes.inventory.modules.*;
@@ -45,73 +39,142 @@ import zmaster587.libVulpes.util.EmbeddedInventory;
 import zmaster587.libVulpes.util.ZUtils;
 import zmaster587.libVulpes.util.ZUtils.RedstoneState;
 
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.List;
 
 public class TileRailgun extends TileMultiPowerConsumer implements IInventory, ILinkableTile, IGuiCallback {
 	private EmbeddedInventory inv;
 	public long recoil;
-	int minStackTransferSize = 1;
-	ModuleNumericTextbox textBox;
-	RedstoneState state;
-	ModuleRedstoneOutputButton redstoneControl;
+	private int minStackTransferSize = 1;
+	private ModuleNumericTextbox textBox;
+	private RedstoneState state;
+	private ModuleRedstoneOutputButton redstoneControl;
 
-	public static final Object[][][] structure = {
-		{	{null, null, null, null, null}, 
-			{null, null, new ResourceLocation("forge", "coil/copper"), null, null},
-			{null, new ResourceLocation("forge", "coil/copper"), new ResourceLocation("forge", "coil/copper") , new ResourceLocation("forge", "coil/copper"), null},
-			{null, null, new ResourceLocation("forge", "coil/copper") , null, null},
-			{null, null, null, null, null}},
-
-			{	{null, null, null, null, null}, 
-				{null, null, new ResourceLocation("forge", "coil/copper") , null, null},
-				{null, new ResourceLocation("forge", "coil/copper"), Blocks.AIR , new ResourceLocation("forge", "coil/copper"), null},
-				{null, null, new ResourceLocation("forge", "coil/copper") , null, null},
-				{null, null, null, null, null}},
-
-				{	{null, null, null, null, null}, 
-					{null, null, new ResourceLocation("forge", "coil/copper") , null, null},
-					{null, new ResourceLocation("forge", "coil/copper"), Blocks.AIR , new ResourceLocation("forge", "coil/copper"), null},
-					{null, null, new ResourceLocation("forge", "coil/copper") , null, null},
-					{null, null, null, null, null}},
-
-					{	{null, null, null, null, null}, 
-						{null, null, new ResourceLocation("forge", "coil/copper") , null, null},
-						{null, new ResourceLocation("forge", "coil/copper"), Blocks.AIR , new ResourceLocation("forge", "coil/copper"), null},
-						{null, null, new ResourceLocation("forge", "coil/copper") , null, null},
-						{null, null, null, null, null}},
-
-						{	{null, null, null, null, null}, 
-							{null, null, new ResourceLocation("forge", "coil/copper") , null, null},
-							{null, new ResourceLocation("forge", "coil/copper"), Blocks.AIR , new ResourceLocation("forge", "coil/copper"), null},
-							{null, null, new ResourceLocation("forge", "coil/copper") , null, null},
-							{null, null, null, null, null}},
-
-
-							{	{null, null, null, null, null}, 
-								{null, null, new ResourceLocation("forge", "coil/copper") , null, null},
-								{null, new ResourceLocation("forge", "coil/copper"), Blocks.AIR , new ResourceLocation("forge", "coil/copper"), null},
-								{null, null, new ResourceLocation("forge", "coil/copper") , null, null},
-								{null, null, null, null, null}},
-
-								{	{null, null, null, null, null}, 
-									{null, null, new ResourceLocation("forge", "coil/copper") , null, null},
-									{null, new ResourceLocation("forge", "coil/copper"), Blocks.AIR , new ResourceLocation("forge", "coil/copper"), null},
-									{null, null, new ResourceLocation("forge", "coil/copper") , null, null},
-									{null, null, null, null, null}},
-
-									{	{'*', '*', '*', '*', '*'}, 
-										{'*', new ResourceLocation("forge", "block/titanium"), new ResourceLocation("forge", "block/titanium") , new ResourceLocation("forge", "block/titanium"), '*'},
-										{'*', new ResourceLocation("forge", "block/titanium"), new ResourceLocation("forge", "block/titanium") , new ResourceLocation("forge", "block/titanium"), '*'},
-										{'*', new ResourceLocation("forge", "block/titanium"), new ResourceLocation("forge", "block/titanium") , new ResourceLocation("forge", "block/titanium"), '*'},
-										{'*', '*', '*', '*', '*'}},
-
-										{{'*', '*', 'c', '*', '*'}, 
-											{'*', new ResourceLocation("forge", "block/titanium"), new ResourceLocation("forge", "block/titanium") , new ResourceLocation("forge", "block/titanium"), '*'},
-											{'*', new ResourceLocation("forge", "block/titanium"), new ResourceLocation("forge", "block/titanium") , new ResourceLocation("forge", "block/titanium"), '*'},
-											{'*', new ResourceLocation("forge", "block/titanium"), new ResourceLocation("forge", "block/titanium") , new ResourceLocation("forge", "block/titanium"), '*'},
-											{'*', '*', '*', '*', '*'}}
-
-	};
+	static final Object[][][] structure = new Object[][][]
+			{
+					{
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,new ResourceLocation("forge","coils/copper"),null,null,null,null},
+							{null,null,null,new ResourceLocation("forge","coils/copper"),LibVulpesBlocks.blockMachineStructure,new ResourceLocation("forge","coils/copper"),null,null,null},
+							{null,null,null,null,new ResourceLocation("forge","coils/copper"),null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null}
+					},
+					{
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,new ResourceLocation("forge","coils/copper"),null,null,null,null},
+							{null,null,null,new ResourceLocation("forge","coils/copper"),LibVulpesBlocks.blockMachineStructure,new ResourceLocation("forge","coils/copper"),null,null,null},
+							{null,null,null,null,new ResourceLocation("forge","coils/copper"),null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null}
+					},
+					{
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,new ResourceLocation("forge","coils/copper"),null,null,null,null},
+							{null,null,null,new ResourceLocation("forge","coils/copper"),LibVulpesBlocks.blockMachineStructure,new ResourceLocation("forge","coils/copper"),null,null,null},
+							{null,null,null,null,new ResourceLocation("forge","coils/copper"),null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null}
+					},
+					{
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,new ResourceLocation("forge","coils/copper"),null,null,null,null},
+							{null,null,null,new ResourceLocation("forge","coils/copper"),LibVulpesBlocks.blockMachineStructure,new ResourceLocation("forge","coils/copper"),null,null,null},
+							{null,null,null,null,new ResourceLocation("forge","coils/copper"),null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null}
+					},
+					{
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,new ResourceLocation("forge","coils/copper"),null,null,null,null},
+							{null,null,null,new ResourceLocation("forge","coils/copper"),LibVulpesBlocks.blockMachineStructure,new ResourceLocation("forge","coils/copper"),null,null,null},
+							{null,null,null,null,new ResourceLocation("forge","coils/copper"),null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null}
+					},
+					{
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,new ResourceLocation("forge","coils/copper"),null,null,null,null},
+							{null,null,null,new ResourceLocation("forge","coils/copper"),LibVulpesBlocks.blockMachineStructure,new ResourceLocation("forge","coils/copper"),null,null,null},
+							{null,null,null,null,new ResourceLocation("forge","coils/copper"),null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null}
+					},
+					{
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,new ResourceLocation("forge","coils/copper"),null,null,null,null},
+							{null,null,null,new ResourceLocation("forge","coils/copper"),LibVulpesBlocks.blockMachineStructure,new ResourceLocation("forge","coils/copper"),null,null,null},
+							{null,null,null,null,new ResourceLocation("forge","coils/copper"),null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null}
+					},
+					{
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,new ResourceLocation("forge","coils/copper"),null,null,null,null},
+							{null,null,null,new ResourceLocation("forge","coils/copper"),LibVulpesBlocks.blockMachineStructure,new ResourceLocation("forge","coils/copper"),null,null,null},
+							{null,null,null,null,new ResourceLocation("forge","coils/copper"),null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null}
+					},
+					{
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,new ResourceLocation("forge","coils/copper"),null,null,null,null},
+							{null,null,null,new ResourceLocation("forge","coils/copper"),LibVulpesBlocks.blockMachineStructure,new ResourceLocation("forge","coils/copper"),null,null,null},
+							{null,null,null,null,new ResourceLocation("forge","coils/copper"),null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null}
+					},
+					{
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,new ResourceLocation("forge","storage_blocks/steel"),null,null,null,null},
+							{null,null,null,LibVulpesBlocks.blockAdvancedMachineStructure,new ResourceLocation("forge","storage_blocks/titanium"),LibVulpesBlocks.blockAdvancedMachineStructure,null,null,null},
+							{null,null,new ResourceLocation("forge","storage_blocks/steel"),new ResourceLocation("forge","storage_blocks/titanium"),new ResourceLocation("forge","storage_blocks/titanium"),new ResourceLocation("forge","storage_blocks/titanium"),new ResourceLocation("forge","storage_blocks/steel"),null,null},
+							{null,null,null,LibVulpesBlocks.blockAdvancedMachineStructure,new ResourceLocation("forge","storage_blocks/titanium"),LibVulpesBlocks.blockAdvancedMachineStructure,null,null,null},
+							{null,null,null,null,new ResourceLocation("forge","storage_blocks/steel"),null,null,null,null},
+							{null,null,null,null,null,null,null,null,null},
+							{null,null,null,null,null,null,null,null,null}
+					},
+					{
+							{new ResourceLocation("forge","storage_blocks/steel"),null,null,new ResourceLocation("minecraft","slabs"),new ResourceLocation("minecraft","slabs"),new ResourceLocation("minecraft","slabs"),null,null,new ResourceLocation("forge","storage_blocks/steel")},
+							{null,LibVulpesBlocks.blockAdvancedMachineStructure,new ResourceLocation("minecraft","slabs"),'I','c','O',new ResourceLocation("minecraft","slabs"),LibVulpesBlocks.blockAdvancedMachineStructure,null},
+							{null,new ResourceLocation("minecraft","slabs"),LibVulpesBlocks.blockAdvancedMachineStructure,LibVulpesBlocks.blockAdvancedMachineStructure,LibVulpesBlocks.blockAdvancedMachineStructure,LibVulpesBlocks.blockAdvancedMachineStructure,LibVulpesBlocks.blockAdvancedMachineStructure,new ResourceLocation("minecraft","slabs"),null},
+							{new ResourceLocation("minecraft","slabs"),new ResourceLocation("minecraft","slabs"),LibVulpesBlocks.blockAdvancedMachineStructure,LibVulpesBlocks.blockAdvancedMachineStructure,LibVulpesBlocks.blockAdvancedMachineStructure,LibVulpesBlocks.blockAdvancedMachineStructure,LibVulpesBlocks.blockAdvancedMachineStructure,new ResourceLocation("minecraft","slabs"),new ResourceLocation("minecraft","slabs")},
+							{new ResourceLocation("minecraft","slabs"),new ResourceLocation("minecraft","slabs"),LibVulpesBlocks.blockAdvancedMachineStructure,LibVulpesBlocks.blockAdvancedMachineStructure,LibVulpesBlocks.motors,LibVulpesBlocks.blockAdvancedMachineStructure,LibVulpesBlocks.blockAdvancedMachineStructure,new ResourceLocation("minecraft","slabs"),new ResourceLocation("minecraft","slabs")},
+							{new ResourceLocation("minecraft","slabs"),new ResourceLocation("minecraft","slabs"),LibVulpesBlocks.blockAdvancedMachineStructure,LibVulpesBlocks.blockAdvancedMachineStructure,LibVulpesBlocks.blockAdvancedMachineStructure,LibVulpesBlocks.blockAdvancedMachineStructure,LibVulpesBlocks.blockAdvancedMachineStructure,new ResourceLocation("minecraft","slabs"),new ResourceLocation("minecraft","slabs")},
+							{null,new ResourceLocation("minecraft","slabs"),LibVulpesBlocks.blockAdvancedMachineStructure,LibVulpesBlocks.blockAdvancedMachineStructure,LibVulpesBlocks.blockAdvancedMachineStructure,LibVulpesBlocks.blockAdvancedMachineStructure,LibVulpesBlocks.blockAdvancedMachineStructure,new ResourceLocation("minecraft","slabs"),null},
+							{null,LibVulpesBlocks.blockAdvancedMachineStructure,new ResourceLocation("minecraft","slabs"),'P','P','P',new ResourceLocation("minecraft","slabs"),LibVulpesBlocks.blockAdvancedMachineStructure,null},
+							{new ResourceLocation("forge","storage_blocks/steel"),null,null,new ResourceLocation("minecraft","slabs"),new ResourceLocation("minecraft","slabs"),new ResourceLocation("minecraft","slabs"),null,null,new ResourceLocation("forge","storage_blocks/steel")}
+					}
+			};
 
 	public TileRailgun() {
 		super(AdvancedRocketryTileEntityType.TILE_RAILGUN);
@@ -133,13 +196,18 @@ public class TileRailgun extends TileMultiPowerConsumer implements IInventory, I
 		}
 		return super.requiredPowerPerTick();
 	}
+
+	@Override
+	public boolean shouldHideBlock(World world, BlockPos pos, BlockState tile) {
+		return true;
+	}
 	
 	/**
 	 * @return the destionation DIMID or Constants.INVALID_PLANET if not valid
 	 */
 	private ResourceLocation getDestDimId() {
 		ItemStack stack = inv.getStackInSlot(0);
-		if(stack != null && stack.getItem() instanceof ItemLinker) {
+		if(!stack.isEmpty() && stack.getItem() instanceof ItemLinker) {
 			return ItemLinker.getDimId(stack);
 		}
 		return Constants.INVALID_PLANET;
@@ -150,22 +218,10 @@ public class TileRailgun extends TileMultiPowerConsumer implements IInventory, I
 	 */
 	private BlockPos getDestPosition() {
 		ItemStack stack = inv.getStackInSlot(0);
-		if(stack != null && stack.getItem() instanceof ItemLinker && ItemLinker.isSet(stack)) {
+		if(!stack.isEmpty() && stack.getItem() instanceof ItemLinker && ItemLinker.isSet(stack)) {
 			return ItemLinker.getMasterCoords(stack);
 		}
 		return null;
-	}
-
-	@Override
-	public List<BlockMeta> getAllowableWildCardBlocks() {
-		List<BlockMeta> blocks = super.getAllowableWildCardBlocks();
-
-		blocks.addAll(getAllowableBlocks('P'));
-		blocks.addAll(getAllowableBlocks('I'));
-		blocks.addAll(getAllowableBlocks('O'));
-		blocks.add(new BlockMeta(LibVulpesBlocks.blockAdvStructureBlock));
-
-		return blocks;
 	}
 
 	@Override
@@ -190,16 +246,6 @@ public class TileRailgun extends TileMultiPowerConsumer implements IInventory, I
 		modules.add(redstoneControl);
 
 		return modules;
-	}
-
-	@Override
-	public void onLoad() {
-		super.onLoad();
-		if(!this.world.isRemote)
-		{
-			ServerWorld serverworld = (ServerWorld)world;
-			serverworld.forceChunk(new ChunkPos(getPos()).x, new ChunkPos(getPos()).z, true);
-		}
 	}
 
 	@Override
@@ -259,7 +305,7 @@ public class TileRailgun extends TileMultiPowerConsumer implements IInventory, I
 		if(world.isRemote)
 			return false;
 
-		ItemStack tfrStack = null;
+		ItemStack tfrStack = ItemStack.EMPTY;
 		IInventory inv2 = null;
 		int index = 0;
 		//BlockPos invPos;
@@ -267,7 +313,7 @@ public class TileRailgun extends TileMultiPowerConsumer implements IInventory, I
 		out:
 			for(IInventory inv : this.itemInPorts) {
 				for(int i = inv.getSizeInventory() - 1; i >= 0 ; i--) {
-					if((tfrStack = inv.getStackInSlot(i)) != null && inv.getStackInSlot(i).getCount() >= minStackTransferSize) {
+					if(!(tfrStack = inv.getStackInSlot(i)).isEmpty() && inv.getStackInSlot(i).getCount() >= minStackTransferSize) {
 						inv2 = inv;
 						index = i;
 
@@ -275,11 +321,11 @@ public class TileRailgun extends TileMultiPowerConsumer implements IInventory, I
 
 						break out;
 					}
-					else tfrStack = null;
+					else tfrStack = ItemStack.EMPTY;
 				}
 			}
 
-		if(tfrStack != null) {
+		if(!tfrStack.isEmpty()) {
 			BlockPos pos = getDestPosition();
 			if(pos != null) {
 				ResourceLocation dimId;
@@ -290,12 +336,12 @@ public class TileRailgun extends TileMultiPowerConsumer implements IInventory, I
 					World world = ZUtils.getWorld(dimId);
 					TileEntity tile;
 
-					if(world != null && (tile = world.getTileEntity(pos)) instanceof TileRailgun && ((TileRailgun)tile).canRecieveCargo(tfrStack) &&
-							(zmaster587.advancedRocketry.dimension.DimensionManager.getInstance().areDimensionsInSamePlanetMoonSystem(ZUtils.getDimensionIdentifier(this.world),
-									zmaster587.advancedRocketry.dimension.DimensionManager.getEffectiveDimId(world, pos).getId()) ||
-									zmaster587.advancedRocketry.dimension.DimensionManager.getEffectiveDimId(world, pos).getId() == zmaster587.advancedRocketry.dimension.DimensionManager.getEffectiveDimId(this.world, this.pos).getId()) ) {
+					if(world != null && (tile = world.getTileEntity(pos)) instanceof TileRailgun && ((TileRailgun)tile).canReceiveCargo(tfrStack) &&
+							(PlanetaryTravelHelper.isTravelAnywhereInPlanetarySystem(ZUtils.getDimensionIdentifier(this.world),
+									DimensionManager.getEffectiveDimId(ZUtils.getDimensionIdentifier(world), pos).getId()) ||
+									DimensionManager.getEffectiveDimId(ZUtils.getDimensionIdentifier(world), pos).getId() == zmaster587.advancedRocketry.dimension.DimensionManager.getEffectiveDimId(ZUtils.getDimensionIdentifier(this.world), this.pos).getId()) ) {
 
-						((TileRailgun)tile).onRecieveCargo(tfrStack);
+						((TileRailgun)tile).onReceiveCargo(tfrStack);
 						inv2.setInventorySlotContents(index, ItemStack.EMPTY);
 						inv2.markDirty();
 						world.notifyBlockUpdate(pos, world.getBlockState(pos),  world.getBlockState(pos), 2);
@@ -313,7 +359,7 @@ public class TileRailgun extends TileMultiPowerConsumer implements IInventory, I
 		return false;
 	}
 
-	public boolean canRecieveCargo(ItemStack stack) {
+	public boolean canReceiveCargo(@Nonnull ItemStack stack) {
 		for(IInventory inv : this.itemOutPorts) {
 			if(ZUtils.numEmptySlots(inv) > 0)
 				return true;
@@ -322,7 +368,7 @@ public class TileRailgun extends TileMultiPowerConsumer implements IInventory, I
 		return false;
 	}
 
-	public void onRecieveCargo(ItemStack stack) {
+	public void onReceiveCargo(@Nonnull ItemStack stack) {
 		for(IInventory inv : this.itemOutPorts) {
 			if(ZUtils.doesInvHaveRoom(stack, inv)) {
 				ZUtils.mergeInventory(stack, inv);
@@ -337,6 +383,7 @@ public class TileRailgun extends TileMultiPowerConsumer implements IInventory, I
 	}
 
 	@Override
+	@Nonnull
 	public AxisAlignedBB getRenderBoundingBox() {
 		return new AxisAlignedBB(this.pos.getX() -5, this.pos.getY(), this.pos.getZ() - 5, this.pos.getX() + 5, this.pos.getY() +10, this.pos.getZ() + 5);
 	}
@@ -347,18 +394,20 @@ public class TileRailgun extends TileMultiPowerConsumer implements IInventory, I
 	}
 
 	@Override
+	@Nonnull
 	public ItemStack getStackInSlot(int i) {
 		return inv.getStackInSlot(i);
 	}
 
 	@Override
+	@Nonnull
 	public ItemStack decrStackSize(int i, int j) {
 		return inv.decrStackSize(i, j);
 	}
 
 
 	@Override
-	public void setInventorySlotContents(int i, ItemStack j) {
+	public void setInventorySlotContents(int i, @Nonnull ItemStack j) {
 		inv.setInventorySlotContents(i, j);
 
 	}
@@ -369,6 +418,7 @@ public class TileRailgun extends TileMultiPowerConsumer implements IInventory, I
 	}
 
 	@Override
+	@ParametersAreNonnullByDefault
 	public boolean isUsableByPlayer(PlayerEntity player) {
 		return true;
 	}
@@ -379,33 +429,35 @@ public class TileRailgun extends TileMultiPowerConsumer implements IInventory, I
 	}
 
 	@Override
+	@ParametersAreNonnullByDefault
 	public void openInventory(PlayerEntity player) {
 
 	}
 
 	@Override
+	@ParametersAreNonnullByDefault
 	public void closeInventory(PlayerEntity player) {
 
 	}
 
 	@Override
-	public boolean isItemValidForSlot(int i, ItemStack stack) {
-		return stack == null || stack.getItem() instanceof ItemLinker;
+	public boolean isItemValidForSlot(int i, @Nonnull ItemStack stack) {
+		return stack.isEmpty() || stack.getItem() instanceof ItemLinker;
 	}
 
 	@Override
-	public boolean onLinkStart(ItemStack item, TileEntity entity,
-			PlayerEntity player, World world) {
+	@ParametersAreNonnullByDefault
+	public boolean onLinkStart(ItemStack item, TileEntity entity, PlayerEntity player, World world) {
 		ItemLinker.setMasterCoords(item, this.getPos());
 		ItemLinker.setDimId(item, ZUtils.getDimensionIdentifier(world));
 		if(!world.isRemote)
-			player.sendMessage(new TranslationTextComponent("msg.linker.program"), Util.field_240973_b_);
+			player.sendMessage(new TranslationTextComponent("msg.linker.program"), Util.DUMMY_UUID);
 		return true;
 	}
 
 	@Override
-	public boolean onLinkComplete(ItemStack item, TileEntity entity,
-			PlayerEntity player, World world) {
+	@ParametersAreNonnullByDefault
+	public boolean onLinkComplete(ItemStack item, TileEntity entity, PlayerEntity player, World world) {
 		return false;
 	}
 
@@ -419,8 +471,8 @@ public class TileRailgun extends TileMultiPowerConsumer implements IInventory, I
 	}
 
 	@Override
-	public void func_230337_a_(BlockState blkstate, CompoundNBT nbt) {
-		super.func_230337_a_(blkstate, nbt);
+	public void read(BlockState blkstate, CompoundNBT nbt) {
+		super.read(blkstate, nbt);
 		inv.readFromNBT(nbt);
 		minStackTransferSize = nbt.getInt("minTfrSize");
 
@@ -439,8 +491,7 @@ public class TileRailgun extends TileMultiPowerConsumer implements IInventory, I
 	}
 
 	@Override
-	public void readDataFromNetwork(PacketBuffer in, byte packetId,
-			CompoundNBT nbt) {
+	public void readDataFromNetwork(PacketBuffer in, byte packetId, CompoundNBT nbt) {
 		if(packetId == 4)
 			nbt.putInt("minTransferSize", in.readInt());
 		else if(packetId == 5) 
@@ -450,8 +501,7 @@ public class TileRailgun extends TileMultiPowerConsumer implements IInventory, I
 	}
 
 	@Override
-	public void useNetworkData(PlayerEntity player, Dist side, byte id,
-			CompoundNBT nbt) {
+	public void useNetworkData(PlayerEntity player, Dist side, byte id, CompoundNBT nbt) {
 		if(side.isClient()) {
 			if(id == 3) {
 				Direction dir = RotatableBlock.getFront(world.getBlockState(pos));
@@ -497,6 +547,7 @@ public class TileRailgun extends TileMultiPowerConsumer implements IInventory, I
 	}
 
 	@Override
+	@Nonnull
 	public ItemStack removeStackFromSlot(int index) {
 		return inv.removeStackFromSlot(index);
 	}

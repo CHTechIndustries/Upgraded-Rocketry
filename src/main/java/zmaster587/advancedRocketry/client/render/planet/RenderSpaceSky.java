@@ -26,8 +26,6 @@ import zmaster587.libVulpes.util.Vector3F;
 
 public class RenderSpaceSky extends RenderPlanetarySky {
 
-	//Mostly vanilla code
-	//TODO: make usable on other planets
 	public RenderSpaceSky() {
 		super();
 	}
@@ -41,9 +39,7 @@ public class RenderSpaceSky extends RenderPlanetarySky {
 	}
 	
 	@Override
-	public void renderPlanet2(BufferBuilder buffer, MatrixStack matrix, DimensionProperties properties, float size, float alphaMultiplier, double shadowAngle, boolean hasRing) {
-		//ResourceLocation icon, int locationX, int locationY, double zLevel, float planetOrbitalDistance, float alphaMultiplier, double angle, boolean hasAtmosphere, float[] atmColor, float[] ringColor, boolean isGasgiant, boolean hasRings, boolean hasDecorators) {
-
+	public void renderPlanet2(BufferBuilder buffer, MatrixStack matrix, DimensionProperties properties, float size, float alphaMultiplier, double shadowAngle, boolean hasRing, float[] shadowColorMultiplier, float alphaMultiplier2) {
 		BlockPos playerPos = new BlockPos(mc.player.getPositionVec());
 		ISpaceObject object = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(playerPos);
 
@@ -51,8 +47,7 @@ public class RenderSpaceSky extends RenderPlanetarySky {
 			return;
 		float planetOrbitalDistance = object.getOrbitalDistance();
 		
-		if(properties.isStar())
-		{
+		if(properties.isStar()) {
 			size = 10;
 			RenderSystem.depthMask(true);
 			RenderSystem.enableAlphaTest();
@@ -76,16 +71,15 @@ public class RenderSpaceSky extends RenderPlanetarySky {
 			buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);	
 			f10 = size*2f*AstronomicalBodyHelper.getBodySizeMultiplier(planetOrbitalDistance);
 			//multiplier = 2;
-			RenderHelper.vertexPos(matrix, buffer, (double)(-f10), 0.0D, (double)(-f10)).tex(0.0f, 0.0f).endVertex();
-			RenderHelper.vertexPos(matrix, buffer, (double)f10, 0.0D, (double)(-f10)).tex(1.0f, 0.0f).endVertex();
-			RenderHelper.vertexPos(matrix, buffer, (double)f10, 0.0D, (double)f10).tex(1.0f, 1.0f).endVertex();
-			RenderHelper.vertexPos(matrix, buffer, (double)(-f10), 0.0D, (double)f10).tex(0.0f, 1.0f).endVertex();
+			RenderHelper.vertexPos(matrix, buffer, -f10, 0.0D, -f10).tex(0.0f, 0.0f).endVertex();
+			RenderHelper.vertexPos(matrix, buffer, f10, 0.0D, -f10).tex(1.0f, 0.0f).endVertex();
+			RenderHelper.vertexPos(matrix, buffer, f10, 0.0D, f10).tex(1.0f, 1.0f).endVertex();
+			RenderHelper.vertexPos(matrix, buffer, -f10, 0.0D, f10).tex(0.0f, 1.0f).endVertex();
 			Tessellator.getInstance().draw();
 			matrix.pop();
 			
 			GL11.glDepthMask(false);
-			for(int i = 0; i < 3; i++)
-			{
+			for(int i = 0; i < 3; i++) {
 				float speedMult = (i)*1.01f + 1;
 				//Render accretion disk
 				mc.getTextureManager().bindTexture(TextureResources.locationAccretionDisk);
@@ -97,10 +91,10 @@ public class RenderSpaceSky extends RenderPlanetarySky {
 				RenderSystem.color4f((float)1, (float).5 , (float).4 ,1f);
 				buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);	
 				f10 = size*40f*AstronomicalBodyHelper.getBodySizeMultiplier(planetOrbitalDistance);
-				RenderHelper.vertexPos(matrix, buffer, (double)(-f10), 0.0D, (double)(-f10)).tex(0.0f, 0.0f).endVertex();
-				RenderHelper.vertexPos(matrix, buffer, (double)f10, 0.0D, (double)(-f10)).tex(1.0f, 0.0f).endVertex();
-				RenderHelper.vertexPos(matrix, buffer, (double)f10, 0.0D, (double)f10).tex(1.0f, 1.0f).endVertex();
-				RenderHelper.vertexPos(matrix, buffer, (double)(-f10), 0.0D, (double)f10).tex(0.0f, 1.0f).endVertex();
+				RenderHelper.vertexPos(matrix, buffer, -f10, 0.0D, -f10).tex(0.0f, 0.0f).endVertex();
+				RenderHelper.vertexPos(matrix, buffer, f10, 0.0D, -f10).tex(1.0f, 0.0f).endVertex();
+				RenderHelper.vertexPos(matrix, buffer, f10, 0.0D, f10).tex(1.0f, 1.0f).endVertex();
+				RenderHelper.vertexPos(matrix, buffer, -f10, 0.0D, f10).tex(0.0f, 1.0f).endVertex();
 				Tessellator.getInstance().draw();
 				matrix.pop();
 				
@@ -114,10 +108,10 @@ public class RenderSpaceSky extends RenderPlanetarySky {
 				buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);	
 				f10 = size*30f*AstronomicalBodyHelper.getBodySizeMultiplier(planetOrbitalDistance);
 				//multiplier = 2;
-				RenderHelper.vertexPos(matrix, buffer, (double)(-f10), 0.0D, (double)(-f10)).tex(0.0f, 0.0f).endVertex();
-				RenderHelper.vertexPos(matrix, buffer, (double)f10, 0.0D, (double)(-f10)).tex(1.0f, 0.0f).endVertex();
-				RenderHelper.vertexPos(matrix, buffer, (double)f10, 0.0D, (double)f10).tex(1.0f, 1.0f).endVertex();
-				RenderHelper.vertexPos(matrix, buffer, (double)(-f10), 0.0D, (double)f10).tex(0.0f, 1.0f).endVertex();
+				RenderHelper.vertexPos(matrix, buffer, -f10, 0.0D, -f10).tex(0.0f, 0.0f).endVertex();
+				RenderHelper.vertexPos(matrix, buffer, f10, 0.0D, -f10).tex(1.0f, 0.0f).endVertex();
+				RenderHelper.vertexPos(matrix, buffer, f10, 0.0D, f10).tex(1.0f, 1.0f).endVertex();
+				RenderHelper.vertexPos(matrix, buffer, -f10, 0.0D, f10).tex(0.0f, 1.0f).endVertex();
 				Tessellator.getInstance().draw();
 				matrix.pop();
 				
@@ -131,10 +125,10 @@ public class RenderSpaceSky extends RenderPlanetarySky {
 				buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);	
 				f10 = size*15f*AstronomicalBodyHelper.getBodySizeMultiplier(planetOrbitalDistance);
 				//multiplier = 2;
-				RenderHelper.vertexPos(matrix, buffer, (double)(-f10), 0.0D, (double)(-f10)).tex(0.0f, 0.0f).endVertex();
-				RenderHelper.vertexPos(matrix, buffer, (double)f10, 0.0D, (double)(-f10)).tex(1.0f, 0.0f).endVertex();
-				RenderHelper.vertexPos(matrix, buffer, (double)f10, 0.0D, (double)f10).tex(1.0f, 1.0f).endVertex();
-				RenderHelper.vertexPos(matrix, buffer, (double)(-f10), 0.0D, (double)f10).tex(0.0f, 1.0f).endVertex();
+				RenderHelper.vertexPos(matrix, buffer, -f10, 0.0D, -f10).tex(0.0f, 0.0f).endVertex();
+				RenderHelper.vertexPos(matrix, buffer, f10, 0.0D, -f10).tex(1.0f, 0.0f).endVertex();
+				RenderHelper.vertexPos(matrix, buffer, f10, 0.0D, f10).tex(1.0f, 1.0f).endVertex();
+				RenderHelper.vertexPos(matrix, buffer, -f10, 0.0D, f10).tex(0.0f, 1.0f).endVertex();
 				Tessellator.getInstance().draw();
 				matrix.pop();
 			}
@@ -149,6 +143,7 @@ public class RenderSpaceSky extends RenderPlanetarySky {
 		matrix.push();
 		//GL11.glDisable(GL11.GL_BLEND);
 
+
 		GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
 		RenderSystem.disableFog();
 
@@ -157,8 +152,8 @@ public class RenderSpaceSky extends RenderPlanetarySky {
 		RenderSystem.blendFunc(GL11.GL_ONE, GL11.GL_ZERO);
 		mc.getTextureManager().bindTexture(getTextureForPlanet(properties));
 
-		GL11.glTexParameterf(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
-		GL11.glTexParameterf(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
+		RenderSystem.texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
+		RenderSystem.texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
 		//int k = mc.theWorld.getMoonPhase();
 		//int l = k % 4;
 		//int i1 = k / 4 % 2;
@@ -178,10 +173,10 @@ public class RenderSpaceSky extends RenderPlanetarySky {
 		RenderSystem.color4f(1f, 1f, 1f, alphaMultiplier);
 
 		buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-		RenderHelper.vertexPos(matrix, buffer, (double)(-f10), -10.0D, (double)f10).tex(f16, f17).endVertex();
-		RenderHelper.vertexPos(matrix, buffer, (double)f10, -10.0D, (double)f10).tex(f14, f17).endVertex();
-		RenderHelper.vertexPos(matrix, buffer, (double)f10, -10.0D, (double)(-f10)).tex(f14, f15).endVertex();
-		RenderHelper.vertexPos(matrix, buffer, (double)(-f10), -10.0D, (double)(-f10)).tex(f16, f15).endVertex();
+		RenderHelper.vertexPos(matrix, buffer, -f10, -10.0D, f10).tex(f16, f17).endVertex();
+		RenderHelper.vertexPos(matrix, buffer, f10, -10.0D, f10).tex(f14, f17).endVertex();
+		RenderHelper.vertexPos(matrix, buffer, f10, -10.0D, -f10).tex(f14, f15).endVertex();
+		RenderHelper.vertexPos(matrix, buffer, -f10, -10.0D, -f10).tex(f16, f15).endVertex();
 
 		Tessellator.getInstance().draw();
 		GL11.glPopAttrib();
@@ -195,6 +190,7 @@ public class RenderSpaceSky extends RenderPlanetarySky {
 
 				buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_COLOR_TEX);
 				mc.getTextureManager().bindTexture(DimensionProperties.getAtmosphereLEOResource());
+				RenderSystem.color4f(atmColor[0], atmColor[1], atmColor[2], 0.5f);
 
 				double dist = -5D - 4*(planetOrbitalDistance)/200D;
 				double scalingMult = 1D - 0.9*(planetOrbitalDistance)/200D;
@@ -211,8 +207,6 @@ public class RenderSpaceSky extends RenderPlanetarySky {
 					g = .4f*(i/6f);
 					b = 1f;
 					a = 0.4f;
-					RenderSystem.color4f(0.05f*(maxAmt-i/6f), .4f*(i/6f), 1f, 0.4f);
-
 					//IDK it looks pretty
 					Xoffset = lng*(i-(maxAmt/4f));
 					float Yoffset = -lng*i;

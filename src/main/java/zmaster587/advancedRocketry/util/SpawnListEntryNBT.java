@@ -1,13 +1,13 @@
 package zmaster587.advancedRocketry.util;
 
+import net.minecraft.nbt.JsonToNBT;
+
 import java.util.UUID;
 
 import org.w3c.dom.DOMException;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
-import net.minecraft.nbt.JsonToNBT;
-import net.minecraft.entity.EntitySpawnPlacementRegistry;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.nbt.CompoundNBT;
@@ -40,8 +40,8 @@ public class SpawnListEntryNBT extends Spawners {
 	}
 	
 	
-	public LivingEntity newInstance(World world) throws Exception {
-		LivingEntity entity = (LivingEntity) super.field_242588_c.create(world);
+	public LivingEntity newInstance(World world) {
+		LivingEntity entity = (LivingEntity) super.type.create(world);
 		if(nbt != null) {
             UUID uuid = entity.getUniqueID();
             CompoundNBT oldNbt = entity.serializeNBT();

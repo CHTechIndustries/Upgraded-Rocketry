@@ -12,7 +12,6 @@ import zmaster587.advancedRocketry.cable.HandlerCableNetwork;
 import zmaster587.advancedRocketry.cable.NetworkRegistry;
 import zmaster587.libVulpes.api.IUniversalEnergy;
 import zmaster587.libVulpes.cap.ForgePowerCapability;
-import zmaster587.libVulpes.cap.TeslaHandler;
 
 public class TileEnergyPipe extends TilePipe implements IUniversalEnergy {
 	

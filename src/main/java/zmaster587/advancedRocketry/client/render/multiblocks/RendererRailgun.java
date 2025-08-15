@@ -4,12 +4,9 @@ import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.client.renderer.WorldRenderer;
 import net.minecraft.client.renderer.tileentity.TileEntityRenderer;
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Direction;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.vector.Quaternion;
-
-import org.lwjgl.opengl.GL11;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
@@ -20,10 +17,11 @@ import zmaster587.advancedRocketry.tile.multiblock.TileRailgun;
 import zmaster587.libVulpes.block.RotatableBlock;
 import zmaster587.libVulpes.render.RenderHelper;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
 public class RendererRailgun extends TileEntityRenderer<TileRailgun> {
 	
 	WavefrontObject model;
-
 	ResourceLocation texture =  new ResourceLocation("advancedrocketry","textures/models/railgun.png");
 	
 	public RendererRailgun(TileEntityRendererDispatcher tile) {
@@ -36,8 +34,8 @@ public class RendererRailgun extends TileEntityRenderer<TileRailgun> {
 	}
 	
 	@Override
-	public void render(TileRailgun tile, float partialTicks, MatrixStack matrix,
-			IRenderTypeBuffer buffer, int combinedLightIn, int combinedOverlayIn) {
+	@ParametersAreNonnullByDefault
+	public void render(TileRailgun tile, float partialTicks, MatrixStack matrix, IRenderTypeBuffer buffer, int combinedLightIn, int combinedOverlayIn) {
 
 		if(!tile.canRender())
 			return;
@@ -56,7 +54,7 @@ public class RendererRailgun extends TileEntityRenderer<TileRailgun> {
 		//Rotate and move the model into position
 		Direction front = RotatableBlock.getFront(tile.getWorld().getBlockState(tile.getPos()));
 		matrix.rotate(new Quaternion(0, (front.getXOffset() == 1 ? 180 : 0) + front.getZOffset()*90f, 0, true));
-		matrix.translate(2f, 0, 0f);
+		matrix.translate(3f, 0, 0f);
 		IVertexBuilder entitySolidBuilder = buffer.getBuffer(RenderHelper.getTranslucentEntityModelRenderType(texture));
 		
 		

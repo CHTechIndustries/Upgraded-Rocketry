@@ -4,7 +4,6 @@ import net.minecraft.inventory.EquipmentSlotType;
 import net.minecraft.item.ArmorMaterial;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.Direction;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.CapabilityFluidHandler;
@@ -14,13 +13,12 @@ import zmaster587.advancedRocketry.api.AdvancedRocketryFluids;
 import zmaster587.advancedRocketry.api.AdvancedRocketryItems;
 import zmaster587.advancedRocketry.api.IAtmosphere;
 import zmaster587.advancedRocketry.api.armor.IFillableArmor;
-import zmaster587.advancedRocketry.api.armor.IProtectiveArmor;
-import zmaster587.advancedRocketry.api.capability.CapabilitySpaceArmor;
 import zmaster587.advancedRocketry.inventory.TextureResources;
 import zmaster587.libVulpes.util.EmbeddedInventory;
 import zmaster587.libVulpes.util.FluidUtils;
 import zmaster587.libVulpes.util.IconResource;
 
+import javax.annotation.Nonnull;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -31,7 +29,7 @@ public class ItemSpaceChest extends ItemSpaceArmor implements IFillableArmor {
 	}
 
 	@Override
-	public boolean isItemValidForSlot(ItemStack stack, int slot) {
+	public boolean isItemValidForSlot(@Nonnull ItemStack stack, int slot) {
 		if(slot >= 2)
 			return true;
 
@@ -39,12 +37,16 @@ public class ItemSpaceChest extends ItemSpaceArmor implements IFillableArmor {
 		
 		LazyOptional<IFluidHandlerItem> cap = stack.getCapability(CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY);
 		
-		return !stack.isEmpty() && cap.isPresent() && 
-				((fstack = cap.orElse(null).getFluidInTank(0)) == null || FluidUtils.areFluidsSameType(fstack.getFluid(), AdvancedRocketryFluids.oxygenFlowing.get()));
+		if(stack.isEmpty() || !cap.isPresent())
+			return false;
+		
+		fstack = cap.orElse(null).getFluidInTank(0);
+		
+		return (fstack.isEmpty() || FluidUtils.areFluidsSameType(fstack.getFluid(), AdvancedRocketryFluids.oxygenFlowing.get()));
 	}
 
 	@Override
-	public boolean canBeExternallyModified(ItemStack armor, int slot) {
+	public boolean canBeExternallyModified(@Nonnull ItemStack armor, int slot) {
 		return slot >= 2;
 	}
 
@@ -61,7 +63,7 @@ public class ItemSpaceChest extends ItemSpaceArmor implements IFillableArmor {
 	 * @return the amount of air in the stack
 	 */
 	@Override
-	public int getAirRemaining(ItemStack stack) {
+	public int getAirRemaining(@Nonnull ItemStack stack) {
 
 		List<ItemStack> list = getComponents(stack);
 
@@ -92,7 +94,7 @@ public class ItemSpaceChest extends ItemSpaceArmor implements IFillableArmor {
 	 * @param amt amount of air to set the suit to
 	 */
 	@Override
-	public void setAirRemaining(ItemStack stack, int amt) {
+	public void setAirRemaining(@Nonnull ItemStack stack, int amt) {
 		/*CompoundNBT nbt;
 		if(stack.hasTag()) {
 			nbt = stack.getTag();
@@ -111,12 +113,12 @@ public class ItemSpaceChest extends ItemSpaceArmor implements IFillableArmor {
 	 * @return The amount of air extracted from the suit
 	 */
 	@Override
-	public int decrementAir(ItemStack stack, int amt) {
+	public int decrementAir(@Nonnull ItemStack stack, int amt) {
 
 		if(stack.hasTag()) {
 			EmbeddedInventory inv = new EmbeddedInventory(getNumSlots(stack));
 			inv.readFromNBT(stack.getTag());
-			List<ItemStack> list = new LinkedList<ItemStack>();
+			List<ItemStack> list = new LinkedList<>();
 
 			for(int i = 0; i < inv.getSizeInventory(); i++) {
 				if(!inv.getStackInSlot(i).isEmpty())
@@ -125,7 +127,7 @@ public class ItemSpaceChest extends ItemSpaceArmor implements IFillableArmor {
 			int amtDrained = amt;
 			for(ItemStack component : list) {
 				
-				LazyOptional<IFluidHandlerItem> cap = stack.getCapability(CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY);
+				LazyOptional<IFluidHandlerItem> cap = component.getCapability(CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY);
 				
 				if(cap.isPresent()) {
 					IFluidHandlerItem fluidItem = cap.orElse(null);
@@ -172,17 +174,17 @@ public class ItemSpaceChest extends ItemSpaceArmor implements IFillableArmor {
 	 * @return The amount of air inserted into the suit
 	 */
 	@Override
-	public int increment(ItemStack stack, int amt) {
+	public int increment(@Nonnull ItemStack stack, int amt) {
 
 		if(stack.hasTag()) {
 			EmbeddedInventory inv = new EmbeddedInventory(getNumSlots(stack));
 			inv.readFromNBT(stack.getTag());
-			List<ItemStack> list = new LinkedList<ItemStack>();
+			List<ItemStack> list = new LinkedList<>();
 
 			for(int i = 0; i < inv.getSizeInventory(); i++) {
 				if(!inv.getStackInSlot(i).isEmpty()) {
 					
-					LazyOptional<IFluidHandlerItem> cap = stack.getCapability(CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY);
+					LazyOptional<IFluidHandlerItem> cap = inv.getStackInSlot(i).getCapability(CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY);
 					
 					if( i < 2) {
 						final int count = i;
@@ -206,7 +208,7 @@ public class ItemSpaceChest extends ItemSpaceArmor implements IFillableArmor {
 					IFluidHandlerItem fHandler = component.getCapability(CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY).orElse(null);
 					FluidStack fluidStack = fHandler.getFluidInTank(0);
 
-					if(fluidStack == null || FluidUtils.areFluidsSameType(fluidStack.getFluid(), AdvancedRocketryFluids.oxygenStill.get()))
+					if(fluidStack.isEmpty() || FluidUtils.areFluidsSameType(fluidStack.getFluid(), AdvancedRocketryFluids.oxygenStill.get()))
 						amtDrained -= fHandler.fill(new FluidStack(AdvancedRocketryFluids.oxygenStill.get(), amtDrained), FluidAction.EXECUTE);
 
 					if(amtDrained == 0)
@@ -241,12 +243,12 @@ public class ItemSpaceChest extends ItemSpaceArmor implements IFillableArmor {
 	 * @return the maximum amount of air allowed in this suit
 	 */
 	@Override
-	public int getMaxAir(ItemStack stack) {
+	public int getMaxAir(@Nonnull ItemStack stack) {
 
 		if(stack.hasTag()) {
 			EmbeddedInventory inv = new EmbeddedInventory(getNumSlots(stack));
 			inv.readFromNBT(stack.getTag());
-			List<ItemStack> list = new LinkedList<ItemStack>();
+			List<ItemStack> list = new LinkedList<>();
 
 			for(int i = 0; i < inv.getSizeInventory(); i++) {
 				if(!inv.getStackInSlot(i).isEmpty()) {
@@ -274,7 +276,7 @@ public class ItemSpaceChest extends ItemSpaceArmor implements IFillableArmor {
 					IFluidHandlerItem fHandler = cap.orElse(null);
 					FluidStack fluidStack = fHandler.getFluidInTank(0);
 
-					if(fluidStack == null || fluidStack.getFluid() == null || FluidUtils.areFluidsSameType(fluidStack.getFluid(), AdvancedRocketryFluids.oxygenStill.get()))
+					if(fluidStack.isEmpty() || FluidUtils.areFluidsSameType(fluidStack.getFluid(), AdvancedRocketryFluids.oxygenStill.get()))
 						maxAir += fHandler.getTankCapacity(0);
 			}
 
@@ -288,7 +290,7 @@ public class ItemSpaceChest extends ItemSpaceArmor implements IFillableArmor {
 	}
 	
 	@Override
-	public boolean protectsFromSubstance(IAtmosphere atmosphere, ItemStack stack, boolean commitProtection) {
+	public boolean protectsFromSubstance(@Nonnull IAtmosphere atmosphere, @Nonnull ItemStack stack, boolean commitProtection) {
 		
 		if(!super.protectsFromSubstance(atmosphere, stack, commitProtection))
 			return false;
@@ -298,8 +300,8 @@ public class ItemSpaceChest extends ItemSpaceArmor implements IFillableArmor {
 			return true;
 		
 		// If the atmosphere allows for combustion, it probably has O2, TODO: atmosphere with non O2 oxidizers
-		boolean commitAndDecrement = commitProtection && ((IFillableArmor)AdvancedRocketryItems.itemSpaceSuit_Chest).decrementAir(stack, 1) > 0;
-		boolean noncommitAndHasAir = !commitProtection && ((IFillableArmor)AdvancedRocketryItems.itemSpaceSuit_Chest).getAirRemaining(stack) > 0;
+		boolean commitAndDecrement = commitProtection && ((IFillableArmor)AdvancedRocketryItems.itemSpaceSuitChestpiece).decrementAir(stack, 1) > 0;
+		boolean noncommitAndHasAir = !commitProtection && ((IFillableArmor)AdvancedRocketryItems.itemSpaceSuitChestpiece).getAirRemaining(stack) > 0;
 		return noncommitAndHasAir || commitAndDecrement;
 	}
 }

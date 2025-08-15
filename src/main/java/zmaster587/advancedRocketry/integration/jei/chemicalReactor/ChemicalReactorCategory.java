@@ -19,22 +19,27 @@ import zmaster587.advancedRocketry.integration.jei.MachineRecipe;
 import zmaster587.advancedRocketry.inventory.TextureResources;
 import zmaster587.libVulpes.LibVulpes;
 
+import javax.annotation.Nonnull;
+
 public class ChemicalReactorCategory extends MachineCategoryTemplate<MachineRecipe> {
 
 	public ChemicalReactorCategory(IGuiHelper helper, ItemStack icon) {
 		super(helper, TextureResources.crystallizerProgressBar, icon);
 	}
 
+	@Nonnull
 	@Override
 	public ResourceLocation getUid() {
 		return ARPlugin.chemicalReactorUUID;
 	}
 
+	@Nonnull
 	@Override
 	public String getTitle() {
-		return LibVulpes.proxy.getLocalizedString("tile.chemreactor.name");
+		return LibVulpes.proxy.getLocalizedString("block.advancedrocketry.chemicalreactor");
 	}
-	
+
+	@Nonnull
 	@Override
 	public Class<? extends MachineRecipe> getRecipeClass() {
 		return MachineRecipe.class;
@@ -79,7 +84,7 @@ public class ChemicalReactorCategory extends MachineCategoryTemplate<MachineReci
 
 		if(isArmorRecipe)
 		{
-			List<ItemStack> outputStacks = new LinkedList<ItemStack>();
+			List<ItemStack> outputStacks = new LinkedList<>();
 			for(ItemStack stacks : ingredients.getInputs(VanillaTypes.ITEM).get(0)) {
 				outputStacks.add(new ItemStack( ingredients.getOutputs(VanillaTypes.ITEM).get(0).get(0).getItem() ,1));
 			}

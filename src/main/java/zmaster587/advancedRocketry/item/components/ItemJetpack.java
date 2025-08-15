@@ -2,12 +2,10 @@ package zmaster587.advancedRocketry.item.components;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.inventory.ContainerScreen;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.EquipmentSlotType;
 import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.container.Container;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
@@ -19,19 +17,17 @@ import net.minecraft.world.World;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.IFluidHandler.FluidAction;
-import net.minecraftforge.items.SlotItemHandler;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 import org.lwjgl.opengl.GL11;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
-
 import zmaster587.advancedRocketry.AdvancedRocketry;
+import zmaster587.advancedRocketry.api.ARConfiguration;
 import zmaster587.advancedRocketry.api.AdvancedRocketryFluids;
 import zmaster587.advancedRocketry.api.AdvancedRocketryItems;
-import zmaster587.advancedRocketry.api.ARConfiguration;
-import zmaster587.advancedRocketry.dimension.DimensionManager;
+import zmaster587.advancedRocketry.api.AdvancedRocketryParticleTypes;
 import zmaster587.advancedRocketry.event.RocketEventHandler;
 import zmaster587.advancedRocketry.inventory.TextureResources;
 import zmaster587.libVulpes.api.IArmorComponent;
@@ -41,14 +37,14 @@ import zmaster587.libVulpes.client.ResourceIcon;
 import zmaster587.libVulpes.util.FluidUtils;
 import zmaster587.libVulpes.util.InputSyncHandler;
 
-import java.lang.reflect.Field;
+import javax.annotation.Nonnull;
 import java.util.List;
 
 public class ItemJetpack extends Item implements IArmorComponent, IJetPack {
 
-	private static enum MODES {
+	private enum MODES {
 		NORMAL,
-		HOVER;
+		HOVER
 	}
 
 	public ItemJetpack(Properties props) {
@@ -56,7 +52,7 @@ public class ItemJetpack extends Item implements IArmorComponent, IJetPack {
 	}
 
 
-	private ResourceLocation background = TextureResources.rocketHud;
+	private final ResourceLocation background = TextureResources.rocketHud;
 
 	@Override
 	public void onTick(World world, PlayerEntity player,
@@ -73,13 +69,13 @@ public class ItemJetpack extends Item implements IArmorComponent, IJetPack {
 		if(helm != null && helm.getItem() instanceof IModularArmor) {
 			List<ItemStack> helmInv = ((IModularArmor)helm.getItem()).getComponents(helm);
 			for(ItemStack stack : helmInv) {
-				if(stack != null) {
+				if(!stack.isEmpty()) {
 					Item item = stack.getItem();
 
-					if (item.getItem() == AdvancedRocketryItems.itemUpgradeHover)
+					if (item.getItem() == AdvancedRocketryItems.itemHoverUpgrade)
 						if(stack.getDamage() == 0)
 							allowsHover = true;
-						else if(stack.getItem() == AdvancedRocketryItems.itemUpgradeSpeed)
+						else if(stack.getItem() == AdvancedRocketryItems.itemFlightSpeedUpgrade)
 							speedUpgrades++;
 				}
 			}
@@ -90,8 +86,7 @@ public class ItemJetpack extends Item implements IArmorComponent, IJetPack {
 
 
 		//Apply speed upgrades only if the player isn't using Elytra
-		if(!player.isElytraFlying())
-		{
+		if(!player.isElytraFlying()) {
 			player.setMotion(player.getMotion().x + speedUpgrades*0.02f, player.getMotion().y, player.getMotion().z + speedUpgrades*0.02f);
 		}
 
@@ -138,12 +133,12 @@ public class ItemJetpack extends Item implements IArmorComponent, IJetPack {
 
 
 	@Override
-	public boolean onComponentAdded(World world, ItemStack armorStack) {
+	public boolean onComponentAdded(World world, @Nonnull ItemStack armorStack) {
 		return true;
 	}
 
 	@Override
-	public void onComponentRemoved(World world, ItemStack armorStack) {
+	public void onComponentRemoved(World world, @Nonnull ItemStack armorStack) {
 
 	}
 
@@ -203,24 +198,22 @@ public class ItemJetpack extends Item implements IArmorComponent, IJetPack {
 
 		if(hasFuel) {
 
-			player.addVelocity(0, (double)ARConfiguration.getCurrentConfig().jetPackThrust.get()*0.1f, 0);
+			player.addVelocity(0, ARConfiguration.getCurrentConfig().jetPackThrust.get() *0.1f, 0);
 			if(player.world.isRemote) {
-				double xPos = player.getPosX();
-				double zPos = player.getPosZ();
 				float playerRot = (float) ((Math.PI/180f)*(player.rotationYaw - 55));
-				xPos = player.getPosX() + MathHelper.cos(playerRot)*.4f;
-				zPos = player.getPosZ() + MathHelper.sin(playerRot)*.4f;
+				double xPos = player.getPosX() + MathHelper.cos(playerRot)*.4f;
+				double zPos = player.getPosZ() + MathHelper.sin(playerRot)*.4f;
 
 				float ejectSpeed = mode == MODES.HOVER ? 0.1f : 0.3f;
-				//AdvancedRocketry.proxy.spawnParticle("smallRocketFlame", player.worldObj, xPos, player.posY - 0.75, zPos, (player.worldObj.rand.nextFloat() - 0.5f)/18f,-.1 ,(player.worldObj.rand.nextFloat() - 0.5f)/18f);
+				//AdvancedRocketry.proxy.spawnParticle(AdvancedRocketryParticleTypes.rocketFx, player.worldObj, xPos, player.posY - 0.75, zPos, (player.worldObj.rand.nextFloat() - 0.5f)/18f,-.1 ,(player.worldObj.rand.nextFloat() - 0.5f)/18f);
 
-				AdvancedRocketry.proxy.spawnParticle("smallRocketFlame", player.world, xPos, player.getPosY() + 0.75, zPos, 0, player.getMotion().y -ejectSpeed ,0);
+				AdvancedRocketry.proxy.spawnParticle(AdvancedRocketryParticleTypes.rocketFx, player.world, xPos, player.getPosY() + 0.75, zPos, 0, player.getMotion().y -ejectSpeed ,0);
 
 				playerRot = (float) ((Math.PI/180f)*(player.rotationYaw - 125));
 				xPos = player.getPosX() + MathHelper.cos(playerRot)*.4f;
 				zPos = player.getPosZ() + MathHelper.sin(playerRot)*.4f;
 
-				AdvancedRocketry.proxy.spawnParticle("smallRocketFlame", player.world, xPos, player.getPosY() + 0.75, zPos, 0, player.getMotion().y -ejectSpeed ,0);
+				AdvancedRocketry.proxy.spawnParticle(AdvancedRocketryParticleTypes.rocketFx, player.world, xPos, player.getPosY() + 0.75, zPos, 0, player.getMotion().y -ejectSpeed ,0);
 			}
 
 			if(player.getMotion().y > -1) {
@@ -269,7 +262,7 @@ public class ItemJetpack extends Item implements IArmorComponent, IJetPack {
 		if(helm != null && helm.getItem() instanceof IModularArmor) {
 			List<ItemStack> helmInv = ((IModularArmor)helm.getItem()).getComponents(helm);
 			for(ItemStack helmStack : helmInv) 
-				if (stack != null && helmStack.getItem() == AdvancedRocketryItems.itemUpgradeHover && helmStack.getDamage() == 0) {
+				if (stack != null && helmStack.getItem() == AdvancedRocketryItems.itemHoverUpgrade && helmStack.getDamage() == 0) {
 					mode = 1;
 					break;
 				}
@@ -294,6 +287,7 @@ public class ItemJetpack extends Item implements IArmorComponent, IJetPack {
 			stack.setTag(nbt);
 			flagModeSwitched(stack);
 		}
+		flagModeSwitched(stack);
 
 		if(mode == MODES.HOVER.ordinal())
 			setHeight(stack, (float)player.getPosY() + player.getHeight());
@@ -335,16 +329,13 @@ public class ItemJetpack extends Item implements IArmorComponent, IJetPack {
 	@Override
 	@OnlyIn(value=Dist.CLIENT)
 	public void renderScreen(MatrixStack mat, ItemStack componentStack, List<ItemStack> modules, RenderGameOverlayEvent event, Screen gui) {
-		List<ItemStack> inv = modules;
 
 		int amt = 0, maxAmt = 0;
-		for(int i = 0; i < inv.size(); i++) {
-			ItemStack currentStack = inv.get(i);
-
-			if(FluidUtils.containsFluid(currentStack, AdvancedRocketryFluids.hydrogenStill.get())) {
+		for (ItemStack currentStack : modules) {
+			if (FluidUtils.containsFluid(currentStack, AdvancedRocketryFluids.hydrogenStill.get())) {
 				FluidStack fluidStack = FluidUtils.getFluidForItem(currentStack);
-				if(fluidStack != null)
-					amt+= fluidStack.getAmount();
+				if (fluidStack != null)
+					amt += fluidStack.getAmount();
 				maxAmt += FluidUtils.getFluidItemCapacity(currentStack);
 			}
 
@@ -365,12 +356,12 @@ public class ItemJetpack extends Item implements IArmorComponent, IJetPack {
 			Minecraft.getInstance().getTextureManager().bindTexture(background);
 			GL11.glColor3f(1f, 1f, 1f);
 			int width = 83;
-			int screenX = RocketEventHandler.hydrogenBar.getRenderX();
-			int screenY = RocketEventHandler.hydrogenBar.getRenderY();
+			int screenX = Minecraft.getInstance().getMainWindow().getScaledWidth()/2 + RocketEventHandler.hydrogenBar.getRenderX();
+			int screenY = Minecraft.getInstance().getMainWindow().getScaledHeight() + RocketEventHandler.hydrogenBar.getRenderY();
 
 			//Draw BG
-			gui.func_238474_b_(mat,screenX, screenY, 23, 34, width, 17);
-			gui.func_238474_b_(mat, screenX , screenY, 23, 51, (int)(width*size), 17);
+			gui.blit(mat,screenX, screenY, 23, 34, width, 17);
+			gui.blit(mat, screenX , screenY, 23, 51, (int)(width*size), 17);
 
 
 		}

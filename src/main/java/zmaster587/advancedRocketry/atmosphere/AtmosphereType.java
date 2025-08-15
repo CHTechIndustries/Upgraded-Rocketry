@@ -11,7 +11,7 @@ public class AtmosphereType implements IAtmosphere {
 	//We're probably not getting a polluted atmosphere type
 	public static final AtmosphereType AIR = new AtmosphereType(false, true, "air");
 	public static final AtmosphereType PRESSURIZEDAIR = new AtmosphereType(false, true, true, "PressurizedAir");
-	public static final AtmosphereType LOWOXYGEN = new AtmosphereLowOxygen(true, false, false, "lowO2");
+	public static final AtmosphereType LOWOXYGEN = new AtmosphereLowOxygen(true, false, true, "lowO2");
 	public static final AtmosphereType VACUUM = new AtmosphereVacuum();
 	public static final AtmosphereType HIGHPRESSURE = new AtmosphereHighPressure(true, false, true, "HighPressure");
 	public static final AtmosphereType SUPERHIGHPRESSURE = new AtmosphereSuperHighPressure(true, false, true, "SuperHighPressure");
@@ -22,8 +22,14 @@ public class AtmosphereType implements IAtmosphere {
 	public static final AtmosphereType SUPERHIGHPRESSURENOO2 = new AtmosphereSuperHighPressureNoOxygen(true, false, false, "SuperHighPressureNoO2");
 	public static final AtmosphereType VERYHOTNOO2 = new AtmosphereVeryHotNoOxygen(true, false, false, "VeryHotNoO2");
 	public static final AtmosphereType SUPERHEATEDNOO2 = new AtmosphereSuperheatedNoOxygen(true, false, false, "SuperheatedNoOxygen");
-
-	static {
+	
+	private boolean allowsCombustion;
+	private boolean isBreathable;
+	private boolean canTick;
+	private String name;
+	
+	public static void registerAtmosphere()
+	{
 		AtmosphereRegister.getInstance().registerAtmosphere(AIR);
 		AtmosphereRegister.getInstance().registerAtmosphere(PRESSURIZEDAIR);
 		AtmosphereRegister.getInstance().registerAtmosphere(VACUUM);
@@ -38,11 +44,6 @@ public class AtmosphereType implements IAtmosphere {
 		AtmosphereRegister.getInstance().registerAtmosphere(VERYHOTNOO2);
 		AtmosphereRegister.getInstance().registerAtmosphere(SUPERHEATEDNOO2);
 	}
-	
-	private boolean allowsCombustion;
-	private boolean isBreathable;
-	private boolean canTick;
-	private String name;
 
 	public AtmosphereType(boolean canTick, boolean isBreathable, String name) {
 		this.allowsCombustion = isBreathable;
@@ -94,7 +95,7 @@ public class AtmosphereType implements IAtmosphere {
 
 	/**
 	 * Sets the atmosphere to be breathable or not breathable
-	 * @param isBreathable
+	 * @param isBreathable boolean for whether the atmosphere should be breatheable
 	 */
 	public void setIsBreathable(boolean isBreathable) {
 		this.isBreathable = isBreathable;
@@ -102,7 +103,7 @@ public class AtmosphereType implements IAtmosphere {
 
 	/**
 	 * Sets the atmosphere to allow combustion or not to allow combustion
-	 * @param allowsCombustion
+	 * @param allowsCombustion boolean for whether the atmosphere should allow combustion
 	 */
 	public void setAllowsCombustion(boolean allowsCombustion) {
 		this.allowsCombustion = allowsCombustion;

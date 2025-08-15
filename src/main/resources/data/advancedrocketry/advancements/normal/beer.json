@@ -4,17 +4,17 @@
             "item": "tnt"
         },
         "title": {
-            "translate": "beerOnTheSun.warp"
+            "translate": "advancement.advancedrocketry.beeronthesun"
         },
         "description": {
-            "translate": "beerOnTheSun.warp.desc"
+            "translate": "advancement.advancedrocketry.beeronthesun.desc"
         },
         "hidden": true
     },
     "parent": "advancedrocketry:normal/root",
     "criteria": {
         "beer": {
-            "trigger": "beer"
+            "trigger": "minecraft:impossible"
         }
     }
 } 

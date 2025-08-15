@@ -1,7 +1,5 @@
 package zmaster587.advancedRocketry.unit;
 
-import java.util.List;
-
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
@@ -12,16 +10,21 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
-import zmaster587.advancedRocketry.AdvancedRocketry;
-import zmaster587.advancedRocketry.api.ARConfiguration;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler;
 import zmaster587.advancedRocketry.api.AdvancedRocketryBlocks;
+import zmaster587.advancedRocketry.api.AdvancedRocketryFluids;
 import zmaster587.advancedRocketry.api.AdvancedRocketryItems;
+import zmaster587.advancedRocketry.api.fuel.FuelRegistry;
+import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.entity.EntityRocket;
 import zmaster587.advancedRocketry.item.ItemStationChip;
-import zmaster587.advancedRocketry.tile.TileRocketBuilder;
+import zmaster587.advancedRocketry.tile.TileRocketAssembler;
 import zmaster587.libVulpes.api.LibVulpesBlocks;
 import zmaster587.libVulpes.block.RotatableBlock;
 import zmaster587.libVulpes.util.ZUtils;
+
+import java.util.List;
 
 public class BuildRocketTest extends BaseTest {
 	
@@ -47,8 +50,7 @@ public class BuildRocketTest extends BaseTest {
 		this.name = "Basic Rocket Tests";
 	}
 	
-	public void Phase1(World world, PlayerEntity player)
-	{
+	public void Phase1(World world, PlayerEntity player) {
 		originalWorldId = ZUtils.getDimensionIdentifier(world);
 		teleportPlayerToStart(player);
 		clearLandscape(world);
@@ -63,8 +65,7 @@ public class BuildRocketTest extends BaseTest {
 		}
 	}
 	
-	public void Phase2(World world, PlayerEntity player)
-	{
+	public void Phase2(World world, PlayerEntity player) {
 		EntityRocket rocket = findRocketOnPad(world);
 		originalPos = new BlockPos(rocket.getPositionVec());
 		FuelRocket(rocket);
@@ -80,10 +81,9 @@ public class BuildRocketTest extends BaseTest {
 	}
 	
 	
-	public void Phase3(World world, PlayerEntity player)
-	{
+	public void Phase3(World world, PlayerEntity player) {
 		// Make sure we're in space and riding a rocket
-		if(!(ARConfiguration.GetSpaceDimId().equals(ZUtils.getDimensionIdentifier(world))))
+		if(!(DimensionManager.spaceId.equals(ZUtils.getDimensionIdentifier(world))))
 			throw new AssertionError("Expected to be on space station!");
 		if(!(player.getRidingEntity() instanceof EntityRocket))
 			throw new AssertionError("Expected player to be riding a rocket!");
@@ -97,8 +97,7 @@ public class BuildRocketTest extends BaseTest {
 		}
 	}
 	
-	public void Phase4(World world, PlayerEntity player)
-	{
+	public void Phase4(World world, PlayerEntity player) {
 		// Make sure we're in space and riding a rocket
 		if(ZUtils.getDimensionIdentifier(player.world) != originalWorldId)
 			throw new AssertionError("Expected to return to the same world we started from");
@@ -115,67 +114,58 @@ public class BuildRocketTest extends BaseTest {
 		player.setPositionAndUpdate(0, 100, 0);
 	}
 	
-	public void clearLandscape(World world)
-	{
-		for(int x = -20; x < 20; x++)
-		{
-			for(int z = -20; z <= 20; z++)
-			{
-				for(int y = 62; y < 250; y++)
-				{
+	public void clearLandscape(World world) {
+		for(int x = -20; x < 20; x++) {
+			for(int z = -20; z <= 20; z++) {
+				for(int y = 62; y < 250; y++) {
 					world.removeBlock(new BlockPos(x,y,z), false);
 				}
 			}
 		}
 	}
 	
-	public void buildBasicRocketPlatform(World world, PlayerEntity player)
-	{
+	public void buildBasicRocketPlatform(World world, PlayerEntity player) {
 		final int padSize = 5;
 		final int height = 6;
 		BlockPos builderPos = new BlockPos(padSize/2, 65, -1);
 		rocketBuilderPos = builderPos;
 		// Build 5x5 pad
-		for(int x = 0; x <= padSize; x++)
-		{
-			for(int z = 0; z <= padSize; z++)
-			{
+		for(int x = 0; x <= padSize; x++) {
+			for(int z = 0; z <= padSize; z++) {
 				world.setBlockState(new BlockPos(x, 64,z), AdvancedRocketryBlocks.blockLaunchpad.getDefaultState());
 			}
 		}
 		
 		//Structure tower
-		for(int y = 0; y <= height; y++)
-		{
+		for(int y = 0; y <= height; y++) {
 			world.setBlockState(new BlockPos(-1, 64+y, height/2), AdvancedRocketryBlocks.blockStructureTower.getDefaultState());
 		}
 		
-		world.setBlockState(builderPos, AdvancedRocketryBlocks.blockRocketBuilder.getDefaultState().with(RotatableBlock.FACING, Direction.NORTH));
+		world.setBlockState(builderPos, AdvancedRocketryBlocks.blockRocketAssembler.getDefaultState().with(RotatableBlock.FACING, Direction.NORTH));
 		world.setBlockState(builderPos.up(), LibVulpesBlocks.blockCreativeInputPlug.getDefaultState());
 		
 		TileEntity tile = world.getTileEntity(builderPos);
 		
-		if(!(tile instanceof TileRocketBuilder))
+		if(!(tile instanceof TileRocketAssembler))
 			throw new AssertionError("Expected tile rocket builder!");
-		if(((TileRocketBuilder)tile).getRocketPadBounds(world, builderPos) == null)
+		if(((TileRocketAssembler)tile).getRocketPadBounds(world, builderPos) == null)
 			throw new AssertionError("Invalid Rocket pad!");
 	}
 	
-	public void buildBasicRocketStructure(World world, PlayerEntity player, BlockPos centerBottom)
-	{
+	public void buildBasicRocketStructure(World world, PlayerEntity player, BlockPos centerBottom) {
 		final int centerX = centerBottom.getX();
 		final int bottomY = centerBottom.getY();
 		final int centerZ = centerBottom.getZ();
 		
-		world.setBlockState(new BlockPos(centerX-1,  bottomY, centerZ), AdvancedRocketryBlocks.blockAdvEngine.getDefaultState());
-		world.setBlockState(new BlockPos(centerX+1,  bottomY, centerZ), AdvancedRocketryBlocks.blockAdvEngine.getDefaultState());
+		world.setBlockState(new BlockPos(centerX-1,  bottomY, centerZ), AdvancedRocketryBlocks.blockAdvancedMonopropellantEngine.getDefaultState());
+		world.setBlockState(new BlockPos(centerX+1,  bottomY, centerZ), AdvancedRocketryBlocks.blockAdvancedMonopropellantEngine.getDefaultState());
 		
 		for(int xOffset=-1; xOffset <= 1; xOffset++)
 			for(int yOffset=1; yOffset <= 2; yOffset++)
-				world.setBlockState(new BlockPos(centerX+xOffset,  bottomY+yOffset, centerZ), AdvancedRocketryBlocks.blockFuelTank.getDefaultState());
+				world.setBlockState(new BlockPos(centerX+xOffset,  bottomY+yOffset, centerZ), AdvancedRocketryBlocks.blockMonopropellantFuelTank.getDefaultState());
 		
 		world.setBlockState(new BlockPos(centerX,  bottomY+3, centerZ), AdvancedRocketryBlocks.blockGuidanceComputer.getDefaultState());
-		world.setBlockState(new BlockPos(centerX,  bottomY+4, centerZ), AdvancedRocketryBlocks.blockGenericSeat.getDefaultState());
+		world.setBlockState(new BlockPos(centerX,  bottomY+4, centerZ), AdvancedRocketryBlocks.blockSeat.getDefaultState());
 	}
 	
 	public void buildRocket(World world, PlayerEntity player)
@@ -183,17 +173,16 @@ public class BuildRocketTest extends BaseTest {
 		buildRocket(world, player, rocketBuilderPos);
 	}
 	
-	public void buildRocket(World world, PlayerEntity player, BlockPos tilePos)
-	{
+	public void buildRocket(World world, PlayerEntity player, BlockPos tilePos) {
 		TileEntity tile = world.getTileEntity(tilePos);
-		if(!(tile instanceof TileRocketBuilder))
+		if(!(tile instanceof TileRocketAssembler))
 			throw new AssertionError("Expected tile rocket builder!");
 		
-		if(((TileRocketBuilder)tile).getRocketPadBounds(world, tilePos) == null)
+		if(((TileRocketAssembler)tile).getRocketPadBounds(world, tilePos) == null)
 			throw new AssertionError("Invalid Rocket pad!");
 		
 		//Build the rocket
-		((TileRocketBuilder)tile).useNetworkData(player, Dist.DEDICATED_SERVER, (byte) 1, new CompoundNBT());
+		((TileRocketAssembler)tile).useNetworkData(player, Dist.DEDICATED_SERVER, (byte) 1, new CompoundNBT());
 	}
 	
 	public void mountPlayerToRocket(PlayerEntity player, EntityRocket rocket)
@@ -201,28 +190,23 @@ public class BuildRocketTest extends BaseTest {
 		player.startRiding(rocket);
 	}
 	
-	public void putStationIntoRocket(EntityRocket rocket, ResourceLocation stationId)
-	{
+	public void putStationIntoRocket(EntityRocket rocket, ResourceLocation stationId) {
 		ItemStack stack = new ItemStack(AdvancedRocketryItems.itemSpaceStationChip);
 		ItemStationChip.setUUID(stack, stationId);
 		rocket.storage.getGuidanceComputer().setInventorySlotContents(0, stack);
 	}
 	
 	
-	public void FuelRocket(EntityRocket rocket)
-	{
-		rocket.setFuelAmount(rocket.getFuelCapacity());
+	public void FuelRocket(EntityRocket rocket) {
+		rocket.stats.getFluidTank(FuelRegistry.FuelType.LIQUID_MONOPROPELLANT).fill(new FluidStack(AdvancedRocketryFluids.rocketFuelStill.get().getFluid(), rocket.stats.getFluidTank(FuelRegistry.FuelType.LIQUID_MONOPROPELLANT).getCapacity()), IFluidHandler.FluidAction.EXECUTE);
 	}
 	
 	public EntityRocket findRocketOnPad(World world)
-	{	
-		EntityRocket rocket = finishBuildingRocket(world);
-		
-		return rocket;
+	{
+		return finishBuildingRocket(world);
 	}
 	
-	public EntityRocket finishBuildingRocket(World world)
-	{
+	public EntityRocket finishBuildingRocket(World world) {
 		List<EntityRocket> list = world.getEntitiesWithinAABB(EntityRocket.class, new AxisAlignedBB(new BlockPos(0,64,0), new BlockPos(6,72,6)));
 		
 		if(list.size() != 1)

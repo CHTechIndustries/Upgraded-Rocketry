@@ -4,10 +4,10 @@
             "item": "advancedrocketry:rollingmachine"
         },
         "title": {
-            "translate": "achievement.rollin"
+            "translate": "advancement.advancedrocketry.rollin"
         },
         "description": {
-            "translate": "achievement.rollin.desc"
+            "translate": "advancement.advancedrocketry.rollin.desc"
         }
     },
     "parent": "advancedrocketry:normal/holographic",

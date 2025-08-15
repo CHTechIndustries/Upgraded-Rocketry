@@ -1,12 +1,10 @@
 package zmaster587.advancedRocketry.tile.station;
 
-import io.netty.buffer.ByteBuf;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.container.Container;
 import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.network.NetworkManager;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.network.play.server.SUpdateTileEntityPacket;
 import net.minecraft.tileentity.ITickableTileEntity;
@@ -17,9 +15,11 @@ import net.minecraftforge.api.distmarker.Dist;
 import zmaster587.advancedRocketry.api.ARConfiguration;
 import zmaster587.advancedRocketry.api.AdvancedRocketryTileEntityType;
 import zmaster587.advancedRocketry.api.stations.ISpaceObject;
+import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.inventory.TextureResources;
 import zmaster587.advancedRocketry.network.PacketStationUpdate;
 import zmaster587.advancedRocketry.stations.SpaceObjectManager;
+import zmaster587.advancedRocketry.stations.SpaceStationObject;
 import zmaster587.libVulpes.LibVulpes;
 import zmaster587.libVulpes.api.LibvulpesGuiRegistry;
 import zmaster587.libVulpes.inventory.ContainerModular;
@@ -28,20 +28,24 @@ import zmaster587.libVulpes.inventory.GuiHandler.guiId;
 import zmaster587.libVulpes.inventory.modules.*;
 import zmaster587.libVulpes.network.PacketHandler;
 import zmaster587.libVulpes.network.PacketMachine;
+import zmaster587.libVulpes.tile.IComparatorOverride;
 import zmaster587.libVulpes.util.INetworkMachine;
 import zmaster587.libVulpes.util.ZUtils;
 
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.LinkedList;
 import java.util.List;
 
-public class TileStationGravityController extends TileEntity implements IModularInventory, ITickableTileEntity, INetworkMachine, ISliderBar {
+public class TileStationGravityController extends TileEntity implements IModularInventory, ITickableTileEntity, INetworkMachine, ISliderBar, IButtonInventory, IComparatorOverride {
 
-	int gravity;
-	int progress;
-	
-	public static int minGravity = 10;
+	private int progress;
+	private ZUtils.RedstoneState state = ZUtils.RedstoneState.OFF;
+
+	private static int minGravity = 10;
 
 	private ModuleText moduleGrav, maxGravBuildSpeed, targetGrav;
+	private ModuleRedstoneOutputButton redstoneControl;
 
 	public TileStationGravityController() {
 		super(AdvancedRocketryTileEntityType.TILE_STATION_GRAVITY_CONTROLLER);
@@ -51,72 +55,130 @@ public class TileStationGravityController extends TileEntity implements IModular
 		targetGrav = new ModuleText(6, 35, LibVulpes.proxy.getLocalizedString("msg.stationgravctrl.tgtalt"), 0x202020);
 		
 		minGravity = ARConfiguration.getCurrentConfig().allowZeroGSpacestations.get() ? 0 : 10;
+		redstoneControl = new ModuleRedstoneOutputButton(174, 4, "", this);
+	}
+
+	public static int getMinGravity() {
+		return minGravity;
 	}
 
 	@Override
 	public List<ModuleBase> getModules(int id, PlayerEntity player) {
-		List<ModuleBase> modules = new LinkedList<ModuleBase>();
+		List<ModuleBase> modules = new LinkedList<>();
 		modules.add(moduleGrav);
 		//modules.add(numThrusters);
 		modules.add(maxGravBuildSpeed);
+		modules.add(redstoneControl);
 
 		modules.add(targetGrav);
-		modules.add(new ModuleSlider(6, 60, 0, TextureResources.doubleWarningSideBarIndicator, (ISliderBar)this));
+		modules.add(new ModuleSlider(6, 60, 0, TextureResources.doubleWarningSideBarIndicator, this));
 
 		updateText();
 		return modules;
 	}
 
 	@Override
+	public void onInventoryButtonPressed(ModuleButton buttonId) {
+		if(buttonId == redstoneControl) {
+			state = redstoneControl.getState();
+			PacketHandler.sendToServer(new PacketMachine(this, (byte)2));
+		}
+		else
+			PacketHandler.sendToServer(new PacketMachine(this, (byte)100) );
+	}
+	@Override
 	public SUpdateTileEntityPacket getUpdatePacket() {
 		CompoundNBT nbt = write(new CompoundNBT());
-		nbt.putInt("gravity", gravity);
-		
 
-		SUpdateTileEntityPacket packet = new SUpdateTileEntityPacket(pos, 0, nbt);
-		return packet;
+
+		return new SUpdateTileEntityPacket(pos, 0, nbt);
+	}
+
+	@Nonnull
+	@Override
+	public CompoundNBT getUpdateTag() {
+		return write(new CompoundNBT());
 	}
 
 	@Override
-	public void onDataPacket(NetworkManager net, SUpdateTileEntityPacket pkt) {
-		super.onDataPacket(net, pkt);
+	@ParametersAreNonnullByDefault
+	public void read(BlockState blkstate, CompoundNBT nbt) {
+		super.read(blkstate, nbt);
 
-		gravity = pkt.getNbtCompound().getInt("gravity");
+		state = ZUtils.RedstoneState.values()[nbt.getByte("redstoneState")];
+		redstoneControl.setRedstoneState(state);
+	}
 
+	@Nonnull
+	@Override
+	@ParametersAreNonnullByDefault
+	public CompoundNBT write(CompoundNBT nbt) {
+		super.write(nbt);
+		nbt.putByte("redstoneState", (byte) state.ordinal());
+		return nbt;
+	}
+
+	@Override
+	public void writeDataToNetwork(PacketBuffer out, byte id) {
+		if(id == 2)
+			out.writeByte(state.ordinal());
+	}
+
+	@Override
+	public void readDataFromNetwork(PacketBuffer in, byte packetId,
+									CompoundNBT nbt) {
+		if(packetId == 1) {
+			nbt.putLong("id", in.readLong());
+		}
+		else if(packetId == 2) {
+			nbt.putByte("state", in.readByte());
+		}
+	}
+
+	@Override
+	public void useNetworkData(PlayerEntity player, Dist side, byte id,
+							   CompoundNBT nbt) {
+		if(id == 2) {
+			state = ZUtils.RedstoneState.values()[nbt.getByte("state")];
+			redstoneControl.setRedstoneState(state);
+		}
 	}
 	
 	private void updateText() {
 		if(world.isRemote) {
-			ISpaceObject object = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(pos);
-			if(object != null) {
-				moduleGrav.setText(String.format("%s%.2f", LibVulpes.proxy.getLocalizedString("msg.stationgravctrl.alt"), object.getProperties().getGravitationalMultiplier()));
-				maxGravBuildSpeed.setText(String.format("%s%.1f",LibVulpes.proxy.getLocalizedString("msg.stationgravctrl.maxaltrate"), 7200D*object.getMaxRotationalAcceleration()));
+			ISpaceObject spaceObject = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(pos);
+			if(spaceObject != null) {
+				moduleGrav.setText(String.format("%s%.2f", LibVulpes.proxy.getLocalizedString("msg.stationgravctrl.alt"), spaceObject.getProperties().getGravitationalMultiplier()));
+				maxGravBuildSpeed.setText(String.format("%s%.1f",LibVulpes.proxy.getLocalizedString("msg.stationgravctrl.maxaltrate"), 7200D*spaceObject.getMaxRotationalAcceleration()));
+				targetGrav.setText(String.format("%s%d", LibVulpes.proxy.getLocalizedString("msg.stationgravctrl.tgtalt"), ((SpaceStationObject) spaceObject).targetGravity));
 			}
-
-			//numThrusters.setText("Number Of Thrusters: 0");
-
-			targetGrav.setText(String.format("%s%d", LibVulpes.proxy.getLocalizedString("msg.stationgravctrl.tgtalt"), gravity));
 		}
 	}
 
 	@Override
 	public void tick() {
 
-		if(ARConfiguration.GetSpaceDimId().equals(ZUtils.getDimensionIdentifier(this.world))) {
+		if(DimensionManager.spaceId.equals(ZUtils.getDimensionIdentifier(this.world))) {
 
 			if(!world.isRemote) {
-				ISpaceObject object = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(pos);
+				ISpaceObject spaceObject = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(pos);
 
-				if(object != null) {
-					if(gravity < 11  && !ARConfiguration.getCurrentConfig().allowZeroGSpacestations.get())
-						gravity = 11;
-					double targetGravity = gravity/100D;
-					double angVel = object.getProperties().getGravitationalMultiplier();
+				if(spaceObject != null) {
+					if (redstoneControl.getState() == ZUtils.RedstoneState.ON)
+						((SpaceStationObject) spaceObject).targetGravity = (world.getStrongPower(pos) * 6) + 10;
+					else if (redstoneControl.getState() == ZUtils.RedstoneState.INVERTED)
+						((SpaceStationObject) spaceObject).targetGravity = Math.abs(15 - world.getStrongPower(pos)) * 6 + 10;
+
+					progress = ((SpaceStationObject) spaceObject).targetGravity - minGravity;
+
+					int targetMultiplier = (ARConfiguration.getCurrentConfig().allowZeroGSpacestations.get()) ? ((SpaceStationObject) spaceObject).targetGravity : Math.max(11, ((SpaceStationObject) spaceObject).targetGravity);
+					double targetGravity = targetMultiplier/100D;
+					double angVel = spaceObject.getProperties().getGravitationalMultiplier();
 					double acc = 0.001;
 
 					double difference = targetGravity - angVel;
 
-					if(Math.abs(difference) > 0.01) {
+					if(Math.abs(difference) >= 0.001) {
 						double finalVel = angVel;
 						if(difference < 0) {
 							finalVel = angVel + Math.max(difference, -acc);
@@ -125,10 +187,11 @@ public class TileStationGravityController extends TileEntity implements IModular
 							finalVel = angVel + Math.min(difference, acc);
 						}
 
-						object.getProperties().setGravitationalMultiplier((float)finalVel);
+						spaceObject.getProperties().setGravitationalMultiplier((float)finalVel);
 						if(!world.isRemote) {
-							//PacketHandler.sendToNearby(new PacketStationUpdate(object, PacketStationUpdate.Type.ROTANGLE_UPDATE), this.worldObj.provider.dimensionId, this.xCoord, this.yCoord, this.zCoord, 1024);
-							PacketHandler.sendToAll(new PacketStationUpdate(object, PacketStationUpdate.Type.DIM_PROPERTY_UPDATE));
+							//PacketHandler.sendToNearby(new PacketStationUpdate(spaceObject, PacketStationUpdate.Type.ROTANGLE_UPDATE), this.worldObj.provider.dimensionId, this.xCoord, this.yCoord, this.zCoord, 1024);
+							PacketHandler.sendToAll(new PacketStationUpdate(spaceObject, PacketStationUpdate.Type.DIM_PROPERTY_UPDATE));
+							markDirty();
 						}
 						else
 							updateText();
@@ -149,40 +212,6 @@ public class TileStationGravityController extends TileEntity implements IModular
 		return true;
 	}
 
-	@Override
-	public void writeDataToNetwork(PacketBuffer out, byte id) {
-		if(id == 0) {
-			out.writeShort(progress);
-		}
-	}
-
-	@Override
-	public void readDataFromNetwork(PacketBuffer in, byte packetId,
-			CompoundNBT nbt) {
-		if(packetId == 0) {
-			setProgress(0, in.readShort());
-		}
-	}
-
-	@Override
-	public void useNetworkData(PlayerEntity player, Dist side, byte id,
-			CompoundNBT nbt) {
-
-	}
-
-	@Override
-	public CompoundNBT write(CompoundNBT nbt) {
-		super.write(nbt);
-		nbt.putShort("numRotations", (short)gravity);
-		return nbt;
-	}
-
-	@Override
-	public void func_230337_a_(BlockState state, CompoundNBT nbt) {
-		super.func_230337_a_(state, nbt);
-		gravity = nbt.getShort("numRotations");
-		progress = gravity -minGravity;
-	}
 
 
 	@Override
@@ -194,7 +223,9 @@ public class TileStationGravityController extends TileEntity implements IModular
 	public void setProgress(int id, int progress) {
 
 		this.progress = progress;
-		gravity = progress + minGravity;
+		if (SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(this.pos) != null) {
+			((SpaceStationObject) (SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(this.pos))).targetGravity = progress + minGravity;
+		}
 	}
 
 	@Override
@@ -213,17 +244,32 @@ public class TileStationGravityController extends TileEntity implements IModular
 	}
 
 	@Override
+	public int getComparatorOverride() {
+		if(DimensionManager.getInstance().isSpaceDimension(world)) {
+			if (!world.isRemote) {
+				ISpaceObject spaceObject = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(pos);
+				if (spaceObject != null) {
+					return (int)(spaceObject.getOrbitalDistance() + 5)/13;
+				}
+			}
+		}
+		return 0;
+	}
+
+	@Override
 	public void setProgressByUser(int id, int progress) {
 		setProgress(id, progress);
 		PacketHandler.sendToServer(new PacketMachine(this, (byte)0));
 	}
 
+	@Nonnull
 	@Override
 	public ITextComponent getDisplayName() {
 		return new TranslationTextComponent(getModularInventoryName());
 	}
 
 	@Override
+	@ParametersAreNonnullByDefault
 	public Container createMenu(int id, PlayerInventory inv, PlayerEntity player) {
 		return new ContainerModular(LibvulpesGuiRegistry.CONTAINER_MODULAR_TILE, id, player, getModules(getModularInvType().ordinal(), player), this, getModularInvType());
 	}

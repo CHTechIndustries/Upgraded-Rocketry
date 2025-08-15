@@ -31,7 +31,7 @@ public class AdvancedRocketryEntities {
 	public static void registerEntities(RegistryEvent.Register<EntityType<?>> event)
 	{
 		ENTITY_DUMMY = EntityType.Builder.<EntityDummy>create(EntityDummy::new, EntityClassification.MISC).disableSummoning().build("dummy");
-		ENTITY_ELEVATOR_CAPSULE = EntityType.Builder.<EntityElevatorCapsule>create(EntityElevatorCapsule::new, EntityClassification.MISC).size(3,3).immuneToFire().setTrackingRange(64).setShouldReceiveVelocityUpdates(true).setUpdateInterval(20).disableSummoning().build("spaceelevator");
+		ENTITY_ELEVATOR_CAPSULE = EntityType.Builder.<EntityElevatorCapsule>create(EntityElevatorCapsule::new, EntityClassification.MISC).size(3,0.1f).immuneToFire().setTrackingRange(64).setShouldReceiveVelocityUpdates(true).setUpdateInterval(20).disableSummoning().build("spaceelevator");
 		ENTITY_HOVER_CRAFT = EntityType.Builder.<EntityHoverCraft>create(EntityHoverCraft::new, EntityClassification.MISC).size(2.5f, 1f).immuneToFire().setTrackingRange(64).setShouldReceiveVelocityUpdates(true).setUpdateInterval(3).build("hovercraft");
 		ENTITY_ITEM_ABDUCTED = EntityType.Builder.<EntityItemAbducted>create(EntityItemAbducted::new, EntityClassification.MISC).size(0.25F, 0.25F).setTrackingRange(127).setShouldReceiveVelocityUpdates(true).setUpdateInterval(400).build("itemabducted");
 		ENTITY_LASER_NODE = EntityType.Builder.<EntityLaserNode>create(EntityLaserNode::new, EntityClassification.MISC).size(0.25F, 0.25F).setTrackingRange(256).setUpdateInterval(20).build("lasernode");
@@ -41,14 +41,14 @@ public class AdvancedRocketryEntities {
 		ENTITY_UIBUTTON = EntityType.Builder.<EntityUIButton>create(EntityUIButton::new, EntityClassification.MISC).size(0.25F, 0.25F).setTrackingRange(64).setUpdateInterval(20).build("uibutton");
 		
 		event.getRegistry().registerAll(
-				ENTITY_DUMMY.setRegistryName("dummy"),
-				ENTITY_ELEVATOR_CAPSULE.setRegistryName("spaceelevator"),
-				ENTITY_HOVER_CRAFT.setRegistryName("hovercraft"),
-				ENTITY_ITEM_ABDUCTED.setRegistryName("itemabducted"),
-				ENTITY_LASER_NODE.setRegistryName("lasernode"),
-				ENTITY_ROCKET.setRegistryName("rocket"),
-				ENTITY_UIPLANET.setRegistryName("uiplanet"),
-				ENTITY_UISTAR.setRegistryName("uistar"),
-				ENTITY_UIBUTTON.setRegistryName("uibutton"));
+				ENTITY_DUMMY.setRegistryName(Constants.modId, "dummy"),
+				ENTITY_ELEVATOR_CAPSULE.setRegistryName(Constants.modId, "spaceelevator"),
+				ENTITY_HOVER_CRAFT.setRegistryName(Constants.modId, "hovercraft"),
+				ENTITY_ITEM_ABDUCTED.setRegistryName(Constants.modId, "itemabducted"),
+				ENTITY_LASER_NODE.setRegistryName(Constants.modId, "lasernode"),
+				ENTITY_ROCKET.setRegistryName(Constants.modId, "rocket"),
+				ENTITY_UIPLANET.setRegistryName(Constants.modId, "uiplanet"),
+				ENTITY_UISTAR.setRegistryName(Constants.modId, "uistar"),
+				ENTITY_UIBUTTON.setRegistryName(Constants.modId, "uibutton"));
 	}
 }
