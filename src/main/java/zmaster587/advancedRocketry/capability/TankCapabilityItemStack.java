@@ -19,7 +19,7 @@ public class TankCapabilityItemStack implements ICapabilityProvider {
 	
 	@Override
 	public boolean hasCapability(Capability<?> capability, EnumFacing facing) {
-		return capability == CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY;
+		return capability == CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY;
 	}
 
 	@Override

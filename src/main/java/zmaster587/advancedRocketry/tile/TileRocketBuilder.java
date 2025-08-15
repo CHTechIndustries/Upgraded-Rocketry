@@ -144,7 +144,7 @@ public class TileRocketBuilder extends TileEntityRFConsumer implements IButtonIn
 		super.invalidate();
 		MinecraftForge.EVENT_BUS.unregister(this);
 		for(HashedBlockPosition pos : blockPos) {
-			TileEntity tile = worldObj.getTileEntity(pos.getBlockPos());
+			TileEntity tile = world.getTileEntity(pos.getBlockPos());
 
 			if(tile instanceof IMultiblock)
 				((IMultiblock)tile).setIncomplete();
@@ -184,7 +184,7 @@ public class TileRocketBuilder extends TileEntityRFConsumer implements IButtonIn
 
 	public float getNeededThrust() {return getWeight();}
 
-	public float getNeededFuel() { return getAcceleration() > 0 ? stats.getFuelRate(FuelType.LIQUID)*MathHelper.sqrt_float((2*(Configuration.orbit-this.getPos().getY()))/getAcceleration()) : 0; }
+	public float getNeededFuel() { return getAcceleration() > 0 ? stats.getFuelRate(FuelType.LIQUID)*MathHelper.sqrt((2*(Configuration.orbit-this.getPos().getY()))/getAcceleration()) : 0; }
 
 	public int getFuel() {return (int) (stats.getFuelCapacity(FuelType.LIQUID)*Configuration.fuelCapacityMultiplier);}
 
@@ -209,11 +209,11 @@ public class TileRocketBuilder extends TileEntityRFConsumer implements IButtonIn
 	@Override
 	public void performFunction() {
 		if(progress >= (totalProgress*MAXSCANDELAY)) {
-			if(!worldObj.isRemote) {
+			if(!world.isRemote) {
 				if(building)
 					assembleRocket();
 				else
-					scanRocket(worldObj, pos, bbCache);
+					scanRocket(world, pos, bbCache);
 			}
 			totalProgress = -1;
 			progress = 0;
@@ -227,9 +227,9 @@ public class TileRocketBuilder extends TileEntityRFConsumer implements IButtonIn
 
 		progress++;
 
-		if(!this.worldObj.isRemote && this.energy.getEnergyStored() < getPowerPerOperation() && progress - prevProgress > 0) {
+		if(!this.world.isRemote && this.energy.getEnergyStored() < getPowerPerOperation() && progress - prevProgress > 0) {
 			prevProgress = progress;
-			PacketHandler.sendToNearby(new PacketMachine(this, (byte)2), this.worldObj.provider.getDimension(), this.getPos(), 32);
+			PacketHandler.sendToNearby(new PacketMachine(this, (byte)2), this.world.provider.getDimension(), this.getPos(), 32);
 		}
 
 	}
@@ -274,7 +274,7 @@ public class TileRocketBuilder extends TileEntityRFConsumer implements IButtonIn
 					IBlockState state = world.getBlockState(currBlockPos);
 					Block block = state.getBlock();
 
-					if(!worldObj.isAirBlock(currBlockPos)) {
+					if(!world.isAirBlock(currBlockPos)) {
 						if(xCurr < actualMinX)
 							actualMinX = xCurr;
 						if(yCurr < actualMinY)
@@ -374,33 +374,33 @@ public class TileRocketBuilder extends TileEntityRFConsumer implements IButtonIn
 
 	public void assembleRocket() {
 
-		if(bbCache == null || worldObj.isRemote)
+		if(bbCache == null || world.isRemote)
 			return;
 		//Need to scan again b/c something may have changed
-		scanRocket(worldObj, pos, bbCache);
+		scanRocket(world, pos, bbCache);
 
 		if(status != ErrorCodes.SUCCESS)
 			return;
 
 		StorageChunk storageChunk;
 		try {
-			storageChunk = StorageChunk.cutWorldBB(worldObj, bbCache);
+			storageChunk = StorageChunk.cutWorldBB(world, bbCache);
 		} catch(NegativeArraySizeException e) {
 			return;
 		}
 
-		EntityRocket rocket = new EntityRocket(worldObj, storageChunk, stats.copy(),bbCache.minX + (bbCache.maxX-bbCache.minX)/2f +.5f, this.getPos().getY() , bbCache.minZ + (bbCache.maxZ-bbCache.minZ)/2f +.5f);
+		EntityRocket rocket = new EntityRocket(world, storageChunk, stats.copy(),bbCache.minX + (bbCache.maxX-bbCache.minX)/2f +.5f, this.getPos().getY() , bbCache.minZ + (bbCache.maxZ-bbCache.minZ)/2f +.5f);
 
-		worldObj.spawnEntityInWorld(rocket);
+		world.spawnEntity(rocket);
 		NBTTagCompound nbtdata = new NBTTagCompound();
 
 		rocket.writeToNBT(nbtdata);
-		PacketHandler.sendToNearby(new PacketEntity((INetworkEntity)rocket, (byte)0, nbtdata), rocket.worldObj.provider.getDimension(), this.pos, 64);
+		PacketHandler.sendToNearby(new PacketEntity((INetworkEntity)rocket, (byte)0, nbtdata), rocket.world.provider.getDimension(), this.pos, 64);
 
 		stats.reset();
 		this.status = ErrorCodes.FINISHED;
 		this.markDirty();
-		worldObj.notifyBlockUpdate(pos, worldObj.getBlockState(pos),  worldObj.getBlockState(pos), 3);
+		world.notifyBlockUpdate(pos, world.getBlockState(pos),  world.getBlockState(pos), 3);
 
 		for(IInfrastructure infrastructure : getConnectedInfrastructure()) {
 			rocket.linkInfrastructure(infrastructure);
@@ -650,15 +650,15 @@ public class TileRocketBuilder extends TileEntityRFConsumer implements IButtonIn
 	public void useNetworkData(EntityPlayer player, Side side, byte id,
 			NBTTagCompound nbt) {
 		if(id == 0) {
-			AxisAlignedBB bb = getRocketPadBounds(worldObj, pos);
+			AxisAlignedBB bb = getRocketPadBounds(world, pos);
 
 			bbCache = bb;
 			if(!canScan())
 				return;
 
-			totalProgress = (int) (Configuration.buildSpeedMultiplier*this.getVolume(worldObj, bbCache)/10);
+			totalProgress = (int) (Configuration.buildSpeedMultiplier*this.getVolume(world, bbCache)/10);
 			this.markDirty();
-			worldObj.notifyBlockUpdate(pos, worldObj.getBlockState(pos),  worldObj.getBlockState(pos), 3);
+			world.notifyBlockUpdate(pos, world.getBlockState(pos),  world.getBlockState(pos), 3);
 		}
 		else if(id == 1) {
 
@@ -666,15 +666,15 @@ public class TileRocketBuilder extends TileEntityRFConsumer implements IButtonIn
 				return;
 
 			building = true;
-			AxisAlignedBB bb = getRocketPadBounds(worldObj, pos);
+			AxisAlignedBB bb = getRocketPadBounds(world, pos);
 
 			bbCache = bb;
 			if(!canScan())
 				return;
 
-			totalProgress =(int) (Configuration.buildSpeedMultiplier*this.getVolume(worldObj,bbCache)/10);
+			totalProgress =(int) (Configuration.buildSpeedMultiplier*this.getVolume(world,bbCache)/10);
 			this.markDirty();
-			worldObj.notifyBlockUpdate(pos, worldObj.getBlockState(pos),  worldObj.getBlockState(pos), 3);
+			world.notifyBlockUpdate(pos, world.getBlockState(pos),  world.getBlockState(pos), 3);
 
 		}
 		else if(id == 2) {
@@ -682,7 +682,7 @@ public class TileRocketBuilder extends TileEntityRFConsumer implements IButtonIn
 			this.progress = nbt.getInteger("tik");
 		}
 		else if(id == 3) {
-			EntityRocket rocket = (EntityRocket) worldObj.getEntityByID(nbt.getInteger("id"));
+			EntityRocket rocket = (EntityRocket) world.getEntityByID(nbt.getInteger("id"));
 			for(IInfrastructure infrastructure : getConnectedInfrastructure()) {
 				rocket.linkInfrastructure(infrastructure);
 			}
@@ -694,8 +694,8 @@ public class TileRocketBuilder extends TileEntityRFConsumer implements IButtonIn
 		weightText.setText(isScanning() ? (LibVulpes.proxy.getLocalizedString("msg.rocketbuilder.weight") + ": ???")  : String.format("%s: %dN", LibVulpes.proxy.getLocalizedString("msg.rocketbuilder.weight"),getWeight()));
 		fuelText.setText(isScanning() ? (LibVulpes.proxy.getLocalizedString("msg.rocketbuilder.fuel") + ": ???") :  String.format("%s: %dmb/s", LibVulpes.proxy.getLocalizedString("msg.rocketbuilder.fuel"), getRocketStats().getFuelRate(FuelType.LIQUID)));
 		accelerationText.setText(isScanning() ? (LibVulpes.proxy.getLocalizedString("msg.rocketbuilder.acc") + ": ???") : String.format("%s: %.2fm/s\u00b2", LibVulpes.proxy.getLocalizedString("msg.rocketbuilder.acc"), getAcceleration()*20f));
-		if(!worldObj.isRemote) { 
-			if(getRocketPadBounds(worldObj, pos) == null)
+		if(!world.isRemote) { 
+			if(getRocketPadBounds(world, pos) == null)
 				setStatus(ErrorCodes.INCOMPLETESTRCUTURE.ordinal());
 			else if( ErrorCodes.INCOMPLETESTRCUTURE.equals(getStatus()))
 				setStatus(ErrorCodes.UNSCANNED.ordinal());
@@ -710,7 +710,7 @@ public class TileRocketBuilder extends TileEntityRFConsumer implements IButtonIn
 
 		modules.add(new ModulePower(160, 90, this));
 
-		if(worldObj.isRemote)
+		if(world.isRemote)
 			modules.add(new ModuleImage(4, 9, new IconResource(4, 9, 168, 74, backdrop)));
 
 		modules.add(new ModuleProgress(89, 47, 0, horizontalProgressBar, this));
@@ -755,9 +755,9 @@ public class TileRocketBuilder extends TileEntityRFConsumer implements IButtonIn
 
 		switch(id) {
 		case 0:
-			return (this.getAcceleration() > 0) ? MathHelper.clamp_float(0.5f + 0.5f*((this.getFuel() - this.getNeededFuel())/this.getNeededFuel()), 0f, 1f) : 0;
+			return (this.getAcceleration() > 0) ? MathHelper.clamp(0.5f + 0.5f*((this.getFuel() - this.getNeededFuel())/this.getNeededFuel()), 0f, 1f) : 0;
 		case 1:
-			return MathHelper.clamp_float(0.5f + this.getAcceleration()*10, 0f, 1f);
+			return MathHelper.clamp(0.5f + this.getAcceleration()*10, 0f, 1f);
 		case 2:
 			return (float)this.getNormallizedProgress();
 		case 3:
@@ -868,19 +868,19 @@ public class TileRocketBuilder extends TileEntityRFConsumer implements IButtonIn
 				blockPos.add(pos);
 
 			if(getBBCache() == null) {
-				bbCache = getRocketPadBounds(worldObj, getPos());
+				bbCache = getRocketPadBounds(world, getPos());
 			}
 
 			if(getBBCache() != null) {
 
-				List<EntityRocketBase> rockets = worldObj.getEntitiesWithinAABB(EntityRocketBase.class, bbCache);
+				List<EntityRocketBase> rockets = world.getEntitiesWithinAABB(EntityRocketBase.class, bbCache);
 				for(EntityRocketBase rocket : rockets) {
 					rocket.linkInfrastructure((IInfrastructure) tile);
 				}
 			}
 
 			if(!world.isRemote) {
-				player.addChatMessage(new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.linker.success")));
+				player.sendMessage(new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.linker.success")));
 
 				if(tile instanceof IMultiblock)
 					((IMultiblock)tile).setMasterBlock(getPos());
@@ -896,11 +896,11 @@ public class TileRocketBuilder extends TileEntityRFConsumer implements IButtonIn
 		blockPos.remove(new HashedBlockPosition(tile.getPos()));
 
 		if(getBBCache() == null) {
-			bbCache = getRocketPadBounds(worldObj, this.getPos());
+			bbCache = getRocketPadBounds(world, this.getPos());
 		}
 
 		if(getBBCache() != null) {
-			List<EntityRocketBase> rockets = worldObj.getEntitiesWithinAABB(EntityRocketBase.class, bbCache);
+			List<EntityRocketBase> rockets = world.getEntitiesWithinAABB(EntityRocketBase.class, bbCache);
 
 			for(EntityRocketBase rocket : rockets) {
 				rocket.unlinkInfrastructure((IInfrastructure) tile);
@@ -916,8 +916,8 @@ public class TileRocketBuilder extends TileEntityRFConsumer implements IButtonIn
 
 		while(iter.hasNext()) {
 			HashedBlockPosition position = iter.next();
-			TileEntity tile = worldObj.getTileEntity(position.getBlockPos());
-			if((tile = worldObj.getTileEntity(position.getBlockPos())) instanceof IInfrastructure) {
+			TileEntity tile = world.getTileEntity(position.getBlockPos());
+			if((tile = world.getTileEntity(position.getBlockPos())) instanceof IInfrastructure) {
 				infrastructure.add((IInfrastructure)tile);
 			}
 			else
@@ -929,16 +929,16 @@ public class TileRocketBuilder extends TileEntityRFConsumer implements IButtonIn
 
 	@SubscribeEvent
 	public void onRocketLand(RocketLandedEvent event) {
-		if(worldObj.isRemote)
+		if(world.isRemote)
 			return;
 		EntityRocketBase rocket = (EntityRocketBase)event.getEntity();
 
 		if(getBBCache() == null) {
-			bbCache = getRocketPadBounds(worldObj, pos);
+			bbCache = getRocketPadBounds(world, pos);
 		}
 
 		if(getBBCache() != null) {
-			List<EntityRocketBase> rockets = worldObj.getEntitiesWithinAABB(EntityRocketBase.class, bbCache);
+			List<EntityRocketBase> rockets = world.getEntitiesWithinAABB(EntityRocketBase.class, bbCache);
 
 			if(rockets.contains(rocket)) {
 				lastRocketID = rocket.getEntityId();

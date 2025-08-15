@@ -248,9 +248,9 @@ public class SpaceObjectManager implements ISpaceObjectManager {
 	 */
 	@SubscribeEvent
 	public void onPlayerTick(PlayerTickEvent event) {
-		if(event.player.worldObj.provider.getDimension() == Configuration.spaceDimId) {
+		if(event.player.world.provider.getDimension() == Configuration.spaceDimId) {
 
-			if(event.player.posY < 0 && !event.player.worldObj.isRemote) {
+			if(event.player.posY < 0 && !event.player.world.isRemote) {
 				ISpaceObject object = getSpaceStationFromBlockCoords(event.player.getPosition());
 				if(object != null) {
 
@@ -259,7 +259,7 @@ public class SpaceObjectManager implements ISpaceObjectManager {
 					event.player.fallDistance=0;
 					event.player.motionY = 0;
 					event.player.setPositionAndUpdate(loc.x, loc.y + 2, loc.z);
-					event.player.addChatComponentMessage(new TextComponentString("You wake up finding yourself back on the station"));
+					event.player.sendMessage(new TextComponentString("You wake up finding yourself back on the station"));
 				}
 			}
 

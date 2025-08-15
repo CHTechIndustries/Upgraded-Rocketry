@@ -38,7 +38,7 @@ public class MissionOreMining extends MissionResourceCollection {
 
 			ItemStack stack = rocketStorage.getGuidanceComputer().getStackInSlot(0);
 
-			if(stack != null && stack.getItem() instanceof ItemAsteroidChip) {
+			if(!stack.isEmpty() && stack.getItem() instanceof ItemAsteroidChip) {
 
 				distanceData = ((ItemAsteroidChip)stack.getItem()).getData(stack,DataType.DISTANCE);
 				compositionData = ((ItemAsteroidChip)stack.getItem()).getData(stack,DataType.COMPOSITION);
@@ -58,18 +58,18 @@ public class MissionOreMining extends MissionResourceCollection {
 						for(StackEntry entry : stacks2) {
 
 							if(compositionData/(float)maxData >= Math.random())
-								entry.stack.stackSize *= 1.25f;
+								entry.stack.setCount((int) (entry.stack.getCount() * 1.25f));
 
 							if(massData/(float)maxData >= Math.random())
-								entry.stack.stackSize *= 1.25f;
+								entry.stack.setCount((int) (entry.stack.getCount() * 1.25f));
 
 							//if(entry.stack.getMaxStackSize() < entry.stack.stackSize) {
-							for(int i = 0; i < entry.stack.stackSize/entry.stack.getMaxStackSize(); i++) {
+							for(int i = 0; i < entry.stack.getCount()/entry.stack.getMaxStackSize(); i++) {
 								ItemStack stack2 = new ItemStack(entry.stack.getItem(), entry.stack.getMaxStackSize(), entry.stack.getMetadata());
 								totalStacksList.add(stack2);
 							}
 							//}
-							entry.stack.stackSize %= entry.stack.getMaxStackSize();
+							entry.stack.setCount( entry.stack.getCount() % entry.stack.getMaxStackSize());
 							totalStacksList.add(entry.stack);
 						}
 
@@ -81,7 +81,7 @@ public class MissionOreMining extends MissionResourceCollection {
 
 
 							for(int offset = 0; offset < tile.getSizeInventory() && g < stacks.length; offset++, g++) {
-								if(tile.getStackInSlot(offset) == null)
+								if(tile.getStackInSlot(offset).isEmpty())
 									tile.setInventorySlotContents(offset, stacks[g]);
 							}
 						}
@@ -91,11 +91,11 @@ public class MissionOreMining extends MissionResourceCollection {
 
 		}
 
-		rocketStorage.getGuidanceComputer().setInventorySlotContents(0, null);
+		rocketStorage.getGuidanceComputer().setInventorySlotContents(0, ItemStack.EMPTY);
 		EntityRocket rocket = new EntityRocket(DimensionManager.getWorld(launchDimension), rocketStorage, rocketStats, x, 999, z);
 
 		World world = DimensionManager.getWorld(launchDimension);
-		world.spawnEntityInWorld(rocket);
+		world.spawnEntity(rocket);
 		rocket.setInOrbit(true);
 		rocket.setInFlight(true);
 		rocket.motionY = -1.0;

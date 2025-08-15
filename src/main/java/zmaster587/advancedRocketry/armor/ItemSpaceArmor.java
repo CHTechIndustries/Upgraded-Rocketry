@@ -6,9 +6,7 @@ import java.util.List;
 import com.mojang.realmsclient.gui.ChatFormatting;
 
 import zmaster587.advancedRocketry.achievements.ARAchivements;
-import zmaster587.advancedRocketry.api.AdvancedRocketryFluids;
 import zmaster587.advancedRocketry.api.AdvancedRocketryItems;
-import zmaster587.advancedRocketry.api.Configuration;
 import zmaster587.advancedRocketry.api.IAtmosphere;
 import zmaster587.advancedRocketry.api.armor.IFillableArmor;
 import zmaster587.advancedRocketry.api.armor.IProtectiveArmor;
@@ -31,7 +29,6 @@ import net.minecraft.item.ItemArmor;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
-import net.minecraft.nbt.NBTUtil;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.world.World;
@@ -39,9 +36,6 @@ import net.minecraftforge.common.ISpecialArmor;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ICapabilityProvider;
 import net.minecraftforge.common.util.Constants.NBT;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.IFluidContainerItem;
-import net.minecraftforge.fluids.IFluidHandler;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
@@ -159,7 +153,7 @@ public class ItemSpaceArmor extends ItemArmor implements ISpecialArmor, ICapabil
 			EmbeddedInventory inv = loadEmbeddedInventory(armor);
 			for(int i = 0; i < inv.getSizeInventory(); i++ ) {
 				ItemStack stack = inv.getStackInSlot(i);
-				if(stack != null) {
+				if(!stack.isEmpty()) {
 					IArmorComponent component = (IArmorComponent)stack.getItem();
 					component.onTick(world, player, armor, inv, stack);
 				}
@@ -172,7 +166,7 @@ public class ItemSpaceArmor extends ItemArmor implements ISpecialArmor, ICapabil
 		ItemStack leg = player.getItemStackFromSlot(EntityEquipmentSlot.LEGS);
 		ItemStack chest = player.getItemStackFromSlot(EntityEquipmentSlot.CHEST);
 		ItemStack helm = player.getItemStackFromSlot(EntityEquipmentSlot.HEAD);
-		if(feet != null && feet.getItem() instanceof ItemSpaceArmor && leg != null && leg.getItem() instanceof ItemSpaceArmor && chest != null && chest.getItem() instanceof ItemSpaceArmor && helm != null && helm.getItem() instanceof ItemSpaceArmor)
+		if(!feet.isEmpty() && feet.getItem() instanceof ItemSpaceArmor && !leg.isEmpty() && leg.getItem() instanceof ItemSpaceArmor && !chest.isEmpty() && chest.getItem() instanceof ItemSpaceArmor && !helm.isEmpty() && helm.getItem() instanceof ItemSpaceArmor)
 			player.addStat(ARAchivements.suitedUp);
 	}
 
@@ -205,7 +199,7 @@ public class ItemSpaceArmor extends ItemArmor implements ISpecialArmor, ICapabil
 			EmbeddedInventory inv = loadEmbeddedInventory(armor);
 			for(int i = 0; i < inv.getSizeInventory(); i++ ) {
 				ItemStack stack = inv.getStackInSlot(i);
-				if(stack != null) {
+				if(!stack.isEmpty()) {
 					IArmorComponent component = (IArmorComponent)stack.getItem();
 					component.onArmorDamaged(entity, armor, stack, source, damage);
 				}
@@ -238,14 +232,14 @@ public class ItemSpaceArmor extends ItemArmor implements ISpecialArmor, ICapabil
 			componentList = nbt.getTagList(componentNBTName, NBT.TAG_COMPOUND);
 		}
 		else {
-			return null;
+			return ItemStack.EMPTY;
 		}
 
 		EmbeddedInventory inv = loadEmbeddedInventory(armor);
 		ItemStack stack = inv.getStackInSlot(index);
-		inv.setInventorySlotContents(index, null);
+		inv.setInventorySlotContents(index, ItemStack.EMPTY);
 
-		if(stack != null) {
+		if(!stack.isEmpty()) {
 			IArmorComponent component = (IArmorComponent) stack.getItem();
 			component.onComponentRemoved(world, armor);
 			saveEmbeddedInventory(armor, inv);
@@ -266,7 +260,7 @@ public class ItemSpaceArmor extends ItemArmor implements ISpecialArmor, ICapabil
 			EmbeddedInventory inv = loadEmbeddedInventory(armor);
 
 			for(int i = 0; i < inv.getSizeInventory(); i++) {
-				if(inv.getStackInSlot(i) != null)
+				if(!inv.getStackInSlot(i).isEmpty())
 					list.add(inv.getStackInSlot(i));
 			}
 		}

@@ -635,7 +635,7 @@ public class SpaceObject implements ISpaceObject, IPlanetDefiner {
 			tag.setBoolean("occupied", pos.getOccupied());
 			tag.setBoolean("autoLand", pos.getAllowedForAutoLand());
 			tag.setIntArray("pos", new int[] {pos.getPos().x, pos.getPos().z});
-			if(pos.getName() != null && !pos.getName().isEmpty())
+			//if(pos.getName() != null && !pos.getName().isEmpty())
 				tag.setString("name", pos.getName());
 			list.appendTag(tag);
 		}

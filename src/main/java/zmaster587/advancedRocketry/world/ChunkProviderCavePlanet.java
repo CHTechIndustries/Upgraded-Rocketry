@@ -281,13 +281,13 @@ public class ChunkProviderCavePlanet extends ChunkProviderPlanet {
 		}
 		
 		Chunk chunk = new Chunk(this.world, chunkprimer, x, z);
-        Biome[] abiome = this.world.getBiomeProvider().loadBlockGeneratorData((Biome[])null, x * 16, z * 16, 16, 16);
-        byte[] abyte = chunk.getBiomeArray();
+		Biome[] abiome = this.world.getBiomeProvider().getBiomes((Biome[])null, x * 16, z * 16, 16, 16);
+		byte[] abyte = chunk.getBiomeArray();
 
-        for (int i = 0; i < abyte.length; ++i)
-        {
-            abyte[i] = (byte)Biome.getIdForBiome(abiome[i]);
-        }
+		for (int i = 0; i < abyte.length; ++i)
+		{
+			abyte[i] = (byte)Biome.getIdForBiome(abiome[i]);
+		}
 
 		chunk.setLightPopulated(true);
 		return chunk;
@@ -369,7 +369,7 @@ public class ChunkProviderCavePlanet extends ChunkProviderPlanet {
 					if ((double)k < 0.0D)
 					{
 						double d10 = (0.0D - (double)k) / 4.0D;
-						d10 = MathHelper.clamp_double(d10, 0.0D, 1.0D);
+						d10 = MathHelper.clamp(d10, 0.0D, 1.0D);
 						d8 = d8 * (1.0D - d10) + -10.0D * d10;
 					}
 
@@ -380,5 +380,32 @@ public class ChunkProviderCavePlanet extends ChunkProviderPlanet {
 		}
 
 		return p_185938_1_;
+	}
+
+	/**
+	 * Returns a list of creatures of the specified type that can spawn at the given location.
+	 */
+	 @Override
+	 public List<SpawnListEntry> getPossibleCreatures(
+			 EnumCreatureType creatureType, BlockPos pos) {
+		Biome biome = this.world.getBiome(pos);
+
+		return biome.getSpawnableList(creatureType);
+	}
+
+	@Override
+	public boolean generateStructures(Chunk chunkIn, int x, int z) {
+		return false;
+	}
+
+	@Override
+	public void recreateStructures(Chunk chunkIn, int x, int z) {
+
+	}
+
+	@Override
+	public void populate(int x, int z) {
+		super.populate(x, z);
+
 	}
 }

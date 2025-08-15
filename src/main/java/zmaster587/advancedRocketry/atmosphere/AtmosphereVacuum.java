@@ -34,7 +34,7 @@ public class AtmosphereVacuum extends AtmosphereType {
 
 	@Override
 	public void onTick(EntityLivingBase player) {
-		if(player.worldObj.getTotalWorldTime() % 10  == 0 && !isImmune(player)) {
+		if(player.world.getTotalWorldTime() % 10  == 0 && !isImmune(player)) {
 			if(!isImmune(player)) {
 				player.attackEntityFrom(AtmosphereHandler.vacuumDamage, damageValue);
 				if(player instanceof EntityPlayer)
@@ -65,7 +65,7 @@ public class AtmosphereVacuum extends AtmosphereType {
 		}
 
 	public boolean protectsFrom(ItemStack stack) {
-		return (ItemAirUtils.INSTANCE.isStackValidAirContainer(stack) && new ItemAirUtils.ItemAirWrapper(stack).protectsFromSubstance(this, stack, true) ) || (stack != null && stack.hasCapability(CapabilitySpaceArmor.PROTECTIVEARMOR, null) &&
+		return (ItemAirUtils.INSTANCE.isStackValidAirContainer(stack) && new ItemAirUtils.ItemAirWrapper(stack).protectsFromSubstance(this, stack, true) ) || (!stack.isEmpty() && stack.hasCapability(CapabilitySpaceArmor.PROTECTIVEARMOR, null) &&
 				stack.getCapability(CapabilitySpaceArmor.PROTECTIVEARMOR, null).protectsFromSubstance(this, stack, true));
 	}
 }

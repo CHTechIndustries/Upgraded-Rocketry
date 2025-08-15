@@ -57,12 +57,12 @@ public class TileWirelessTransciever extends TileEntity implements INetworkMachi
 
 
 	@Override
-	public boolean onLinkStart(ItemStack item, TileEntity entity, EntityPlayer player, World worldObj) {
+	public boolean onLinkStart(ItemStack item, TileEntity entity, EntityPlayer player, World world) {
 
 		ItemLinker.setMasterCoords(item, getPos());
 
-		if(worldObj.isRemote)
-			player.addChatMessage(new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.linker.program")));
+		if(world.isRemote)
+			player.sendMessage(new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.linker.program")));
 
 		return true;
 	}
@@ -75,16 +75,16 @@ public class TileWirelessTransciever extends TileEntity implements INetworkMachi
 	}
 
 	@Override
-	public boolean onLinkComplete(ItemStack item, TileEntity entity, EntityPlayer player, World worldObj) {
+	public boolean onLinkComplete(ItemStack item, TileEntity entity, EntityPlayer player, World world) {
 		BlockPos pos = ItemLinker.getMasterCoords(item);
 
-		TileEntity tile = worldObj.getTileEntity(pos);
+		TileEntity tile = world.getTileEntity(pos);
 
 		if(tile instanceof TileWirelessTransciever )
 		{
-			if(worldObj.isRemote)
+			if(world.isRemote)
 			{
-				player.addChatMessage(new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.linker.success")));
+				player.sendMessage(new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.linker.success")));
 				return true;
 			}
 
@@ -123,7 +123,7 @@ public class TileWirelessTransciever extends TileEntity implements INetworkMachi
 	private void addToNetwork()
 	{
 
-		if(networkID == -1 || worldObj.isRemote)
+		if(networkID == -1 || world.isRemote)
 			return;
 		else if(!NetworkRegistry.dataNetwork.doesNetworkExist(networkID))
 			NetworkRegistry.dataNetwork.getNewNetworkID(networkID);
@@ -265,12 +265,12 @@ public class TileWirelessTransciever extends TileEntity implements INetworkMachi
 	@Override
 	public void onLoad() {
 		super.onLoad();
-		if(!worldObj.isRemote)
+		if(!world.isRemote)
 		{
 
 			if(!NetworkRegistry.dataNetwork.doesNetworkExist(networkID))
 				NetworkRegistry.dataNetwork.getNewNetworkID(networkID);
-
+			
 			NetworkRegistry.dataNetwork.getNetwork(networkID).removeFromAll(this);
 
 			if(extractMode) 
@@ -283,13 +283,13 @@ public class TileWirelessTransciever extends TileEntity implements INetworkMachi
 
 	@Override
 	public void update() {
-		IBlockState state = worldObj.getBlockState(getPos());
-		if(!worldObj.isRemote) {
+
+		if(!world.isRemote) {
+			IBlockState state = world.getBlockState(getPos());
 			if (state.getBlock() instanceof RotatableBlock) {
 				EnumFacing facing = RotatableBlock.getFront(state).getOpposite();
 
-				TileEntity tile = worldObj.getTileEntity(getPos().add(facing.getFrontOffsetX(),facing.getFrontOffsetY(),facing.getFrontOffsetZ()));
-
+				TileEntity tile = world.getTileEntity(getPos().add(facing.getFrontOffsetX(),facing.getFrontOffsetY(),facing.getFrontOffsetZ()));
 
 				if( tile instanceof IDataHandler && !(tile instanceof TileWirelessTransciever))
 				{
@@ -332,9 +332,9 @@ public class TileWirelessTransciever extends TileEntity implements INetworkMachi
 		else if(module == toggle)
 			extractMode = toggle.getState();
 
-		if(!worldObj.isRemote) {
+		if(!world.isRemote) {
 			this.markDirty();
-			worldObj.notifyBlockUpdate(pos, worldObj.getBlockState(pos),  worldObj.getBlockState(pos), 3);
+			world.notifyBlockUpdate(pos, world.getBlockState(pos),  world.getBlockState(pos), 3);
 		}
 	}
 

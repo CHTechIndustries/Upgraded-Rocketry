@@ -27,6 +27,7 @@ public abstract class SatelliteBase {
 		satelliteProperties = new SatelliteProperties();
 		satelliteProperties.setSatelliteType(SatelliteRegistry.getKey(this.getClass()));
 		isDead = false;
+		satellite = ItemStack.EMPTY;
 	}
 	
 	public boolean acceptsItemInConstruction(ItemStack item) {
@@ -73,7 +74,7 @@ public abstract class SatelliteBase {
 	 * @return true if the item stack is a valid controller for the satellite
 	 */
 	public boolean isAcceptableControllerItemStack(ItemStack stack) {
-		return stack != null && stack.getItem() == AdvancedRocketryItems.itemSatelliteIdChip;
+		return !stack.isEmpty() && stack.getItem() == AdvancedRocketryItems.itemSatelliteIdChip;
 	}
 	
 	/**
@@ -155,7 +156,7 @@ public abstract class SatelliteBase {
 		
 		NBTTagCompound itemNBT = new NBTTagCompound();
 		//Transition
-		if(satellite != null)
+		if(!satellite.isEmpty())
 			satellite.writeToNBT(itemNBT);
 		nbt.setTag("item", itemNBT);
 		
@@ -164,7 +165,7 @@ public abstract class SatelliteBase {
 	public void readFromNBT(NBTTagCompound nbt) {
 		satelliteProperties.readFromNBT(nbt.getCompoundTag("properties"));
 		dimId = nbt.getInteger("dimId");
-		satellite = ItemStack.loadItemStackFromNBT(nbt.getCompoundTag("item"));
+		satellite = new ItemStack(nbt.getCompoundTag("item"));
 	}
 	
 	public void writeDataToNetwork(ByteBuf out, byte packetId) {

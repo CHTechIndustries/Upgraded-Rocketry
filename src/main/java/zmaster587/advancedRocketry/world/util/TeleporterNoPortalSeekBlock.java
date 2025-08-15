@@ -24,7 +24,7 @@ public class TeleporterNoPortalSeekBlock extends Teleporter {
 
 		if (entity.isEntityAlive()) {
 			entity.setLocationAndAngles(entity.posX, entity.posY, entity.posZ, entity.rotationYaw, entity.rotationPitch);
-			world.spawnEntityInWorld(entity);
+			world.spawnEntity(entity);
 			world.updateEntityWithOptionalForce(entity, false);
 		}
 		entity.setWorld(world);

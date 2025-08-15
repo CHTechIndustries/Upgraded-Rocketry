@@ -38,7 +38,7 @@ public class ItemSatellite extends ItemIdWithName {
 			int powerStorage = 0, powerGeneration = 0, maxData = 0;
 			EmbeddedInventory inv = readInvFromNBT(stackIn);
 
-			if(inv.getStackInSlot(0) == null)
+			if(inv.getStackInSlot(0).isEmpty())
 				return null;
 			
 			String satType = SatelliteRegistry.getSatelliteProperty(inv.getStackInSlot(0)).getSatelliteType();
@@ -46,7 +46,7 @@ public class ItemSatellite extends ItemIdWithName {
 
 			for(int i = 0; i < inv.getSizeInventory(); i++) {
 				ItemStack stack = inv.getStackInSlot(i);
-				if(stack != null) {
+				if(!stack.isEmpty()) {
 					SatelliteProperties properties = SatelliteRegistry.getSatelliteProperty(stack);
 
 					if(!sat.acceptsItemInConstruction(stack))

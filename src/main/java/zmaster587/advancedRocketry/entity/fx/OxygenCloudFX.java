@@ -4,8 +4,8 @@ import org.lwjgl.opengl.GL11;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.particle.Particle;
-import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.VertexBuffer;
+import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.ResourceLocation;
@@ -55,7 +55,7 @@ public class OxygenCloudFX extends Particle {
 		float f13 = (float)(this.prevPosZ + (this.posZ - this.prevPosZ) * (double)partialTicks - interpPosZ);
 		float f10 = 0.25F * this.particleScale;
 		
-        int i = this.getBrightnessForRender(partialTicks);
+        int i = 15728640;
         int j = i >> 16 & 65535;
         int k = i & 65535;
 		

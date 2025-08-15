@@ -33,7 +33,6 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
 public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProvider {
-	private IRenderHandler skyRender;
 	public BiomeProvider chunkMgrTerraformed;
 
 	/*@Override
@@ -50,12 +49,12 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 
 	@Override
 	public IChunkGenerator createChunkGenerator() {
-		if(DimensionManager.getInstance().getDimensionProperties(worldObj.provider.getDimension()).getGenType() == 1)
+		if(DimensionManager.getInstance().getDimensionProperties(world.provider.getDimension()).getGenType() == 1)
 		{
-			return new ChunkProviderCavePlanet(this.worldObj, false, this.worldObj.getSeed(),worldObj.getWorldInfo().getGeneratorOptions());
+			return new ChunkProviderCavePlanet(this.world, false, this.world.getSeed(),world.getWorldInfo().getGeneratorOptions());
 		}
 		else
-			return new ChunkProviderPlanet(this.worldObj, this.worldObj.getSeed(), false, worldObj.getWorldInfo().getGeneratorOptions());
+			return new ChunkProviderPlanet(this.world, this.world.getSeed(), false, world.getWorldInfo().getGeneratorOptions());
 	}
 
 	@Override
@@ -82,14 +81,17 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 		//return getDimensionProperties().biomeProperties.getChunkPropertiesFromBlockCoords(x, z).getBiomeGenForWorldCoords(x & 15, z & 15, this.worldChunkMgr);
 	}*/
 
+	
+	
 	@Override
-	protected void createBiomeProvider()
+	protected void init()
 	{
-		worldObj.getWorldInfo().setTerrainType(AdvancedRocketry.planetWorldType);
+		this.hasSkyLight = true;
+		world.getWorldInfo().setTerrainType(AdvancedRocketry.planetWorldType);
 
 
-		this.biomeProvider = new ChunkManagerPlanet(worldObj, worldObj.getWorldInfo().getGeneratorOptions(), DimensionManager.getInstance().getDimensionProperties(worldObj.provider.getDimension()).getBiomes());
-		this.chunkMgrTerraformed = new ChunkManagerPlanet(worldObj, worldObj.getWorldInfo().getGeneratorOptions(), DimensionManager.getInstance().getDimensionProperties(worldObj.provider.getDimension()).getTerraformedBiomes());
+		this.biomeProvider = new ChunkManagerPlanet(world, world.getWorldInfo().getGeneratorOptions(), DimensionManager.getInstance().getDimensionProperties(world.provider.getDimension()).getBiomes());
+		this.chunkMgrTerraformed = new ChunkManagerPlanet(world, world.getWorldInfo().getGeneratorOptions(), DimensionManager.getInstance().getDimensionProperties(world.provider.getDimension()).getTerraformedBiomes());
 		//AdvancedRocketry.planetWorldType.getChunkManager(worldObj);
 	}
 	@Override
@@ -109,8 +111,8 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 		if(Configuration.canPlayerRespawnInSpace) {
 			BlockPos coords = player.getBedLocation(getDimension());
 
-			if(coords != null && worldObj.getBlockState(coords).getBlock() == AdvancedRocketryBlocks.blockAstroBed) {
-				if (Configuration.forcePlayerRespawnInSpace || AtmosphereHandler.hasAtmosphereHandler(player.worldObj.provider.getDimension()) && AtmosphereHandler.getOxygenHandler(player.worldObj.provider.getDimension()).getAtmosphereType(coords).isBreathable()) {
+			if(coords != null && world.getBlockState(coords).getBlock() == AdvancedRocketryBlocks.blockAstroBed) {
+				if (Configuration.forcePlayerRespawnInSpace || AtmosphereHandler.hasAtmosphereHandler(player.world.provider.getDimension()) && AtmosphereHandler.getOxygenHandler(player.world.provider.getDimension()).getAtmosphereType(coords).isBreathable()) {
 					return getDimension();
 				}
 			}
@@ -128,7 +130,7 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 	@SideOnly(Side.CLIENT)
 	public float[] calcSunriseSunsetColors(float p_76560_1_, float p_76560_2_) {
 
-		float[] colors = getDimensionProperties(new BlockPos((int)Minecraft.getMinecraft().thePlayer.posX,0 , (int)Minecraft.getMinecraft().thePlayer.posZ)).sunriseSunsetColors;
+		float[] colors = getDimensionProperties(new BlockPos((int)Minecraft.getMinecraft().player.posX,0 , (int)Minecraft.getMinecraft().player.posZ)).sunriseSunsetColors;
 
 		if(colors == null)
 			return super.calcSunriseSunsetColors(p_76560_1_, p_76560_2_);
@@ -147,7 +149,7 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 			finalColors[0] = f5 * 0.3F + colors[0];
 			finalColors[1] = f5 * f5 * 0.7F + colors[1];
 			finalColors[2] = f5 * f5 * 0.1F + colors[2];
-			finalColors[3] = f6 * (getAtmosphereDensityFromHeight(Minecraft.getMinecraft().getRenderViewEntity().posY, new BlockPos((int)Minecraft.getMinecraft().thePlayer.posX, 0, (int)Minecraft.getMinecraft().thePlayer.posZ)));
+			finalColors[3] = f6 * (getAtmosphereDensityFromHeight(Minecraft.getMinecraft().getRenderViewEntity().posY, new BlockPos((int)Minecraft.getMinecraft().player.posX, 0, (int)Minecraft.getMinecraft().player.posZ)));
 			return finalColors;
 		}
 		else
@@ -160,10 +162,11 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 
 	@Override
 	public float getSunBrightness(float partialTicks) {
+		
 		float atmosphere = getAtmosphereDensity(new BlockPos(0,0,0));
 		Math.abs(1-atmosphere);
 		//calculateCelestialAngle(p_76563_1_, p_76563_3_)
-		float f1 = worldObj.getCelestialAngle(partialTicks);
+		float f1 = world.getCelestialAngle(partialTicks);
 		float f2 = 1.0F - (MathHelper.cos(f1 * (float)Math.PI * 2.0F) * 2.0F + 0.2F) - atmosphere/4f;
 
 		if (f2 < 0.0F)
@@ -179,8 +182,8 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 		f2 = 1.0F - f2;
 
 		//Eclipse handling
-		if(this.worldObj.isRemote) {
-			DimensionProperties properties = getDimensionProperties(Minecraft.getMinecraft().thePlayer.getPosition());
+		if(this.world.isRemote) {
+			DimensionProperties properties = getDimensionProperties(Minecraft.getMinecraft().player.getPosition());
 			if(properties.isMoon()) {
 				f2 = eclipseValue(properties, f2, partialTicks);
 			}
@@ -212,7 +215,7 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 		//-1 is no atten
 		//solar distance conrols fade, planetary distance controls duration
 		if(phiMuliplier !=0 && currentTheta > 180 - offset && currentTheta < 180 + offset ) {
-			lightValue *= phiMuliplier*(MathHelper.clamp_float((float) ((difference/20f) + (Math.abs(currentTheta - 180)*difference)/(10f)) ,0,1)) + (1-phiMuliplier);
+			lightValue *= phiMuliplier*(MathHelper.clamp((float) ((difference/20f) + (Math.abs(currentTheta - 180)*difference)/(10f)) ,0,1)) + (1-phiMuliplier);
 			//f2 = 0;
 		}
 		return lightValue;
@@ -248,7 +251,7 @@ public class WorldProviderPlanet extends WorldProvider implements IPlanetaryProv
 		Vec3d superVec = super.getFogColor(p_76562_1_, p_76562_2_);
 		//float multiplier = getAtmosphereDensityFromHeight(Minecraft.getMinecraft().renderViewEntity.posY);
 
-		float[] vec = getDimensionProperties(new BlockPos((int)Minecraft.getMinecraft().thePlayer.posX, 0, (int)Minecraft.getMinecraft().thePlayer.posZ)).fogColor;
+		float[] vec = getDimensionProperties(new BlockPos((int)Minecraft.getMinecraft().player.posX, 0, (int)Minecraft.getMinecraft().player.posZ)).fogColor;
 		return new Vec3d(vec[0] * superVec.xCoord, vec[1] * superVec.yCoord, vec[2] * superVec.zCoord);
 	}
 

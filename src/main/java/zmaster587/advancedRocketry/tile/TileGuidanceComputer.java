@@ -78,7 +78,7 @@ public class TileGuidanceComputer extends TileInventoryHatch implements IModular
 
 	public long getTargetSatellite() {
 		ItemStack stack = getStackInSlot(0);
-		if(stack != null && stack.getItem() instanceof ItemSatelliteIdentificationChip) {
+		if(!stack.isEmpty() && stack.getItem() instanceof ItemSatelliteIdentificationChip) {
 			return ((ItemSatelliteIdentificationChip)stack.getItem()).getSatelliteId(stack);
 		}
 		return -1;
@@ -91,7 +91,7 @@ public class TileGuidanceComputer extends TileInventoryHatch implements IModular
 	public int getDestinationDimId(int currentDimension, BlockPos pos) {
 		ItemStack stack = getStackInSlot(0);
 
-		if(stack != null){
+		if(!stack.isEmpty()){
 			Item itemType = stack.getItem();
 			if (itemType instanceof ItemPlanetIdentificationChip) {
 				ItemPlanetIdentificationChip item = (ItemPlanetIdentificationChip)itemType;
@@ -134,7 +134,7 @@ public class TileGuidanceComputer extends TileInventoryHatch implements IModular
 	 */
 	public Vector3F<Float> getLandingLocation(int landingDimension, boolean commit) {
 		ItemStack stack = getStackInSlot(0);
-		if(stack != null && stack.getItem() instanceof ItemStationChip) {
+		if(!stack.isEmpty() && stack.getItem() instanceof ItemStationChip) {
 			ItemStationChip chip = (ItemStationChip)stack.getItem();
 			if(landingDimension == Configuration.spaceDimId) {
 				//TODO: handle Exception
@@ -222,14 +222,14 @@ public class TileGuidanceComputer extends TileInventoryHatch implements IModular
 		super.setInventorySlotContents(slot, stack);
 
 		//If the item in the slot is modified then reset dimid
-		if(stack != null)
+		if(!stack.isEmpty())
 			destinationId = -1;
 	}
 
 	public void setReturnPosition(Vector3F<Float> pos, int dimId) {
 		ItemStack stack = getStackInSlot(0);
 
-		if(stack != null && stack.getItem() instanceof ItemStationChip) {
+		if(!stack.isEmpty() && stack.getItem() instanceof ItemStationChip) {
 			ItemStationChip item = (ItemStationChip)stack.getItem();
 			item.setTakeoffCoords(stack, pos, dimId);
 		}

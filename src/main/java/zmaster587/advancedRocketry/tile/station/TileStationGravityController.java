@@ -75,7 +75,7 @@ public class TileStationGravityController extends TileEntity implements IModular
 	}
 	
 	private void updateText() {
-		if(worldObj.isRemote) {
+		if(world.isRemote) {
 			ISpaceObject object = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(pos);
 			if(object != null) {
 				moduleGrav.setText(String.format("%s%.2f", LibVulpes.proxy.getLocalizedString("msg.stationgravctrl.alt"), object.getProperties().getGravitationalMultiplier()));
@@ -91,9 +91,9 @@ public class TileStationGravityController extends TileEntity implements IModular
 	@Override
 	public void update() {
 
-		if(this.worldObj.provider instanceof WorldProviderSpace) {
+		if(this.world.provider instanceof WorldProviderSpace) {
 
-			if(!worldObj.isRemote) {
+			if(!world.isRemote) {
 				ISpaceObject object = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(pos);
 
 				if(object != null) {
@@ -115,7 +115,7 @@ public class TileStationGravityController extends TileEntity implements IModular
 						}
 
 						object.getProperties().setGravitationalMultiplier((float)finalVel);
-						if(!worldObj.isRemote) {
+						if(!world.isRemote) {
 							//PacketHandler.sendToNearby(new PacketStationUpdate(object, PacketStationUpdate.Type.ROTANGLE_UPDATE), this.worldObj.provider.dimensionId, this.xCoord, this.yCoord, this.zCoord, 1024);
 							PacketHandler.sendToAll(new PacketStationUpdate(object, PacketStationUpdate.Type.DIM_PROPERTY_UPDATE));
 						}

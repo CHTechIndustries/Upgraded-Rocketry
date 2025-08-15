@@ -67,10 +67,10 @@ public class TileSuitWorkStation extends TileEntity implements IModularInventory
 		if(slot == 0) {
 			return inventory.getStackInSlot(slot);
 		}
-		else if(inventory.getStackInSlot(0) != null && inventory.getStackInSlot(0).getItem() instanceof IModularArmor && ((IModularArmor)inventory.getStackInSlot(0).getItem()).getNumSlots(inventory.getStackInSlot(0)) > slot-1) {
+		else if(!inventory.getStackInSlot(0).isEmpty() && inventory.getStackInSlot(0).getItem() instanceof IModularArmor && ((IModularArmor)inventory.getStackInSlot(0).getItem()).getNumSlots(inventory.getStackInSlot(0)) > slot-1) {
 			return ((IModularArmor)inventory.getStackInSlot(0).getItem()).getComponentInSlot(inventory.getStackInSlot(0), slot-1);
 		}
-		return null;
+		return ItemStack.EMPTY;
 	}
 
 	@Override
@@ -78,11 +78,11 @@ public class TileSuitWorkStation extends TileEntity implements IModularInventory
 		if(slot == 0) {
 			return inventory.decrStackSize(slot, amt);
 		}
-		else if(inventory.getStackInSlot(0) != null && inventory.getStackInSlot(0).getItem() instanceof IModularArmor) {
+		else if(!inventory.getStackInSlot(0).isEmpty() && inventory.getStackInSlot(0).getItem() instanceof IModularArmor) {
 
-			return ((IModularArmor)inventory.getStackInSlot(0).getItem()).removeComponent(worldObj, inventory.getStackInSlot(0), slot - 1);
+			return ((IModularArmor)inventory.getStackInSlot(0).getItem()).removeComponent(world, inventory.getStackInSlot(0), slot - 1);
 		}
-		return null;
+		return ItemStack.EMPTY;
 
 		//return inventory.decrStackSize(i, j);
 	}
@@ -99,7 +99,7 @@ public class TileSuitWorkStation extends TileEntity implements IModularInventory
 				List<ItemStack> list = ((IModularArmor)contents.getItem()).getComponents(contents);
 				for(int i = 0; i < getSizeInventory() -1; i++) {
 					if(i >= list.size())
-						inventory.setInventorySlotContents(i, null);
+						inventory.setInventorySlotContents(i, ItemStack.EMPTY);
 					else
 						inventory.setInventorySlotContents(i, list.get(i));
 				}
@@ -120,16 +120,16 @@ public class TileSuitWorkStation extends TileEntity implements IModularInventory
 			inventory.setInventorySlotContents(slot, contents);
 			
 		}
-		else if(inventory.getStackInSlot(0) != null && inventory.getStackInSlot(0).getItem() instanceof IModularArmor &&
+		else if(!inventory.getStackInSlot(0).isEmpty() && inventory.getStackInSlot(0).getItem() instanceof IModularArmor &&
 			slot - 1 < ((IModularArmor)inventory.getStackInSlot(0).getItem()).getNumSlots(inventory.getStackInSlot(0))) {
 			//TODO
-			if(contents != null && contents.getItem() instanceof IArmorComponent)
-				((IModularArmor)inventory.getStackInSlot(0).getItem()).addArmorComponent(worldObj, inventory.getStackInSlot(0), contents, slot - 1);
-			else if(contents != null) {
+			if(!contents.isEmpty() && contents.getItem() instanceof IArmorComponent)
+				((IModularArmor)inventory.getStackInSlot(0).getItem()).addArmorComponent(world, inventory.getStackInSlot(0), contents, slot - 1);
+			else if(!contents.isEmpty()) {
 				//If somehow an item gets forced into the slot 
 				
 			} else
-				((IModularArmor)inventory.getStackInSlot(0).getItem()).removeComponent(worldObj, inventory.getStackInSlot(0), slot - 1);
+				((IModularArmor)inventory.getStackInSlot(0).getItem()).removeComponent(world, inventory.getStackInSlot(0), slot - 1);
 		}
 	}
 
@@ -164,10 +164,15 @@ public class TileSuitWorkStation extends TileEntity implements IModularInventory
 	}
 
 	@Override
-	public boolean isUseableByPlayer(EntityPlayer p_70300_1_) {
+	public boolean isUsableByPlayer(EntityPlayer p_70300_1_) {
 		return true;
 	}
 
+	@Override
+	public boolean isEmpty() {
+		return inventory.isEmpty();
+	}
+	
 	@Override
 	public void openInventory(EntityPlayer player) {
 		inventory.openInventory(player);
@@ -182,7 +187,7 @@ public class TileSuitWorkStation extends TileEntity implements IModularInventory
 	public boolean isItemValidForSlot(int slot, ItemStack stack) {
 		
 		return (slot == 0 && stack.getItem() instanceof IModularArmor) || 
-				(inventory.getStackInSlot(0) != null && inventory.getStackInSlot(0).getItem() instanceof IModularArmor && slot != 0 && stack.getItem() instanceof IArmorComponent && 
+				(!inventory.getStackInSlot(0).isEmpty() && inventory.getStackInSlot(0).getItem() instanceof IModularArmor && slot != 0 && stack.getItem() instanceof IArmorComponent && 
 				((IArmorComponent)stack.getItem()).isAllowedInSlot(stack, ((ItemArmor)inventory.getStackInSlot(0).getItem()).armorType) && slot - 1 < ((IModularArmor)inventory.getStackInSlot(0).getItem()).getNumSlots(inventory.getStackInSlot(0))
 				&& ((IModularArmor)inventory.getStackInSlot(0).getItem()).isItemValidForSlot(stack, slot - 1) );
 	}

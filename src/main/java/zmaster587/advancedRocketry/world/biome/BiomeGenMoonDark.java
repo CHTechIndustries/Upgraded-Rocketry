@@ -17,11 +17,11 @@ public class BiomeGenMoonDark extends Biome {
 //		registerBiome(biomeId, "Moon", this);
 		
 		//cold and dry
-		this.theBiomeDecorator.generateLakes=false;
-		this.theBiomeDecorator.flowersPerChunk=0;
-		this.theBiomeDecorator.grassPerChunk=0;
-		this.theBiomeDecorator.treesPerChunk=0;
-		this.theBiomeDecorator.mushroomsPerChunk=0;
+		this.decorator.generateLakes=false;
+		this.decorator.flowersPerChunk=0;
+		this.decorator.grassPerChunk=0;
+		this.decorator.treesPerChunk=0;
+		this.decorator.mushroomsPerChunk=0;
 		this.fillerBlock = this.topBlock = AdvancedRocketryBlocks.blockMoonTurfDark.getDefaultState();
 	}
 	

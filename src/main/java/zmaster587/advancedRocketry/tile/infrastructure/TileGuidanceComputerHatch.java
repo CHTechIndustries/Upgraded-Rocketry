@@ -116,7 +116,7 @@ public class TileGuidanceComputerHatch extends TilePointer implements IInfrastru
 		if(rocket != null && (guidanceComputer = rocket.storage.getGuidanceComputer()) != null) {
 			return guidanceComputer.getStackInSlot(index);
 		}
-		return null;
+		return ItemStack.EMPTY;
 	}
 
 	@Override
@@ -125,7 +125,7 @@ public class TileGuidanceComputerHatch extends TilePointer implements IInfrastru
 		if(rocket != null && (guidanceComputer = rocket.storage.getGuidanceComputer()) != null) {
 			return guidanceComputer.decrStackSize(index, count);
 		}
-		return null;
+		return ItemStack.EMPTY;
 	}
 
 	@Override
@@ -134,7 +134,7 @@ public class TileGuidanceComputerHatch extends TilePointer implements IInfrastru
 		if(rocket != null && (guidanceComputer = rocket.storage.getGuidanceComputer()) != null) {
 			return guidanceComputer.removeStackFromSlot(index);
 		}
-		return null;
+		return ItemStack.EMPTY;
 	}
 
 	@Override
@@ -149,9 +149,9 @@ public class TileGuidanceComputerHatch extends TilePointer implements IInfrastru
 	public int getInventoryStackLimit() {
 		return 1;
 	}
-
+	
 	@Override
-	public boolean isUseableByPlayer(EntityPlayer player) {
+	public boolean isUsableByPlayer(EntityPlayer player) {
 		return true;
 	}
 
@@ -209,8 +209,7 @@ public class TileGuidanceComputerHatch extends TilePointer implements IInfrastru
 			this.unlinkRocket();
 		}
 
-
-		if(player.worldObj.isRemote)
+		if(player.world.isRemote)
 			Minecraft.getMinecraft().ingameGUI.getChatGUI().printChatMessage((new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.guidanceComputerHatch.link") + ": " + getPos().getX() + " " + getPos().getY() + " " + getPos().getZ())));
 		return true;
 	}
@@ -218,7 +217,7 @@ public class TileGuidanceComputerHatch extends TilePointer implements IInfrastru
 	@Override
 	public boolean onLinkComplete(ItemStack item, TileEntity entity,
 			EntityPlayer player, World world) {
-		if(player.worldObj.isRemote)
+		if(player.world.isRemote)
 			Minecraft.getMinecraft().ingameGUI.getChatGUI().printChatMessage((new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.linker.error.firstMachine"))));
 		return false;
 	}
@@ -226,7 +225,7 @@ public class TileGuidanceComputerHatch extends TilePointer implements IInfrastru
 	@Override
 	public void unlinkRocket() {
 		rocket = null;
-		((BlockARHatch)AdvancedRocketryBlocks.blockLoader).setRedstoneState(worldObj, worldObj.getBlockState(pos), pos, false);
+		((BlockARHatch)AdvancedRocketryBlocks.blockLoader).setRedstoneState(world, world.getBlockState(pos), pos, false);
 		chipEjected = false;
 	}
 
@@ -242,7 +241,7 @@ public class TileGuidanceComputerHatch extends TilePointer implements IInfrastru
 
 		if(!chipEjected && buttonState[buttonAutoEject] && (guidanceComputer = this.rocket.storage.getGuidanceComputer()) != null ) {
 			ItemStack stack = guidanceComputer.getStackInSlot(0);
-			if(stack != null) {
+			if(!stack.isEmpty()) {
 				if(		(stack.getItem() instanceof ItemSatelliteIdentificationChip && buttonState[buttonSatellite]) ||
 						(stack.getItem() instanceof ItemPlanetIdentificationChip && buttonState[buttonPlanet]) ||
 						(stack.getItem() instanceof ItemStationChip && buttonState[buttonStation])) {
@@ -259,7 +258,7 @@ public class TileGuidanceComputerHatch extends TilePointer implements IInfrastru
 
 	private void ejectChipFrom(IInventory guidanceComputer) {
 		for(EnumFacing dir : EnumFacing.VALUES) {
-			TileEntity tile = worldObj.getTileEntity(getPos().offset(dir));
+			TileEntity tile = world.getTileEntity(getPos().offset(dir));
 			if(tile instanceof IInventory) {
 				if(ZUtils.doesInvHaveRoom(guidanceComputer.getStackInSlot(0), (IInventory)tile)) {
 					ZUtils.mergeInventory(guidanceComputer.getStackInSlot(0), (IInventory)tile);
@@ -291,17 +290,17 @@ public class TileGuidanceComputerHatch extends TilePointer implements IInfrastru
 
 
 
-		if(worldObj.isRemote)
+		if(world.isRemote)
 			module_satellite.setBGColor(0xFF2a4bad);
 
 		modules.add(module_satellite);
 
-		if(worldObj.isRemote)
+		if(world.isRemote)
 			module_planet.setBGColor(0xFF8fdc60);
 
 		modules.add(module_planet);
 
-		if(worldObj.isRemote)
+		if(world.isRemote)
 			module_station.setBGColor(0xFFdddddd);
 
 		modules.add(module_station);
@@ -318,8 +317,8 @@ public class TileGuidanceComputerHatch extends TilePointer implements IInfrastru
 	}
 
 	public void update() {
-		if(!worldObj.isRemote && rocket != null) {
-			boolean rocketContainsItems = rocket.storage.getGuidanceComputer() != null && rocket.storage.getGuidanceComputer().getStackInSlot(0) != null && (chipEjected || !buttonState[buttonAutoEject]);
+		if(!world.isRemote && rocket != null) {
+			boolean rocketContainsItems = rocket.storage.getGuidanceComputer() != null && !rocket.storage.getGuidanceComputer().getStackInSlot(0).isEmpty() && (chipEjected || !buttonState[buttonAutoEject]);
 			//Update redstone state
 			setRedstoneState(!rocketContainsItems);
 
@@ -328,8 +327,7 @@ public class TileGuidanceComputerHatch extends TilePointer implements IInfrastru
 
 	protected void setRedstoneState(boolean condition) {
 		condition = isStateActive(state, condition);
-		((BlockARHatch)AdvancedRocketryBlocks.blockLoader).setRedstoneState(worldObj,worldObj.getBlockState(pos), pos, condition);
-
+		((BlockARHatch)AdvancedRocketryBlocks.blockLoader).setRedstoneState(world,world.getBlockState(pos), pos, condition);
 	}
 
 	protected boolean isStateActive(RedstoneState state, boolean condition) {
@@ -411,7 +409,7 @@ public class TileGuidanceComputerHatch extends TilePointer implements IInfrastru
 			state = RedstoneState.values()[nbt.getByte("state")];
 
 			markDirty();
-			worldObj.notifyBlockOfStateChange(getPos(), worldObj.getBlockState(getPos()).getBlock());
+			world.setBlockState(getPos(), world.getBlockState(getPos()));
 		}
 		else {
 			short status = nbt.getShort("status");
@@ -450,6 +448,11 @@ public class TileGuidanceComputerHatch extends TilePointer implements IInfrastru
 		}
 
 		super.readFromNBT(nbt);
+	}
+
+	@Override
+	public boolean isEmpty() {
+		return getStackInSlot(0).isEmpty();
 	}
 
 }

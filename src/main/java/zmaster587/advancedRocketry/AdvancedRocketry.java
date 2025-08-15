@@ -27,7 +27,6 @@ import net.minecraftforge.common.ForgeChunkManager;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidContainerRegistry;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.common.Loader;
@@ -258,7 +257,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 
-@Mod(modid="advancedRocketry", name="Advanced Rocketry", version="@MAJOR@.@MINOR@.@REVIS@@BUILD@", dependencies="required-after:libVulpes@[%LIBVULPESVERSION%,)")
+@Mod(modid="advancedrocketry", name="Advanced Rocketry", version="@MAJOR@.@MINOR@.@REVIS@@BUILD@", dependencies="required-after:libvulpes@[%LIBVULPESVERSION%,)")
 public class AdvancedRocketry {
 
 
@@ -300,8 +299,8 @@ public class AdvancedRocketry {
 
 	private static CreativeTabs tabAdvRocketry = new CreativeTabs("advancedRocketry") {
 		@Override
-		public Item getTabIconItem() {
-			return AdvancedRocketryItems.itemSatelliteIdChip;
+		public ItemStack getTabIconItem() {
+			return new ItemStack(AdvancedRocketryItems.itemSatelliteIdChip);
 		}
 	};
 
@@ -653,9 +652,9 @@ public class AdvancedRocketry {
 		AdvancedRocketryBlocks.blockNitrogenFluid = new BlockFluid(AdvancedRocketryFluids.fluidNitrogen, Material.WATER).setUnlocalizedName("nitrogenFluidBlock").setCreativeTab(CreativeTabs.MISC);
 
 		//Cables
-		AdvancedRocketryBlocks.blockFluidPipe = new BlockLiquidPipe(Material.IRON).setUnlocalizedName("liquidPipe").setCreativeTab(tabAdvRocketry).setHardness(1f);;
-		AdvancedRocketryBlocks.blockDataPipe = new BlockDataCable(Material.IRON).setUnlocalizedName("dataPipe").setCreativeTab(tabAdvRocketry).setHardness(1f);;
-		AdvancedRocketryBlocks.blockEnergyPipe = new BlockEnergyCable(Material.IRON).setUnlocalizedName("energyPipe").setCreativeTab(tabAdvRocketry).setHardness(1f);;
+		AdvancedRocketryBlocks.blockFluidPipe = new BlockLiquidPipe(Material.IRON).setUnlocalizedName("liquidPipe").setCreativeTab(tabAdvRocketry).setHardness(1f);
+		AdvancedRocketryBlocks.blockDataPipe = new BlockDataCable(Material.IRON).setUnlocalizedName("dataPipe").setCreativeTab(tabAdvRocketry).setHardness(1f);
+		AdvancedRocketryBlocks.blockEnergyPipe = new BlockEnergyCable(Material.IRON).setUnlocalizedName("energyPipe").setCreativeTab(tabAdvRocketry).setHardness(1f);
 
 		LibVulpesBlocks.registerBlock(AdvancedRocketryBlocks.blockDataPipe.setRegistryName("dataPipe"));
 		LibVulpesBlocks.registerBlock(AdvancedRocketryBlocks.blockEnergyPipe.setRegistryName("energyPipe"));
@@ -779,10 +778,10 @@ public class AdvancedRocketry {
 		AdvancedRocketryItems.itemBasicLaserGun = new ItemBasicLaserGun().setUnlocalizedName("basicLaserGun").setCreativeTab(tabAdvRocketry);
 
 		//Fluids
-		AdvancedRocketryItems.itemBucketRocketFuel = new Item().setCreativeTab(LibVulpes.tabLibVulpesOres).setUnlocalizedName("bucketRocketFuel").setContainerItem(Items.BUCKET);
-		AdvancedRocketryItems.itemBucketNitrogen = new Item().setCreativeTab(LibVulpes.tabLibVulpesOres).setUnlocalizedName("bucketNitrogen").setContainerItem(Items.BUCKET);
-		AdvancedRocketryItems.itemBucketHydrogen = new Item().setCreativeTab(LibVulpes.tabLibVulpesOres).setUnlocalizedName("bucketHydrogen").setContainerItem(Items.BUCKET);
-		AdvancedRocketryItems.itemBucketOxygen = new Item().setCreativeTab(LibVulpes.tabLibVulpesOres).setUnlocalizedName("bucketOxygen").setContainerItem(Items.BUCKET);
+		AdvancedRocketryItems.itemBucketRocketFuel = new ItemARBucket(AdvancedRocketryFluids.fluidRocketFuel).setCreativeTab(LibVulpes.tabLibVulpesOres).setUnlocalizedName("bucketRocketFuel").setContainerItem(Items.BUCKET);
+		AdvancedRocketryItems.itemBucketNitrogen = new ItemARBucket(AdvancedRocketryFluids.fluidNitrogen).setCreativeTab(LibVulpes.tabLibVulpesOres).setUnlocalizedName("bucketNitrogen").setContainerItem(Items.BUCKET);
+		AdvancedRocketryItems.itemBucketHydrogen = new ItemARBucket(AdvancedRocketryFluids.fluidHydrogen).setCreativeTab(LibVulpes.tabLibVulpesOres).setUnlocalizedName("bucketHydrogen").setContainerItem(Items.BUCKET);
+		AdvancedRocketryItems.itemBucketOxygen = new ItemARBucket(AdvancedRocketryFluids.fluidOxygen).setCreativeTab(LibVulpes.tabLibVulpesOres).setUnlocalizedName("bucketOxygen").setContainerItem(Items.BUCKET);
 		//FluidRegistry.addBucketForFluid(AdvancedRocketryFluids.fluidHydrogen);
 		//FluidRegistry.addBucketForFluid(AdvancedRocketryFluids.fluidNitrogen);
 		//FluidRegistry.addBucketForFluid(AdvancedRocketryFluids.fluidOxygen);
@@ -869,15 +868,15 @@ public class AdvancedRocketry {
 		//End Items
 
 		//Entity Registration ---------------------------------------------------------------------------------------------
-		EntityRegistry.registerModEntity(EntityDummy.class, "mountDummy", 0, this, 16, 20, false);
-		EntityRegistry.registerModEntity(EntityRocket.class, "rocket", 1, this, 64, 3, true);
-		EntityRegistry.registerModEntity(EntityLaserNode.class, "laserNode", 2, instance, 256, 20, false);
-		EntityRegistry.registerModEntity(EntityStationDeployedRocket.class, "deployedRocket", 3, this, 256, 600, true);
-		EntityRegistry.registerModEntity(EntityItemAbducted.class, "ARAbductedItem", 4, this, 127, 600, false);
-		EntityRegistry.registerModEntity(EntityUIPlanet.class, "ARPlanetUIItem", 5, this, 64, 1, false);
-		EntityRegistry.registerModEntity(EntityUIButton.class, "ARPlanetUIButton", 6, this, 64, 20, false);
-		EntityRegistry.registerModEntity(EntityUIStar.class, "ARStarUIButton", 7, this, 64, 20, false);
-		EntityRegistry.registerModEntity(EntityElevatorCapsule.class, "ARSpaceElevatorCapsule", 8, this, 64, 20, true);
+		EntityRegistry.registerModEntity(new ResourceLocation(Constants.modId, "mountDummy"),EntityDummy.class, "mountDummy", 0, this, 16, 20, false);
+		EntityRegistry.registerModEntity(new ResourceLocation(Constants.modId, "rocket") ,EntityRocket.class, "rocket", 1, this, 64, 3, true);
+		EntityRegistry.registerModEntity(new ResourceLocation(Constants.modId, "laserNode"), EntityLaserNode.class, "laserNode", 2, instance, 256, 20, false);
+		EntityRegistry.registerModEntity(new ResourceLocation(Constants.modId, "deployedRocket"), EntityStationDeployedRocket.class, "deployedRocket", 3, this, 256, 600, true);
+		EntityRegistry.registerModEntity(new ResourceLocation(Constants.modId, "ARAbductedItem"), EntityItemAbducted.class, "ARAbductedItem", 4, this, 127, 600, false);
+		EntityRegistry.registerModEntity(new ResourceLocation(Constants.modId, "ARPlanetUIItem"), EntityUIPlanet.class, "ARPlanetUIItem", 5, this, 64, 1, false);
+		EntityRegistry.registerModEntity(new ResourceLocation(Constants.modId, "ARPlanetUIButton"), EntityUIButton.class, "ARPlanetUIButton", 6, this, 64, 20, false);
+		EntityRegistry.registerModEntity(new ResourceLocation(Constants.modId, "ARStarUIButton"), EntityUIStar.class, "ARStarUIButton", 7, this, 64, 20, false);
+		EntityRegistry.registerModEntity(new ResourceLocation(Constants.modId, "ARSpaceElevatorCapsule"),EntityElevatorCapsule.class, "ARSpaceElevatorCapsule", 8, this, 64, 20, true);
 		
 		//TileEntity Registration ---------------------------------------------------------------------------------------------
 		GameRegistry.registerTileEntity(TileRocketBuilder.class, "ARrocketBuilder");
@@ -979,9 +978,10 @@ public class AdvancedRocketry {
 		OreDictionary.registerOre("concrete", new ItemStack(AdvancedRocketryBlocks.blockConcrete));
 		OreDictionary.registerOre("itemLens", AdvancedRocketryItems.itemLens);
 		OreDictionary.registerOre("dustThermite", new ItemStack(AdvancedRocketryItems.itemThermite));
-		OreDictionary.registerOre("turfMoon", new ItemStack(AdvancedRocketryBlocks.blockMoonTurf));
 		OreDictionary.registerOre("itemSilicon", MaterialRegistry.getItemStackFromMaterialAndType("Silicon", AllowedProducts.getProductByName("INGOT")));
+		OreDictionary.registerOre("turfMoon", new ItemStack(AdvancedRocketryBlocks.blockMoonTurf));
 		OreDictionary.registerOre("turfMoon", new ItemStack(AdvancedRocketryBlocks.blockMoonTurfDark));
+		
 		//Regiser item/block crap
 		proxy.preinit();
 	}
@@ -1352,11 +1352,11 @@ public class AdvancedRocketry {
 		BucketHandler.INSTANCE.registerBucket(AdvancedRocketryBlocks.blockOxygenFluid, AdvancedRocketryItems.itemBucketOxygen);
 		BucketHandler.INSTANCE.registerBucket(AdvancedRocketryBlocks.blockNitrogenFluid, AdvancedRocketryItems.itemBucketNitrogen);
 		
-		FluidContainerRegistry.registerFluidContainer(AdvancedRocketryFluids.fluidRocketFuel, new ItemStack(AdvancedRocketryItems.itemBucketRocketFuel), new ItemStack(Items.BUCKET));
-		FluidContainerRegistry.registerFluidContainer(AdvancedRocketryFluids.fluidNitrogen, new ItemStack(AdvancedRocketryItems.itemBucketNitrogen), new ItemStack(Items.BUCKET));
-		FluidContainerRegistry.registerFluidContainer(AdvancedRocketryFluids.fluidHydrogen, new ItemStack(AdvancedRocketryItems.itemBucketHydrogen), new ItemStack(Items.BUCKET));
-		FluidContainerRegistry.registerFluidContainer(AdvancedRocketryFluids.fluidOxygen, new ItemStack(AdvancedRocketryItems.itemBucketOxygen), new ItemStack(Items.BUCKET));
-		
+		//FluidContainerRegistry.registerFluidContainer(AdvancedRocketryFluids.fluidRocketFuel, new ItemStack(AdvancedRocketryItems.itemBucketRocketFuel), new ItemStack(Items.BUCKET));
+		//FluidContainerRegistry.registerFluidContainer(AdvancedRocketryFluids.fluidNitrogen, new ItemStack(AdvancedRocketryItems.itemBucketNitrogen), new ItemStack(Items.BUCKET));
+		//FluidContainerRegistry.registerFluidContainer(AdvancedRocketryFluids.fluidHydrogen, new ItemStack(AdvancedRocketryItems.itemBucketHydrogen), new ItemStack(Items.BUCKET));
+		//FluidContainerRegistry.registerFluidContainer(AdvancedRocketryFluids.fluidOxygen, new ItemStack(AdvancedRocketryItems.itemBucketOxygen), new ItemStack(Items.BUCKET));
+
 		//Register mixed material's recipes
 		for(MixedMaterial material : MaterialRegistry.getMixedMaterialList()) {
 			RecipesMachine.getInstance().addRecipe(material.getMachine(), material.getProducts(), 100, 10, material.getInput());
@@ -1434,7 +1434,7 @@ public class AdvancedRocketry {
 
 
 		for(String str : entityList) {
-			Class clazz = (Class) EntityList.NAME_TO_CLASS.get(str);
+			Class clazz = (Class) EntityList.getClass(new ResourceLocation(str));
 
 			//If not using string name maybe it's a class name?
 			if(clazz == null) {
@@ -1542,7 +1542,7 @@ public class AdvancedRocketry {
 						+ "\n\t</asteroid>"
 						+ "\n\t<asteroid name=\"Iridium Enriched asteroid\" distance=\"100\" mass=\"25\" massVariability=\"0.5\" minLevel=\"0\" probability=\"0.75\" richness=\"0.2\" richnessVariability=\"0.3\">"
 						+ "\n\t\t<ore itemStack=\"minecraft:iron_ore\" chance=\"25\" />"
-						+ "\n\t\t<ore itemStack=\"libVulpes:ore0 10\" chance=\"5\" />"
+						+ "\n\t\t<ore itemStack=\"libvulpes:ore0 10\" chance=\"5\" />"
 						+ "\n\t</asteroid>"
 						+ "\n</Asteroids>");
 				stream.close();

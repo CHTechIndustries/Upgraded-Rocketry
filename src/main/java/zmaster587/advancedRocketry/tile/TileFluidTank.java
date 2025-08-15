@@ -29,10 +29,10 @@ public class TileFluidTank extends TileFluidHatch {
 	}
 
 	private void checkForUpdate() {
-		if(fluidChanged && worldObj instanceof WorldDummy || worldObj.getTotalWorldTime() - lastUpdateTime > MAX_UPDATE) {
+		if(fluidChanged && world instanceof WorldDummy || world.getTotalWorldTime() - lastUpdateTime > MAX_UPDATE) {
 			this.markDirty();
-			worldObj.notifyBlockUpdate(pos, worldObj.getBlockState(pos),  worldObj.getBlockState(pos), 2);
-			lastUpdateTime = worldObj.getTotalWorldTime();
+			world.notifyBlockUpdate(pos, world.getBlockState(pos),  world.getBlockState(pos), 2);
+			lastUpdateTime = world.getTotalWorldTime();
 			fluidChanged = false;
 		}
 	}
@@ -49,8 +49,10 @@ public class TileFluidTank extends TileFluidHatch {
 	
 	@Override
 	public int fill(FluidStack resource, boolean doFill) {
+		
 		if(resource == null)
 			return 0;
+		
 		IFluidHandler handler = this.getFluidTankInDirection(EnumFacing.DOWN);
 		int amt = 0;
 
@@ -115,7 +117,7 @@ public class TileFluidTank extends TileFluidHatch {
 	}
 
 	public TileFluidTank getFluidTankInDirection(EnumFacing direction) {
-		TileEntity tile = worldObj.getTileEntity(pos.offset(direction));
+		TileEntity tile = world.getTileEntity(pos.offset(direction));
 
 		if(tile instanceof TileFluidTank) {
 			return ((TileFluidTank) tile);

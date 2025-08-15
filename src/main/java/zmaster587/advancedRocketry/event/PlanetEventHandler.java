@@ -1,10 +1,14 @@
 package zmaster587.advancedRocketry.event;
 
+import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import org.lwjgl.opengl.GL11;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockTorch;
@@ -31,6 +35,8 @@ import net.minecraftforge.client.event.EntityViewRenderEvent.FogColors;
 import net.minecraftforge.client.event.EntityViewRenderEvent.RenderFogEvent;
 import net.minecraftforge.event.entity.living.LivingEvent.LivingUpdateEvent;
 import net.minecraftforge.event.entity.living.LivingFallEvent;
+import net.minecraftforge.event.entity.player.PlayerContainerEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock;
 import net.minecraftforge.event.entity.player.PlayerSleepInBedEvent;
@@ -42,6 +48,7 @@ import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.eventhandler.Event.Result;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
+import net.minecraftforge.fml.common.network.FMLNetworkEvent.ClientConnectedToServerEvent;
 import net.minecraftforge.fml.common.network.FMLNetworkEvent.ClientDisconnectionFromServerEvent;
 import net.minecraftforge.fml.common.network.FMLNetworkEvent.ServerConnectionFromClientEvent;
 import net.minecraftforge.fml.relauncher.Side;
@@ -65,6 +72,7 @@ import zmaster587.advancedRocketry.network.PacketStellarInfo;
 import zmaster587.advancedRocketry.stations.SpaceObjectManager;
 import zmaster587.advancedRocketry.util.AsteroidSmall;
 import zmaster587.advancedRocketry.util.BiomeHandler;
+import zmaster587.advancedRocketry.util.RocketInventoryHelper;
 import zmaster587.advancedRocketry.util.TransitionEntity;
 import zmaster587.advancedRocketry.world.ChunkManagerPlanet;
 import zmaster587.advancedRocketry.world.provider.WorldProviderPlanet;
@@ -72,6 +80,7 @@ import zmaster587.advancedRocketry.world.util.TeleporterNoPortal;
 import zmaster587.libVulpes.LibVulpes;
 import zmaster587.libVulpes.api.IModularArmor;
 import zmaster587.libVulpes.api.LibVulpesItems;
+import zmaster587.libVulpes.api.material.AllowedProducts;
 import zmaster587.libVulpes.network.PacketHandler;
 
 public class PlanetEventHandler {
@@ -132,8 +141,7 @@ public class PlanetEventHandler {
 
 	@SubscribeEvent
 	public void onPickup(net.minecraftforge.fml.common.gameevent.PlayerEvent.ItemPickupEvent event) {
-		if(event.pickedUp != null) {
-			Item item = event.pickedUp.getEntityItem().getItem();
+		if(event.pickedUp != null && !event.pickedUp.getEntityItem().isEmpty()) {
 
 			zmaster587.libVulpes.api.material.Material mat = LibVulpes.materialRegistry.getMaterialFromItemStack( event.pickedUp.getEntityItem());
 			if(mat != null && mat.getUnlocalizedName().contains("Dilithium"))
@@ -145,16 +153,16 @@ public class PlanetEventHandler {
 	@SubscribeEvent
 	public void playerTick(LivingUpdateEvent event) {
 
-		if(event.getEntity().worldObj.isRemote && event.getEntity().posY > 260 && event.getEntity().posY < 270 && event.getEntity().motionY < -.1) {
-			RocketEventHandler.destroyOrbitalTextures(event.getEntity().worldObj);
+		if(event.getEntity().world.isRemote && event.getEntity().posY > 260 && event.getEntity().posY < 270 && event.getEntity().motionY < -.1) {
+			RocketEventHandler.destroyOrbitalTextures(event.getEntity().world);
 		}
 		if(event.getEntity().isInWater()) {
 			if(AtmosphereType.LOWOXYGEN.isImmune(event.getEntityLiving()))
 				event.getEntity().setAir(300);
 		}
 
-		if(!event.getEntity().worldObj.isRemote && event.getEntity().worldObj.getTotalWorldTime() % 20 ==0 && event.getEntity() instanceof EntityPlayer) {
-			if(DimensionManager.getInstance().getDimensionProperties(event.getEntity().worldObj.provider.getDimension()).getName().equals("Luna") && 
+		if(!event.getEntity().world.isRemote && event.getEntity().world.getTotalWorldTime() % 20 ==0 && event.getEntity() instanceof EntityPlayer) {
+			if(DimensionManager.getInstance().getDimensionProperties(event.getEntity().world.provider.getDimension()).getName().equals("Luna") && 
 					event.getEntity().getPosition().distanceSq(67, 80, 2347) < 512 ) {
 				((EntityPlayer)event.getEntity()).addStat(ARAchivements.weReallyWentToTheMoon);
 			}	
@@ -163,9 +171,10 @@ public class PlanetEventHandler {
 
 	@SubscribeEvent
 	public void sleepEvent(PlayerSleepInBedEvent event) {
-		if(event.getEntity().worldObj.provider instanceof WorldProviderPlanet) {
-			if (!Configuration.forcePlayerRespawnInSpace && AtmosphereHandler.hasAtmosphereHandler(event.getEntity().worldObj.provider.getDimension()) && 
-					!AtmosphereHandler.getOxygenHandler(event.getEntity().worldObj.provider.getDimension()).getAtmosphereType(event.getPos()).isBreathable()) {
+
+		if(event.getEntity().world.provider instanceof WorldProviderPlanet) {
+			if (!Configuration.forcePlayerRespawnInSpace && AtmosphereHandler.hasAtmosphereHandler(event.getEntity().world.provider.getDimension()) && 
+					!AtmosphereHandler.getOxygenHandler(event.getEntity().world.provider.getDimension()).getAtmosphereType(event.getPos()).isBreathable()) {
 				event.setResult(SleepResult.OTHER_PROBLEM);
 			}
 		}
@@ -191,7 +200,7 @@ public class PlanetEventHandler {
 		}
 
 		if(!event.getWorld().isRemote && event.getItemStack() != null && event instanceof PlayerInteractEvent.RightClickBlock && event.getItemStack().getItem() == Items.BED && event.getWorld().provider instanceof WorldProviderPlanet) {
-			AdvancedRocketryItems.itemAstroBed.onItemUse( event.getItemStack(),  event.getEntityPlayer(),  event.getEntityPlayer().worldObj, event.getPos(), event.getHand(), event.getFace(), 0, 0, 0);
+			AdvancedRocketryItems.itemAstroBed.onItemUse( event.getEntityPlayer(),  event.getEntityPlayer().world, event.getPos(), event.getHand(), event.getFace(), 0, 0, 0);
 			event.setCanceled(true);
 		}
 
@@ -232,7 +241,7 @@ public class PlanetEventHandler {
 				while(itr.hasNext()) {
 					Entry<Long, TransitionEntity> entry = itr.next();
 					TransitionEntity ent = entry.getValue();
-					if(ent.entity.worldObj.getTotalWorldTime() >= entry.getKey()) {
+					if(ent.entity.world.getTotalWorldTime() >= entry.getKey()) {
 						ent.entity.setLocationAndAngles(ent.location.getX(), ent.location.getY(), ent.location.getZ(), ent.entity.rotationYaw, ent.entity.rotationPitch);
 						ent.entity.getServer().getPlayerList().transferPlayerToDimension((EntityPlayerMP)ent.entity, ent.dimId, new TeleporterNoPortal(ent.entity.getServer().worldServerForDimension(ent.dimId)));
 						ent.entity.startRiding(ent.entity2);
@@ -361,7 +370,7 @@ public class PlanetEventHandler {
 	public void fogColor(FogColors event) {
 
 
-		IBlockState state = ActiveRenderInfo.getBlockStateAtEntityViewpoint(event.getEntity().worldObj, event.getEntity(), (float)event.getRenderPartialTicks());
+		IBlockState state = ActiveRenderInfo.getBlockStateAtEntityViewpoint(event.getEntity().world, event.getEntity(), (float)event.getRenderPartialTicks());
 
 		Block block = state.getBlock();
 		if(block.getMaterial(state) == Material.WATER)
@@ -371,15 +380,15 @@ public class PlanetEventHandler {
 		if(properties != null) {
 			float fog = properties.getAtmosphereDensityAtHeight(event.getEntity().posY);
 
-			if(event.getEntity().worldObj.provider instanceof IPlanetaryProvider) {
-				Vec3d color = event.getEntity().worldObj.provider.getSkyColor(event.getEntity(), 0f);
+			if(event.getEntity().world.provider instanceof IPlanetaryProvider) {
+				Vec3d color = event.getEntity().world.provider.getSkyColor(event.getEntity(), 0f);
 				event.setRed((float) Math.min(color.xCoord*1.4f,1f));
 				event.setGreen((float) Math.min(color.yCoord*1.4f, 1f));
 				event.setBlue((float) Math.min(color.zCoord*1.4f, 1f));
 			}
 
 			if(endTime > 0) {
-				double amt = (endTime - Minecraft.getMinecraft().theWorld.getTotalWorldTime()) / (double)duration;
+				double amt = (endTime - Minecraft.getMinecraft().world.getTotalWorldTime()) / (double)duration;
 				if(amt < 0) {
 					endTime = 0;
 				}
@@ -404,19 +413,20 @@ public class PlanetEventHandler {
 			if(DimensionManager.getInstance().getDimensionProperties(event.world.provider.getDimension()).isTerraformed()) {
 				Collection<Chunk> list = ((WorldServer)event.world).getChunkProvider().getLoadedChunks();
 				int listSize = list.size();
-				
+
 				if(list.size() > 0) {
 					try {
 						if(Configuration.terraformingBlockSpeed > listSize || event.world.rand.nextFloat() < Configuration.terraformingBlockSpeed/(float)listSize)
 						{
 							for(Chunk chunk : list) {
 								int coord = event.world.rand.nextInt(256);
-								int x = (coord & 0xF) + chunk.xPosition*16;
-								int z = (coord >> 4) + chunk.zPosition*16;
+								int x = (coord & 0xF) + chunk.x*16;
+								int z = (coord >> 4) + chunk.z*16;
 
 								BiomeHandler.changeBiome(event.world, Biome.getIdForBiome(((ChunkManagerPlanet)((WorldProviderPlanet)event.world.provider).chunkMgrTerraformed).getBiomeGenAt(x,z)), x, z);
 							}
 						}
+
 					} catch (NullPointerException e) {
 						//Ghost
 					}
@@ -443,7 +453,7 @@ public class PlanetEventHandler {
 	public static void modifyChunk(World world ,WorldProviderPlanet provider, Chunk chunk) {
 		for(int x = 0; x < 16; x++) {
 			for(int z = 0; z < 16; z++) {
-				BiomeHandler.changeBiome(world, Biome.getIdForBiome(((ChunkManagerPlanet)((WorldProviderPlanet)world.provider).chunkMgrTerraformed).getBiomeGenAt(x + chunk.xPosition*16,z + chunk.zPosition*16)), chunk, x + chunk.xPosition* 16, z + chunk.zPosition*16);
+				BiomeHandler.changeBiome(world, Biome.getIdForBiome(((ChunkManagerPlanet)((WorldProviderPlanet)world.provider).chunkMgrTerraformed).getBiomeGenAt(x + chunk.x*16,z + chunk.z*16)), chunk, x + chunk.x* 16, z + chunk.z*16);
 			}
 		}
 	}
@@ -470,7 +480,7 @@ public class PlanetEventHandler {
 			float far;
 
 			int atmosphere = properties.getAtmosphereDensity();
-			ItemStack armor = Minecraft.getMinecraft().thePlayer.getItemStackFromSlot(EntityEquipmentSlot.HEAD);
+			ItemStack armor = Minecraft.getMinecraft().player.getItemStackFromSlot(EntityEquipmentSlot.HEAD);
 
 			if(armor != null && armor.getItem() instanceof IModularArmor) {
 				for(ItemStack i : ((IModularArmor)armor.getItem()).getComponents(armor)) {
@@ -524,8 +534,8 @@ public class PlanetEventHandler {
 	//Make sure the player doesnt die on low gravity worlds
 	@SubscribeEvent
 	public void fallEvent(LivingFallEvent event) {
-		if(event.getEntity().worldObj.provider instanceof IPlanetaryProvider) {
-			IPlanetaryProvider planet = (IPlanetaryProvider)event.getEntity().worldObj.provider;
+		if(event.getEntity().world.provider instanceof IPlanetaryProvider) {
+			IPlanetaryProvider planet = (IPlanetaryProvider)event.getEntity().world.provider;
 			event.setDistance((float) (event.getDistance() * planet.getGravitationalMultiplier(event.getEntity().getPosition())));
 		}
 	}

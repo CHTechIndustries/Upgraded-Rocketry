@@ -26,20 +26,19 @@ public class ItemSealDetector extends Item
     //TODO make consume power?
 
 	@Override
-	public ActionResult<ItemStack> onItemRightClick(ItemStack itemStackIn,
-			World worldIn, EntityPlayer playerIn, EnumHand hand) {
-		return new ActionResult<ItemStack>(EnumActionResult.SUCCESS, itemStackIn);
+	public ActionResult<ItemStack> onItemRightClick(World worldIn, EntityPlayer playerIn, EnumHand hand) {
+		return new ActionResult<ItemStack>(EnumActionResult.SUCCESS, playerIn.getHeldItem(hand));
 	}
 	
 	@Override
-	public EnumActionResult onItemUse(ItemStack stack, EntityPlayer player,
+	public EnumActionResult onItemUse(EntityPlayer player,
 			World world, BlockPos pos, EnumHand hand, EnumFacing facing,
 			float hitX, float hitY, float hitZ) {
         if (!world.isRemote)
         {
             if (SealableBlockHandler.INSTANCE.isBlockSealed(world, pos))
             {
-                player.addChatComponentMessage(new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.sealdetector.sealed")));
+                player.sendMessage(new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.sealdetector.sealed")));
             }
             else
             {
@@ -47,23 +46,23 @@ public class ItemSealDetector extends Item
                 Material mat = state.getMaterial();
                 if (SealableBlockHandler.INSTANCE.isMaterialBanned(mat))
                 {
-                    player.addChatComponentMessage(new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.sealdetector.notsealmat")));
+                    player.sendMessage(new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.sealdetector.notsealmat")));
                 }
                 else if (SealableBlockHandler.INSTANCE.isBlockBanned(state.getBlock()))
                 {
-                    player.addChatComponentMessage(new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.sealdetector.notsealblock")));
+                    player.sendMessage(new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.sealdetector.notsealblock")));
                 }
                 else if (SealableBlockHandler.isFulBlock(world, pos))
                 {
-                    player.addChatComponentMessage(new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.sealdetector.notfullblock")));
+                    player.sendMessage(new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.sealdetector.notfullblock")));
                 }
                 else if (state.getBlock() instanceof IFluidBlock)
                 {
-                    player.addChatComponentMessage(new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.sealdetector.fluid")));
+                    player.sendMessage(new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.sealdetector.fluid")));
                 }
                 else
                 {
-                    player.addChatComponentMessage(new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.sealdetector.other")));
+                    player.sendMessage(new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.sealdetector.other")));
                 }
             }
         }

@@ -50,16 +50,16 @@ public class TileStationBuilder extends TileRocketBuilder implements IInventory 
 			return false;
 		ItemStack stack = new ItemStack(AdvancedRocketryBlocks.blockLoader,1,1);
 
-		if(inventory.getStackInSlot(0) == null || !stack.isItemEqual(inventory.getStackInSlot(0))) {
+		if(inventory.getStackInSlot(0).isEmpty() || !stack.isItemEqual(inventory.getStackInSlot(0))) {
 			status = ErrorCodes.NOSATELLITEHATCH;
 			return false;
 		}
 
-		if(inventory.getStackInSlot(1) == null || AdvancedRocketryItems.itemSpaceStationChip != inventory.getStackInSlot(1).getItem()) {
+		if(inventory.getStackInSlot(1).isEmpty() || AdvancedRocketryItems.itemSpaceStationChip != inventory.getStackInSlot(1).getItem()) {
 			status = ErrorCodes.NOSATELLITECHIP;
 			return false;
 		}
-		if( inventory.getStackInSlot(2) != null || inventory.getStackInSlot(3) != null) {
+		if( !inventory.getStackInSlot(2).isEmpty() || !inventory.getStackInSlot(3).isEmpty()) {
 			status = ErrorCodes.OUTPUTBLOCKED;
 			return false;
 		}
@@ -108,17 +108,17 @@ public class TileStationBuilder extends TileRocketBuilder implements IInventory 
 
 	@Override
 	public void assembleRocket() {
-		if(!worldObj.isRemote) {
+		if(!world.isRemote) {
 			if(bbCache == null)
 				return;
 			//Need to scan again b/c something may have changed
-			scanRocket(worldObj, pos, bbCache);
+			scanRocket(world, pos, bbCache);
 
 			if(status != ErrorCodes.SUCCESS_STATION)
 				return;
 			StorageChunk storageChunk;
 			try {
-				storageChunk = StorageChunk.cutWorldBB(worldObj, bbCache);
+				storageChunk = StorageChunk.cutWorldBB(world, bbCache);
 			} catch( NegativeArraySizeException e) {
 				return;
 			}
@@ -152,14 +152,14 @@ public class TileStationBuilder extends TileRocketBuilder implements IInventory 
 			this.status = ErrorCodes.FINISHED;
 			storedId = null;
 			this.markDirty();
-			worldObj.notifyBlockUpdate(pos, worldObj.getBlockState(pos),  worldObj.getBlockState(pos), 3);	
+			world.notifyBlockUpdate(pos, world.getBlockState(pos),  world.getBlockState(pos), 3);	
 		}
 	}
 
 	@Override
 	protected void updateText() {
-		if(!worldObj.isRemote) { 
-			if(getRocketPadBounds(worldObj, pos) == null)
+		if(!world.isRemote) { 
+			if(getRocketPadBounds(world, pos) == null)
 				setStatus(ErrorCodes.INCOMPLETESTRCUTURE.ordinal());
 			else if( ErrorCodes.INCOMPLETESTRCUTURE.equals(getStatus()))
 				setStatus(ErrorCodes.UNSCANNED.ordinal());
@@ -198,11 +198,11 @@ public class TileStationBuilder extends TileRocketBuilder implements IInventory 
 	@Override
 	public void useNetworkData(EntityPlayer player, Side side, byte id,
 			NBTTagCompound nbt) {
+		
 		boolean isScanningFlag = !isScanning() && canScan();
 		
 		super.useNetworkData(player, side, id, nbt);
-		
-		if(id == 1 && isScanningFlag ) {
+		if(id == 1 && isScanningFlag) {
 			inventory.decrStackSize(0, 1);
 
 			storedId = (long)ItemStationChip.getUUID(inventory.getStackInSlot(1));
@@ -210,8 +210,6 @@ public class TileStationBuilder extends TileRocketBuilder implements IInventory 
 			if(storedId == null)
 				inventory.decrStackSize(1, 1);
 		}
-		
-		
 	}
 
 	@Override
@@ -275,10 +273,14 @@ public class TileStationBuilder extends TileRocketBuilder implements IInventory 
 
 
 	@Override
-	public boolean isUseableByPlayer(EntityPlayer player) {
-		return inventory.isUseableByPlayer(player);
+	public boolean isUsableByPlayer(EntityPlayer player) {
+		return inventory.isUsableByPlayer(player);
 	}
 
+	@Override
+	public boolean isEmpty() {
+		return inventory.isEmpty();
+	}
 
 	@Override
 	public void openInventory(EntityPlayer pos) {

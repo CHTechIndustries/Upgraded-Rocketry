@@ -78,7 +78,7 @@ public class TileEntityMoniteringStation extends TileEntity  implements IModular
 		if(state == RedstoneState.OFF)
 			return false;
 
-		boolean state2 = worldObj.isBlockIndirectlyGettingPowered(pos) > 0;
+		boolean state2 = world.isBlockIndirectlyGettingPowered(pos) > 0;
 
 		if(state == RedstoneState.INVERTED)
 			state2 = !state2;
@@ -87,7 +87,7 @@ public class TileEntityMoniteringStation extends TileEntity  implements IModular
 
 	@Override
 	public void onAdjacentBlockUpdated() {
-		if(!worldObj.isRemote && getEquivilentPower() && linkedRocket != null) {
+		if(!world.isRemote && getEquivilentPower() && linkedRocket != null) {
 			linkedRocket.prepareLaunch();
 		}
 	}
@@ -103,7 +103,7 @@ public class TileEntityMoniteringStation extends TileEntity  implements IModular
 
 		ItemLinker.setMasterCoords(item, getPos());
 
-		if(player.worldObj.isRemote)
+		if(player.world.isRemote)
 			Minecraft.getMinecraft().ingameGUI.getChatGUI().printChatMessage((new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.monitoringStation.link") + ": " + getPos().getX() + " " + getPos().getY() + " " + getPos().getZ())));
 		return true;
 	}
@@ -111,7 +111,7 @@ public class TileEntityMoniteringStation extends TileEntity  implements IModular
 	@Override
 	public boolean onLinkComplete(ItemStack item, TileEntity entity,
 			EntityPlayer player, World world) {
-		if(player.worldObj.isRemote)
+		if(player.world.isRemote)
 			Minecraft.getMinecraft().ingameGUI.getChatGUI().printChatMessage((new TextComponentString(LibVulpes.proxy.getLocalizedString("msg.linker.error.firstMachine"))));
 		return false;
 	}
@@ -232,7 +232,7 @@ public class TileEntityMoniteringStation extends TileEntity  implements IModular
 		modules.add(new ModuleProgress(30, 120, 4, TextureResources.workMission, this));
 		modules.add(new ModuleProgress(30, 130, 5, TextureResources.progressFromMission, this));
 
-		if(!worldObj.isRemote) {
+		if(!world.isRemote) {
 			PacketHandler.sendToPlayer(new PacketMachine(this, (byte)1), player);
 		}
 
@@ -275,21 +275,21 @@ public class TileEntityMoniteringStation extends TileEntity  implements IModular
 		else if(id == 3) {
 			if(mission == null)
 				return 0f;
-			return (float) Math.min(3f*mission.getProgress(this.worldObj), 1f);
+			return (float) Math.min(3f*mission.getProgress(this.world), 1f);
 		}
 		else if(id == 4) {
 			if(mission == null)
 				return 0f;
-			return (float) Math.min(Math.max( 3f*(mission.getProgress(this.worldObj) - 0.333f), 0f), 1f);
+			return (float) Math.min(Math.max( 3f*(mission.getProgress(this.world) - 0.333f), 0f), 1f);
 		}
 		else if(id == 5) {
 			if(mission == null)
 				return 0f;
-			return (float) Math.min(Math.max( 3f*(mission.getProgress(this.worldObj) - 0.666f), 0f), 1f);
+			return (float) Math.min(Math.max( 3f*(mission.getProgress(this.world) - 0.666f), 0f), 1f);
 		}
 		
 		//keep text updated
-		if(worldObj.isRemote && mission != null)
+		if(world.isRemote && mission != null)
 			setMissionText();
 		
 		return getProgress(id)/(float)getTotalProgress(id);
@@ -308,7 +308,7 @@ public class TileEntityMoniteringStation extends TileEntity  implements IModular
 	@Override
 	public int getProgress(int id) {
 		//Try to keep client synced with server, this also allows us to put the monitor on a different world altogether
-		if(worldObj.isRemote)
+		if(world.isRemote)
 			if(mission != null && id == 0)
 				return getTotalProgress(id);
 			else if(id == 0)
@@ -337,7 +337,7 @@ public class TileEntityMoniteringStation extends TileEntity  implements IModular
 		else if(id == 1)
 			return 200;
 		else if(id == 2)
-			if(worldObj.isRemote)
+			if(world.isRemote)
 				return maxFuelLevel;
 			else
 				if(linkedRocket == null)
@@ -363,7 +363,7 @@ public class TileEntityMoniteringStation extends TileEntity  implements IModular
 	@Override
 	public boolean linkMission(IMission misson) {
 		this.mission = misson;
-		PacketHandler.sendToNearby(new PacketMachine(this, (byte)1), worldObj.provider.getDimension(), getPos(), 16);
+		PacketHandler.sendToNearby(new PacketMachine(this, (byte)1), world.provider.getDimension(), getPos(), 16);
 		return true;
 	}
 
@@ -371,7 +371,7 @@ public class TileEntityMoniteringStation extends TileEntity  implements IModular
 	public void unlinkMission() {
 		mission = null;
 		setMissionText();
-		PacketHandler.sendToNearby(new PacketMachine(this, (byte)1), worldObj.provider.getDimension(), getPos(), 16);
+		PacketHandler.sendToNearby(new PacketMachine(this, (byte)1), world.provider.getDimension(), getPos(), 16);
 	}
 
 	@Override

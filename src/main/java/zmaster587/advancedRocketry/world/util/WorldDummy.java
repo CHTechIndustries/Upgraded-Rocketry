@@ -10,8 +10,10 @@ import net.minecraft.profiler.Profiler;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
+import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.storage.WorldInfo;
 import net.minecraftforge.fml.relauncher.Side;
@@ -39,6 +41,14 @@ public class WorldDummy extends World {
 		return storage.getTileEntity(pos);
 	}
 
+    @SideOnly(Side.CLIENT)
+    public int getLightFromNeighborsFor(EnumSkyBlock type, BlockPos pos)
+    {
+    	if(type == EnumSkyBlock.SKY)
+    		return 15;
+    	return super.getLightFromNeighborsFor(type, pos);
+    }
+	
 	@Override
 	public long getWorldTime() {
 		return 0;
@@ -71,7 +81,7 @@ public class WorldDummy extends World {
 	}
 	
 	@Override
-	public Biome getBiomeGenForCoords(BlockPos pos) {
+	public Biome getBiome(BlockPos pos) {
 		return AdvancedRocketryBiomes.spaceBiome;
 	}
 
@@ -89,6 +99,11 @@ public class WorldDummy extends World {
 		return 0;
 	}
 
+	@Override
+	public int getLight(BlockPos pos, boolean checkNeighbors) {
+		return 15;
+	}
+	
 	//No entities exist
 	@Override
 	public Entity getEntityByID(int p_73045_1_) {

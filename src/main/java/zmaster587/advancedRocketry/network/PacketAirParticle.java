@@ -49,14 +49,14 @@ public class PacketAirParticle extends BasePacket {
 	public void executeClient(EntityPlayer thePlayer) {
 
 		if(Minecraft.getMinecraft().gameSettings.particleSetting < 1) {
-			OxygenCloudFX fx3 = new OxygenCloudFX(thePlayer.worldObj,  toPos.x + 0.5, toPos.y + 0.5, toPos.z + 0.5, 0, 0, 0);
+			OxygenCloudFX fx3 = new OxygenCloudFX(thePlayer.world,  toPos.x + 0.5, toPos.y + 0.5, toPos.z + 0.5, 0, 0, 0);
 			Minecraft.getMinecraft().effectRenderer.addEffect(fx3);
 		}
 
 		int numIterations = Minecraft.getMinecraft().gameSettings.particleSetting < 1 ? 5 : (Minecraft.getMinecraft().gameSettings.particleSetting < 2 ? 3 : 1);
 		
 		for(int i = 0; i < numIterations;i++) {
-			OxygenTraceFX fx2 = new OxygenTraceFX(thePlayer.worldObj,  toPos.x + 0.5, toPos.y + 0.5, toPos.z + 0.5, 0.01*(0.5 - Math.random()), 0.01*(0.5 - Math.random()), 0.01*(0.5 - Math.random()));
+			OxygenTraceFX fx2 = new OxygenTraceFX(thePlayer.world,  toPos.x + 0.5, toPos.y + 0.5, toPos.z + 0.5, 0.01*(0.5 - Math.random()), 0.01*(0.5 - Math.random()), 0.01*(0.5 - Math.random()));
 			Minecraft.getMinecraft().effectRenderer.addEffect(fx2);
 		}
 	}

@@ -53,7 +53,7 @@ public class TileDockingPort extends TileEntity implements IModularInventory, IG
 	public List<ModuleBase> getModules(int id, EntityPlayer player) {
 		List<ModuleBase> modules = new LinkedList<ModuleBase>();
 		modules.add(new ModuleText(20, 50, LibVulpes.proxy.getLocalizedString("msg.dockingport.target"), 0x2a2a2a));
-		if(worldObj.isRemote) {
+		if(world.isRemote) {
 			myId = new ModuleTextBox(this, 20, 30, 60, 12, 9);
 			targetId = new ModuleTextBox(this, 20, 60, 60, 12, 9);
 			targetId.setText(targetIdStr);
@@ -137,14 +137,14 @@ public class TileDockingPort extends TileEntity implements IModularInventory, IG
 	@Override
 	public void invalidate() {
 		super.invalidate();
-		unregisterTileWithStation(worldObj, pos);
+		unregisterTileWithStation(world, pos);
 	}
 
 	
 	@Override
 	public void onLoad() {
 		super.onLoad();
-		registerTileWithStation(worldObj, pos);
+		registerTileWithStation(world, pos);
 	}
 
 	@Override
@@ -190,7 +190,7 @@ public class TileDockingPort extends TileEntity implements IModularInventory, IG
 			NBTTagCompound nbt) {
 		int len = in.readInt();
 		PacketBuffer buff = new PacketBuffer(in);
-		nbt.setString("id", buff.readStringFromBuffer(len));
+		nbt.setString("id", buff.readString(len));
 	}
 
 	@Override
@@ -198,7 +198,7 @@ public class TileDockingPort extends TileEntity implements IModularInventory, IG
 			NBTTagCompound nbt) {
 		if(id == 0) {
 			myIdStr = nbt.getString("id");
-			if(!worldObj.isRemote && worldObj.provider.getDimension() == Configuration.spaceDimId) {
+			if(!world.isRemote && world.provider.getDimension() == Configuration.spaceDimId) {
 				ISpaceObject spaceObj = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(pos);
 
 				if(spaceObj instanceof SpaceObject) {
@@ -210,6 +210,6 @@ public class TileDockingPort extends TileEntity implements IModularInventory, IG
 			targetIdStr = nbt.getString("id");
 		}
 		markDirty();
-		worldObj.notifyBlockUpdate(pos, worldObj.getBlockState(pos),  worldObj.getBlockState(pos), 3);
+		world.notifyBlockUpdate(pos, world.getBlockState(pos),  world.getBlockState(pos), 3);
 	}
 }

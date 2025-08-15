@@ -7,12 +7,10 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.EnumFacing;
 import net.minecraftforge.fml.relauncher.Side;
 import zmaster587.advancedRocketry.api.DataStorage;
 import zmaster587.advancedRocketry.api.DataStorage.DataType;
-import zmaster587.advancedRocketry.api.satellite.IDataHandler;
 import zmaster587.advancedRocketry.api.satellite.SatelliteBase;
 import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.inventory.TextureResources;
@@ -28,9 +26,7 @@ import zmaster587.libVulpes.inventory.modules.IModularInventory;
 import zmaster587.libVulpes.inventory.modules.ModuleBase;
 import zmaster587.libVulpes.inventory.modules.ModuleButton;
 import zmaster587.libVulpes.inventory.modules.ModulePower;
-import zmaster587.libVulpes.inventory.modules.ModuleSlotArray;
 import zmaster587.libVulpes.inventory.modules.ModuleText;
-import zmaster587.libVulpes.inventory.modules.ModuleToggleSwitch;
 import zmaster587.libVulpes.network.PacketHandler;
 import zmaster587.libVulpes.network.PacketMachine;
 import zmaster587.libVulpes.tile.TileInventoriedRFConsumer;
@@ -70,7 +66,7 @@ public class TileEntitySatelliteControlCenter extends TileInventoriedRFConsumer 
 
 	@Override
 	public boolean canPerformFunction() {
-		return worldObj.getTotalWorldTime() % 16 == 0 && getSatelliteFromSlot(0) != null;
+		return world.getTotalWorldTime() % 16 == 0 && getSatelliteFromSlot(0) != null;
 	}
 
 	@Override
@@ -80,7 +76,7 @@ public class TileEntitySatelliteControlCenter extends TileInventoriedRFConsumer 
 
 	@Override
 	public void performFunction() {
-		if(worldObj.isRemote)
+		if(world.isRemote)
 			updateInventoryInfo();
 	}
 
@@ -103,9 +99,8 @@ public class TileEntitySatelliteControlCenter extends TileInventoriedRFConsumer 
 		else if( id == 100 ) {
 
 			SatelliteBase satellite = moduleSatellite.getSatellite();
-			
-			if(satellite != null && DimensionManager.getInstance().areDimensionsInSamePlanetMoonSystem(satellite.getDimensionId(), DimensionManager.getEffectiveDimId(worldObj, pos).getId())) {
-				satellite.performAction(player, worldObj, pos);
+			if(satellite != null && DimensionManager.getInstance().areDimensionsInSamePlanetMoonSystem(satellite.getDimensionId(), DimensionManager.getEffectiveDimId(world, pos).getId())) {
+				satellite.performAction(player, world, pos);
 			}
 		}
 		else if( id == 101) {
@@ -128,12 +123,12 @@ public class TileEntitySatelliteControlCenter extends TileInventoriedRFConsumer 
 				if(getEnergyStored() < getPowerPerOperation()) 
 					moduleText.setText(LibVulpes.proxy.getLocalizedString("msg.notenoughpower"));
 
-				else if(!DimensionManager.getInstance().areDimensionsInSamePlanetMoonSystem(satellite.getDimensionId(), DimensionManager.getEffectiveDimId(worldObj, pos).getId())) {
+				else if(!DimensionManager.getInstance().areDimensionsInSamePlanetMoonSystem(satellite.getDimensionId(), DimensionManager.getEffectiveDimId(world, pos).getId())) {
 					moduleText.setText(satellite.getName() + "\n\n" + LibVulpes.proxy.getLocalizedString("msg.satctrlcenter.toofar") );
 				}
 
 				else
-					moduleText.setText(satellite.getName() + "\n\n" + LibVulpes.proxy.getLocalizedString("msg.satctrlcenter.info") + "\n" + satellite.getInfo(worldObj));
+					moduleText.setText(satellite.getName() + "\n\n" + LibVulpes.proxy.getLocalizedString("msg.satctrlcenter.info") + "\n" + satellite.getInfo(world));
 			}
 			else
 				moduleText.setText(LibVulpes.proxy.getLocalizedString("msg.satctrlcenter.nolink"));
@@ -226,9 +221,9 @@ public class TileEntitySatelliteControlCenter extends TileInventoriedRFConsumer 
 
 	@Override
 	public void storeData(int id) {
-		if(!worldObj.isRemote) {
+		if(!world.isRemote) {
 			ItemStack inv = getStackInSlot(1);
-			if(inv != null && inv.getItem() instanceof ItemData && inv.stackSize == 1) {
+			if(inv != null && inv.getItem() instanceof ItemData && inv.getCount() == 1) {
 				ItemData dataItem = (ItemData)inv.getItem();
 				data.removeData(dataItem.addData(inv, data.getData(), data.getDataType()), true);
 			}
@@ -243,8 +238,8 @@ public class TileEntitySatelliteControlCenter extends TileInventoriedRFConsumer 
 		//TODO
 		if(type == data.getDataType() ||  data.getDataType() == DataType.UNDEFINED) {
 			SatelliteBase satellite = getSatelliteFromSlot(0);
-			if(satellite != null && satellite instanceof SatelliteData && DimensionManager.getInstance().areDimensionsInSamePlanetMoonSystem(satellite.getDimensionId(), DimensionManager.getEffectiveDimId(worldObj, pos).getId())) {
-				satellite.performAction(null, worldObj, pos);
+			if(satellite != null && satellite instanceof SatelliteData && DimensionManager.getInstance().areDimensionsInSamePlanetMoonSystem(satellite.getDimensionId(), DimensionManager.getEffectiveDimId(world, pos).getId())) {
+				satellite.performAction(null, world, pos);
 			}
 			
 			return data.removeData(maxAmount, commit);

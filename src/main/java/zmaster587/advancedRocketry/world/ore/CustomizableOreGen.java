@@ -5,7 +5,6 @@ import java.util.Random;
 import zmaster587.advancedRocketry.util.OreGenProperties;
 import net.minecraft.block.BlockStone;
 import net.minecraft.block.state.IBlockState;
-import net.minecraft.block.state.pattern.BlockMatcher;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -15,7 +14,6 @@ import net.minecraft.world.gen.feature.WorldGenMinable;
 import net.minecraftforge.fml.common.IWorldGenerator;
 import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.dimension.DimensionProperties;
-
 import com.google.common.base.Predicate;
 
 public class CustomizableOreGen implements IWorldGenerator {
@@ -49,7 +47,7 @@ public class CustomizableOreGen implements IWorldGenerator {
 		{
 			IBlockState state = ((DimensionProperties)DimensionManager.getInstance().getDimensionProperties(world.provider.getDimension())).getStoneBlock();
 			if(state != null)
-				predicate = BlockMatcher.forBlock(state.getBlock());
+				predicate = new CustomPredicate(state);
 		}
 		
 		for(int i = 0; i < numPerChunk; i++) {
@@ -63,5 +61,33 @@ public class CustomizableOreGen implements IWorldGenerator {
 				new WorldGenMinable(oreToGen, clumpSize).generate(world, random, new BlockPos(coordX, coordY, coordZ));
 		}
 
+	}
+
+	static class CustomPredicate implements Predicate<IBlockState>
+	{
+		IBlockState state;
+		public CustomPredicate(IBlockState state)
+		{
+			this.state = state;
+		}
+
+
+
+		public boolean apply(IBlockState p_apply_1_)
+		{
+			if (p_apply_1_ != null) {
+				if(p_apply_1_.getBlock() == Blocks.STONE)
+				{
+					BlockStone.EnumType blockstone$enumtype = (BlockStone.EnumType)p_apply_1_.getValue(BlockStone.VARIANT);
+					return blockstone$enumtype.isNatural();
+				} 
+				else if(p_apply_1_.getBlock() == state.getBlock())
+				{
+					return true;
+				}
+			}
+			
+			return false;
+		}
 	}
 }
