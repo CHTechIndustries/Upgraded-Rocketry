@@ -1,5 +1,6 @@
 package zmaster587.advancedRocketry.api;
 
+import cpw.mods.fml.common.eventhandler.Cancelable;
 import net.minecraft.entity.Entity;
 import net.minecraft.world.World;
 import net.minecraftforge.event.entity.EntityEvent;
@@ -25,6 +26,17 @@ public class RocketEvent extends EntityEvent {
 	}
 	
 	/**
+	 * Fired when the rocket is launched on the Minecraft Forge EVENT_BUS
+	 * Cancelling the event aborts the launch
+	 */
+	@Cancelable
+	public static class RocketPreLaunchEvent extends RocketEvent {
+		public RocketPreLaunchEvent(Entity entity) {
+			super(entity);
+		}
+	}
+	
+	/**
 	 * Fired before the rocket is finished teleporting to the destination world on the Minecraft Forge EVENT_BUS
 	 */
 	public static class RocketDeOrbitingEvent extends RocketEvent {
@@ -38,6 +50,15 @@ public class RocketEvent extends EntityEvent {
 	 */
 	public static class RocketLandedEvent extends RocketEvent {
 		public RocketLandedEvent(Entity entity) {
+			super(entity);
+		}
+	}
+	
+	/**
+	 * Fired right before the rocket is dismantled on the Minecraft Forge EVENT_BUS
+	 */
+	public static class RocketDismantleEvent extends RocketEvent {
+		public RocketDismantleEvent(Entity entity) {
 			super(entity);
 		}
 	}

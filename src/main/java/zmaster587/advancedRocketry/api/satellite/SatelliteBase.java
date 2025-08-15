@@ -2,10 +2,14 @@ package zmaster587.advancedRocketry.api.satellite;
 
 import cpw.mods.fml.relauncher.Side;
 import io.netty.buffer.ByteBuf;
+import zmaster587.advancedRocketry.api.AdvancedRocketryItems;
+import zmaster587.advancedRocketry.api.ISatelliteIdItem;
 import zmaster587.advancedRocketry.api.SatelliteRegistry;
+import zmaster587.advancedRocketry.item.ItemSatellite;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.ICrafting;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
 
@@ -13,9 +17,20 @@ public abstract class SatelliteBase {
 	
 	protected SatelliteProperties satelliteProperties;
 	private int dimId = -1;
+	//Will always be of type ItemSatellite
+	protected ItemStack satellite;
 
+	private boolean isDead;
+	
 	public SatelliteBase() {
 		satelliteProperties = new SatelliteProperties();
+		satelliteProperties.setSatelliteType(SatelliteRegistry.getKey(this.getClass()));
+		isDead = false;
+	}
+	
+	public boolean acceptsItemInConstruction(ItemStack item) {
+		int flag = SatelliteRegistry.getSatelliteProperty(item).getPropertyFlag();
+		return SatelliteProperties.Property.MAIN.isOfType(flag);
 	}
 	
 	/**
@@ -43,6 +58,22 @@ public abstract class SatelliteBase {
 	 */
 	public abstract double failureChance();
 	
+	/**
+	 * @return an item that can be used to control the satellite, normally a satellite ID chip but can be something else
+	 */
+	public ItemStack getContollerItemStack(ItemStack satIdChip, SatelliteProperties properties) {
+		ISatelliteIdItem idChipItem = (ISatelliteIdItem)satIdChip.getItem();
+		idChipItem.setSatellite(satIdChip, properties);
+		return satIdChip;
+	}
+	
+	/**
+	 * @param stack stack to check (can be null)
+	 * @return true if the item stack is a valid controller for the satellite
+	 */
+	public boolean isAcceptableControllerItemStack(ItemStack stack) {
+		return stack != null && stack.getItem() == AdvancedRocketryItems.itemSatelliteIdChip;
+	}
 	
 	/**
 	 * @return true if the satellite can tick
@@ -63,6 +94,14 @@ public abstract class SatelliteBase {
 		return satelliteProperties.getId();
 	}
 	
+	public void setDead(){
+		isDead = true;
+	}
+	
+	public boolean isDead() {
+		return isDead;
+	}
+	
 	/**
 	 * Does not currently support dimension change
 	 * @param world World of which to assign to the satellite
@@ -75,11 +114,24 @@ public abstract class SatelliteBase {
 		dimId = newId;
 	}
 	
+	public void setDimensionId(int world) {
+		int newId = world;
+		if(dimId != -1) {
+			//TODO: handle dim change
+		}
+		dimId = newId;
+	}
+	
 	/**
 	 * @param satelliteProperties satelliteProperties to assign to this satellite
 	 */
-	public void setProperties(SatelliteProperties satelliteProperties) {
-		this.satelliteProperties = satelliteProperties;
+	public void setProperties(ItemStack stack) {
+		this.satelliteProperties = ((ItemSatellite)stack.getItem()).getSatellite(stack);
+		this.satellite = stack;
+	}
+	
+	public ItemStack getItemStackFromSatellite() {
+		return satellite;
 	}
 	
 	/**
@@ -100,11 +152,18 @@ public abstract class SatelliteBase {
 		nbt.setTag("properties", properties);
 		nbt.setInteger("dimId", dimId);
 		
+		NBTTagCompound itemNBT = new NBTTagCompound();
+		//Transition
+		if(satellite != null)
+			satellite.writeToNBT(itemNBT);
+		nbt.setTag("item", itemNBT);
+		
 	}
 	
 	public void readFromNBT(NBTTagCompound nbt) {
 		satelliteProperties.readFromNBT(nbt.getCompoundTag("properties"));
 		dimId = nbt.getInteger("dimId");
+		satellite = ItemStack.loadItemStackFromNBT(nbt.getCompoundTag("item"));
 	}
 	
 	public void writeDataToNetwork(ByteBuf out, byte packetId) {

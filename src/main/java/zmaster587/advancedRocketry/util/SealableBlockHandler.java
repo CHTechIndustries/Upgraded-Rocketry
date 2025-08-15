@@ -2,13 +2,16 @@ package zmaster587.advancedRocketry.util;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
+import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldServer;
 import net.minecraftforge.fluids.IFluidBlock;
 import zmaster587.advancedRocketry.api.AdvancedRocketryBlocks;
 import zmaster587.advancedRocketry.api.atmosphere.IAtmosphereSealHandler;
 import zmaster587.libVulpes.util.BlockPosition;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -26,6 +29,8 @@ public final class SealableBlockHandler implements IAtmosphereSealHandler
     private List<Material> materialBanList = new ArrayList();
     /** List of block materials that are allowed regardless of properties. */
     private List<Material> materialAllowList = new ArrayList();
+    
+    private HashSet<BlockPosition> doorPositions = new HashSet<BlockPosition>();
     //TODO add meta support
     //TODO add complex logic support threw API interface
     //TODO add complex logic handler for integration support
@@ -41,37 +46,61 @@ public final class SealableBlockHandler implements IAtmosphereSealHandler
         return isBlockSealed(world, new BlockPosition(x, y, z));
     }
 
+    /**
+     * Checks to see if the block at the location can be sealed
+     * @param world
+     * @param pos
+     * @return
+     */
     public boolean isBlockSealed(World world, BlockPosition pos)
     {
-        Block block = world.getBlock(pos.x, pos.y, pos.z);
-        int meta = world.getBlockMetadata(pos.x, pos.y, pos.z);
-        Material material = block.getMaterial();
+        //Ensure we are not checking outside of the map
+        if(pos.y >= 0 && pos.y <= 256)
+        {
+            //Prevents orphan chunk loading - DarkGuardsman
+            if(world instanceof WorldServer && !((WorldServer) world).theChunkProviderServer.chunkExists(pos.x >> 4, pos.z >> 4))
+            {
+                return false;
+            }
 
-        //Always allow list
-        if (blockAllowList.contains(block) || materialAllowList.contains(material))
-        {
-            return true;
+            Block block = world.getBlock(pos.x, pos.y, pos.z);
+            int meta = world.getBlockMetadata(pos.x, pos.y, pos.z);
+            Material material = block.getMaterial();
+
+            //Always allow list
+            if (blockAllowList.contains(block) || materialAllowList.contains(material))
+            {
+                return true;
+            }
+            //Always block list
+            else if (blockBanList.contains(block) || materialBanList.contains(material))
+            {
+                return false;
+            }
+            else if (material.isLiquid() || !material.isSolid())
+            {
+                return false;
+            }
+            else if (world.isAirBlock(pos.x, pos.y, pos.z) || block instanceof IFluidBlock)
+            {
+                return false;
+            }
+            //TODO replace with seal logic handler
+            else if (block == AdvancedRocketryBlocks.blockAirLock)
+            {
+				
+				if(doorPositions.contains(pos))
+					return true;
+				doorPositions.add(pos);
+				
+				boolean doorIsSealed = checkDoorIsSealed(world, pos, meta);
+				doorPositions.remove(pos);
+				return doorIsSealed;
+            }
+            //TODO add is side solid check, which will require forge direction or side check. Eg more complex logic...
+            return isFulBlock(world, pos);
         }
-        //Always block list
-        else if (blockBanList.contains(block) || materialBanList.contains(material))
-        {
-            return false;
-        }
-        else if (material.isLiquid() || !material.isSolid())
-        {
-            return false;
-        }
-        else if (world.isAirBlock(pos.x, pos.y, pos.z) || block instanceof IFluidBlock)
-        {
-            return false;
-        }
-        //TODO replace with seal logic handler
-        else if (block == AdvancedRocketryBlocks.blockAirLock)
-        {
-            return checkDoorIsSealed(world, pos, meta);
-        }
-        //TODO add is side solid check, which will require forge direction or side check. Eg more complex logic...
-        return isFulBlock(world, pos);
+        return false;
     }
 
     @Override
@@ -112,27 +141,31 @@ public final class SealableBlockHandler implements IAtmosphereSealHandler
      */
     public static boolean isFulBlock(World world, BlockPosition pos)
     {
-        return isFulBlock(world.getBlock(pos.x, pos.y, pos.z));
+        return isFulBlock(world, world.getBlock(pos.x, pos.y, pos.z), pos);
     }
 
     /**
-     * Checks if a block is full sized based off of block bounds. This
-     * is not a perfect check as mods may have a full size. However,
-     * have a 3D model that doesn't look a full block in size. There
-     * is no way around this other than to make a black list check.
+     * Checks if a block is full sized based off of collision bounds. This
+     * is not a perfect check as some mods may have blocks that can be walked through.
+     * But should be air-tight like forcefields
      *
      * @param block - block to compare
      * @return true if full block
      */
-    public static boolean isFulBlock(Block block)
+    public static boolean isFulBlock(World world, Block block, BlockPosition pos)
     {
+    	AxisAlignedBB bb = block.getCollisionBoundingBoxFromPool(world, pos.x, pos.y, pos.z);
+    	
+    	if(bb == null)
+    		return false;
+    	
         //size * 100 to correct rounding errors
-        int minX = (int) (block.getBlockBoundsMinX() * 100);
-        int minY = (int) (block.getBlockBoundsMinY() * 100);
-        int minZ = (int) (block.getBlockBoundsMinZ() * 100);
-        int maxX = (int) (block.getBlockBoundsMaxX() * 100);
-        int maxY = (int) (block.getBlockBoundsMaxY() * 100);
-        int maxZ = (int) (block.getBlockBoundsMaxZ() * 100);
+        int minX = (int) ((bb.minX - pos.x) * 100);
+        int minY = (int) ((bb.minY - pos.y) * 100);
+        int minZ = (int) ((bb.minZ - pos.z) * 100);
+        int maxX = (int) ((bb.maxX - pos.x) * 100);
+        int maxY = (int) ((bb.maxY - pos.y) * 100);
+        int maxZ = (int) ((bb.maxZ - pos.z) * 100);
 
         return minX == 0 && minY == 0 && minZ == 0 && maxX == 100 && maxY == 100 && maxZ == 100;
     }

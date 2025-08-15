@@ -2,15 +2,16 @@ package zmaster587.advancedRocketry.block;
 
 import java.util.List;
 
-import zmaster587.advancedRocketry.api.material.MaterialRegistry;
-import zmaster587.advancedRocketry.api.material.MaterialRegistry.Materials;
-import zmaster587.advancedRocketry.recipe.RecipesMachine;
+import zmaster587.libVulpes.api.material.Material;
+import zmaster587.libVulpes.api.material.MaterialRegistry;
 import zmaster587.libVulpes.interfaces.IRecipe;
+import zmaster587.libVulpes.recipe.RecipesMachine;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockPistonBase;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.init.Blocks;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
 
@@ -56,23 +57,25 @@ public class BlockPress extends BlockPistonBase {
 	}
 
 	private ItemStack getRecipe(World world, int x, int y, int z, int meta) {
+		
 		if(world.isAirBlock(x, y-1, z))
 			return null;
-		ItemStack stackInWorld = new ItemStack(world.getBlock(x, y-1, z), 1, world.getBlockMetadata(x, y-1, z));
-		Materials material = MaterialRegistry.getMaterialFromItemStack(stackInWorld);
-
-
-		if(material == null)
+		
+		Item item = Item.getItemFromBlock(world.getBlock(x, y-1, z));
+		if(item == null)
 			return null;
+		
+		ItemStack stackInWorld = new ItemStack(item, 1, world.getBlockMetadata(x, y-1, z));
 
 		List<IRecipe> recipes = RecipesMachine.getInstance().getRecipes(this.getClass());
 		ItemStack stack = null;
 
 		for(IRecipe recipe : recipes) {
-			if(recipe.getIngredients().get(0).get(0).isItemEqual(stackInWorld)) {
-				stack = recipe.getOutput().get(0);
-				break;
-			}
+			for(ItemStack stack2 : recipe.getIngredients().get(0))
+				if(stack2.isItemEqual(stackInWorld)) {
+					stack = recipe.getOutput().get(0);
+					break;
+				}
 		}
 
 

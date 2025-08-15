@@ -82,6 +82,6 @@ public class TrailFx extends EntityFX {
             this.setDead();
         }
         
-        this.setPosition(posX + this.motionX, posY + this.motionY, posZ  + this.motionX);
+        this.setPosition(posX + this.motionX, posY + this.motionY, posZ  + this.motionZ);
 	}
 }

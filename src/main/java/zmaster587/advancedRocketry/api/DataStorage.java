@@ -1,5 +1,7 @@
 package zmaster587.advancedRocketry.api;
 
+import java.util.Locale;
+
 import net.minecraft.nbt.NBTTagCompound;
 
 public class DataStorage {
@@ -14,7 +16,7 @@ public class DataStorage {
 		MASS;
 
 		public String toString() {
-			return "data." + name().toLowerCase() + ".name";
+			return "data." + name().toLowerCase(Locale.ENGLISH) + ".name";
 		};
 	}
 
@@ -33,6 +35,9 @@ public class DataStorage {
 	}
 
 	public boolean setData(int data, DataType dataType) {
+		if(this.dataType == DataStorage.DataType.UNDEFINED)
+			this.dataType = dataType;
+		
 		if(dataType == DataStorage.DataType.UNDEFINED || dataType == this.dataType) {
 			this.data = Math.min(data, maxData);
 			return true;
@@ -89,14 +94,15 @@ public class DataStorage {
 	 * @param dataType type to add
 	 * @return data amount added
 	 */
-	public int addData(int data, DataType dataType) {
-		if(this.dataType == DataStorage.DataType.UNDEFINED || dataType == DataStorage.DataType.UNDEFINED || dataType == this.dataType) {
+	public int addData(int data, DataType dataType, boolean commit) {
+		if((!this.locked && (dataType == DataStorage.DataType.UNDEFINED)) || dataType == this.dataType || this.dataType == DataStorage.DataType.UNDEFINED) {
 
 			if(this.dataType == DataStorage.DataType.UNDEFINED)
 				this.dataType = dataType;
 
 			int amountToAdd = Math.min(data, this.maxData - this.data);
-			this.data += amountToAdd;
+			if(commit)
+				this.data += amountToAdd;
 			return amountToAdd;
 		}
 		return 0;
@@ -106,9 +112,10 @@ public class DataStorage {
 	 * @param data max amount of data to remove
 	 * @return amount of data removed
 	 */
-	public int removeData(int data) {
+	public int removeData(int data, boolean commit) {
 		int dataRemoved = Math.min(data, this.data);
-		this.data -= dataRemoved;
+		if(commit)
+			this.data -= dataRemoved;
 		if(!locked && this.data == 0)
 			this.dataType = DataType.UNDEFINED;
 
@@ -125,7 +132,12 @@ public class DataStorage {
 	public void readFromNBT(NBTTagCompound nbt) {
 		data = nbt.getInteger("Data");
 		maxData = nbt.getInteger("maxData");
-		dataType = DataType.values()[nbt.getInteger("DataType")];
+		try {
+			dataType = DataType.values()[nbt.getInteger("DataType")];
+		} catch(ArrayIndexOutOfBoundsException e)
+		{
+			dataType = DataType.UNDEFINED;
+		}
 
 
 		///TODO: dev compat

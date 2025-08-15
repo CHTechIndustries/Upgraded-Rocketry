@@ -2,7 +2,7 @@ package zmaster587.advancedRocketry.tile.oxygen;
 
 import net.minecraft.item.ItemStack;
 import zmaster587.advancedRocketry.api.AdvancedRocketryItems;
-import zmaster587.advancedRocketry.tile.multiblock.TileInventoryHatch;
+import zmaster587.libVulpes.tile.multiblock.hatch.TileInventoryHatch;
 
 public class TileCO2Scrubber extends TileInventoryHatch {
 	public TileCO2Scrubber() {
@@ -22,9 +22,8 @@ public class TileCO2Scrubber extends TileInventoryHatch {
 	public boolean useCharge() {
 		ItemStack stack = getStackInSlot(0);
 		if(stack != null && stack.getItem() == AdvancedRocketryItems.itemCarbonScrubberCartridge) {
-			int newDamage = stack.getItemDamage() + 1;
-			if(newDamage != stack.getMaxDamage()) {
-				stack.setItemDamage(newDamage);
+			if(stack.getItemDamage() != stack.getMaxDamage()) {
+				stack.setItemDamage(stack.getItemDamage() + 1);
 				this.markDirty();
 				return true;
 			}

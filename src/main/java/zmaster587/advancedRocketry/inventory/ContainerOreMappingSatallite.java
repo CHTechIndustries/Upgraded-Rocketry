@@ -1,6 +1,6 @@
 package zmaster587.advancedRocketry.inventory;
 
-import zmaster587.advancedRocketry.satellite.OreMappingSatellite;
+import zmaster587.advancedRocketry.satellite.SatelliteOreMapping;
 import codechicken.lib.inventory.InventorySimple;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.InventoryPlayer;
@@ -15,9 +15,9 @@ import net.minecraftforge.oredict.OreDictionary;
 public class ContainerOreMappingSatallite extends Container {
 
 
-	private OreMappingSatellite inv;
+	private SatelliteOreMapping inv;
 
-	ContainerOreMappingSatallite(OreMappingSatellite inv, InventoryPlayer inventoryPlayer) {
+	ContainerOreMappingSatallite(SatelliteOreMapping inv, InventoryPlayer inventoryPlayer) {
 		super();
 		this.inv = inv;
 
@@ -36,14 +36,14 @@ public class ContainerOreMappingSatallite extends Container {
 			stack =  player.inventory.mainInventory[slot];
 		else stack = null;
 
-		if(p_75144_2_ == 0)
+		if(inv != null && p_75144_2_ == 0)
 			//Check if anything is in the slot and set the slot value if it is
 			if(stack == null) {
 				inv.setSelectedSlot(-1);
 			}
 			else
 				for(int id : OreDictionary.getOreIDs(stack)) {
-					if(OreDictionary.getOreName(id).startsWith("ore")) {
+					if(OreDictionary.getOreName(id).startsWith("ore") || OreDictionary.getOreName(id).startsWith("gem") || OreDictionary.getOreName(id).startsWith("dust")) {
 						inv.setSelectedSlot(slot);
 					}
 

@@ -21,7 +21,7 @@ public class BiomeGenMoon extends BiomeGenBase {
 		enableRain = false;
 		enableSnow = false;
 		rootHeight=1f;
-		heightVariation=0.01f;
+		heightVariation=0.2f;
 		rainfall = 0f;
 		temperature = 0.3f;
 		this.theBiomeDecorator.generateLakes=false;

@@ -16,15 +16,15 @@ import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.dimension.DimensionProperties;
-import zmaster587.advancedRocketry.inventory.TextureResources;
-import zmaster587.advancedRocketry.inventory.modules.IModularInventory;
-import zmaster587.advancedRocketry.inventory.modules.IProgressBar;
-import zmaster587.advancedRocketry.inventory.modules.ISelectionNotify;
-import zmaster587.advancedRocketry.inventory.modules.ModuleBase;
 import zmaster587.advancedRocketry.inventory.modules.ModulePlanetSelector;
-import zmaster587.advancedRocketry.network.PacketHandler;
-import zmaster587.advancedRocketry.network.PacketMachine;
 import zmaster587.advancedRocketry.util.ITilePlanetSystemSelectable;
+import zmaster587.libVulpes.inventory.TextureResources;
+import zmaster587.libVulpes.inventory.modules.IModularInventory;
+import zmaster587.libVulpes.inventory.modules.IProgressBar;
+import zmaster587.libVulpes.inventory.modules.ISelectionNotify;
+import zmaster587.libVulpes.inventory.modules.ModuleBase;
+import zmaster587.libVulpes.network.PacketHandler;
+import zmaster587.libVulpes.network.PacketMachine;
 import zmaster587.libVulpes.tile.TilePointer;
 import zmaster587.libVulpes.util.INetworkMachine;
 
@@ -67,11 +67,11 @@ public class TilePlanetSelector extends TilePointer implements ISelectionNotify,
 	}
 
 	@Override
-	public List<ModuleBase> getModules(int ID) {
+	public List<ModuleBase> getModules(int ID, EntityPlayer player) {
 
 		List<ModuleBase> modules = new LinkedList<ModuleBase>();
 
-		container = new ModulePlanetSelector(worldObj.provider.dimensionId, TextureResources.starryBG, this);
+		container = new ModulePlanetSelector(0, TextureResources.starryBG, this,true);
 		container.setOffset(1000, 1000);
 		modules.add(container);
 
@@ -143,9 +143,9 @@ public class TilePlanetSelector extends TilePointer implements ISelectionNotify,
 		if(dimCache == null)
 			return 50;
 		if(id == 0)
-			return dimCache.atmosphereDensity/2;
+			return dimCache.getAtmosphereDensity()/16;
 		else if(id == 1)
-			return dimCache.orbitalDist/2;
+			return dimCache.orbitalDist/16;
 		else //if(id == 2)
 			return (int) (dimCache.gravitationalMultiplier*50);
 	}

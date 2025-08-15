@@ -1,9 +1,9 @@
 package zmaster587.advancedRocketry.api;
 
 import java.util.LinkedList;
+import java.util.Set;
 
 import zmaster587.advancedRocketry.api.stations.ISpaceObject;
-import zmaster587.advancedRocketry.api.stations.SpaceObjectManager;
 import zmaster587.libVulpes.util.BlockPosition;
 import net.minecraft.entity.Entity;
 import net.minecraft.world.World;
@@ -16,8 +16,21 @@ public abstract class EntityRocketBase extends Entity {
 	//Linked list containing Objects implementing IInfrastructure
 	protected LinkedList<IInfrastructure> connectedInfrastructure;
 	
+	//stores the coordinates of infrastructures, used for when the world loads/saves
+	protected Set<BlockPosition> infrastructureCoords;
+	
+	//Stores the blocks and tiles that make up the rocket
+	//public StorageChunk storage;
+
+	//Stores other info about the rocket such as fuel and acceleration properties
+	public StatsRocket stats;
+	
 	public EntityRocketBase(World world) {
 		super(world);
+	}
+	
+	public String getTextOverlay() {
+		return "";
 	}
 
 	/**
@@ -40,8 +53,8 @@ public abstract class EntityRocketBase extends Entity {
 	 * @param tile
 	 */
 	public void linkInfrastructure(IInfrastructure tile) {
-		if(tile.linkRocket(this));
-		connectedInfrastructure.add(tile);
+		if(!connectedInfrastructure.contains(tile) && tile.linkRocket(this))
+			connectedInfrastructure.add(tile);
 	}
 	
 	/**
@@ -84,7 +97,7 @@ public abstract class EntityRocketBase extends Entity {
 		MinecraftForge.EVENT_BUS.post(new RocketEvent.RocketReachesOrbitEvent(this));
 		
 		if(this.worldObj.provider.dimensionId == Configuration.spaceDimId) {
-			ISpaceObject station = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords((int)this.posX, (int)this.posZ);
+			ISpaceObject station = AdvancedRocketryAPI.spaceObjectManager.getSpaceStationFromBlockCoords((int)this.posX, (int)this.posZ);
 			
 			if(station instanceof ISpaceObject) {
 				((ISpaceObject)station).setPadStatus((int)this.posX, (int)this.posZ, false);
@@ -96,12 +109,6 @@ public abstract class EntityRocketBase extends Entity {
 	 * Deconstructs the rocket, replacing it with actual blocks
 	 */
 	public void deconstructRocket() {
-		if(this.worldObj.provider.dimensionId == Configuration.spaceDimId) {
-			ISpaceObject station = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords((int)this.posX, (int)this.posZ);
-			
-			if(station instanceof ISpaceObject) {
-				((ISpaceObject)station).setPadStatus((int)this.posX, (int)this.posZ, false);
-			}
-		}
+		MinecraftForge.EVENT_BUS.post(new RocketEvent.RocketDismantleEvent(this));
 	}
 }

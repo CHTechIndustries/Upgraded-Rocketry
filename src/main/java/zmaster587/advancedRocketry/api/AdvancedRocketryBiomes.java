@@ -4,11 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import zmaster587.advancedRocketry.world.biome.BiomeGenCrystal;
-import zmaster587.advancedRocketry.world.biome.BiomeGenDeepSwamp;
-import zmaster587.advancedRocketry.world.biome.BiomeGenOceanSpires;
 import net.minecraft.world.biome.BiomeGenBase;
-
 /**
  * Stores information relating to the biomes and biome registry of AdvancedRocketry
  */
@@ -29,16 +25,13 @@ public class AdvancedRocketryBiomes {
 	public static BiomeGenBase swampDeepBiome;
 	public static BiomeGenBase marsh;
 	public static BiomeGenBase oceanSpires;
-	
+	public static BiomeGenBase moonBiomeDark;
 	private AdvancedRocketryBiomes() {
 		registeredBiomes = new ArrayList<BiomeGenBase>();
 		registeredHighPressureBiomes = new LinkedList<BiomeGenBase>();
 		blackListedBiomeIds = new ArrayList<Integer>();
 		registeredSingleBiome = new ArrayList<BiomeGenBase>();
-		
-		registerBlackListBiome(BiomeGenBase.sky);
-		registerBlackListBiome(BiomeGenBase.hell);
-		registerBlackListBiome(BiomeGenBase.river);
+	
 	}
 	
 	/**
@@ -84,7 +77,6 @@ public class AdvancedRocketryBiomes {
 	 */
 	public void registerSingleBiome(BiomeGenBase biome) {
 		registeredSingleBiome.add(biome);
-		registerBlackListBiome(biome);
 	}
 	
 	public List<BiomeGenBase> getSingleBiome() {
@@ -104,6 +96,34 @@ public class AdvancedRocketryBiomes {
 		}
 		
 		return BiomeGenBase.getBiome(id);
+	}
+
+	public void blackListVanillaBiomes() {
+		//Good grief... this is long, better than making users do it though..
+		for(int i = 0; i < 40; i++)
+			blackListedBiomeIds.add(i);
+		
+		blackListedBiomeIds.add(129);
+		blackListedBiomeIds.add(130);
+		blackListedBiomeIds.add(131);
+		blackListedBiomeIds.add(132);
+		blackListedBiomeIds.add(133);
+		blackListedBiomeIds.add(134);
+		blackListedBiomeIds.add(140);
+		blackListedBiomeIds.add(149);
+		blackListedBiomeIds.add(151);
+		blackListedBiomeIds.add(155);
+		blackListedBiomeIds.add(156);
+		blackListedBiomeIds.add(157);
+		blackListedBiomeIds.add(158);
+		blackListedBiomeIds.add(160);
+		blackListedBiomeIds.add(161);
+		blackListedBiomeIds.add(162);
+		blackListedBiomeIds.add(163);
+		blackListedBiomeIds.add(164);
+		blackListedBiomeIds.add(165);
+		blackListedBiomeIds.add(166);
+		blackListedBiomeIds.add(167);
 	}
 	
 }

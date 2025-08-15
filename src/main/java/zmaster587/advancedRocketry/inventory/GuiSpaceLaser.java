@@ -9,10 +9,11 @@ import java.util.LinkedList;
 
 import org.lwjgl.input.Keyboard;
 
-import zmaster587.advancedRocketry.network.PacketHandler;
-import zmaster587.advancedRocketry.network.PacketMachine;
-import zmaster587.advancedRocketry.tile.TileSpaceLaser;
+import zmaster587.advancedRocketry.tile.multiblock.TileSpaceLaser;
+import zmaster587.libVulpes.LibVulpes;
 import zmaster587.libVulpes.gui.GuiImageButton;
+import zmaster587.libVulpes.network.PacketHandler;
+import zmaster587.libVulpes.network.PacketMachine;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiTextField;
 import net.minecraft.client.gui.inventory.GuiContainer;
@@ -56,8 +57,8 @@ public class GuiSpaceLaser extends GuiContainer {
 		ybox.setCanLoseFocus(true);
 		ybox.setEnabled(true);
 
-		modeDown = new GuiImageButton(0, x + 103, y + 20, 5, 8, TextureResources.buttonLeft);
-		modeUp = new GuiImageButton(1, x + 157, y + 20, 5, 8,  TextureResources.buttonRight);
+		modeDown = new GuiImageButton(0, x + 103, y + 20, 5, 8, zmaster587.libVulpes.inventory.TextureResources.buttonLeft);
+		modeUp = new GuiImageButton(1, x + 157, y + 20, 5, 8,  zmaster587.libVulpes.inventory.TextureResources.buttonRight);
 		this.buttonList.add(modeUp);
 		this.buttonList.add(modeDown);
 		this.buttonList.add(new GuiButton(2, x + 103, y + 62, 34,20, "Reset"));
@@ -141,7 +142,7 @@ public class GuiSpaceLaser extends GuiContainer {
 		
 		if(a > x + 11 && a < x + 27 && b < y + 85 && b > y + 43) {
 			LinkedList<String> text = new LinkedList<String>();
-			text.add(laserTile.getEnergyStored(ForgeDirection.UNKNOWN) + " / " + laserTile.getMaxEnergyStored(ForgeDirection.UNKNOWN) + " RF");
+			text.add(laserTile.getBatteries().getEnergyStored() + " / " + laserTile.getBatteries().getMaxEnergyStored() + " RF");
 			this.drawHoveringText(text, a, b, this.fontRendererObj);
 		}
 

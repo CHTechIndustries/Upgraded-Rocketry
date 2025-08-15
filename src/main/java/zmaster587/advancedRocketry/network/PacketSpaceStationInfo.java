@@ -4,10 +4,11 @@ import java.io.IOException;
 import java.util.logging.Logger;
 
 import zmaster587.advancedRocketry.api.stations.ISpaceObject;
-import zmaster587.advancedRocketry.api.stations.SpaceObjectManager;
 import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.dimension.DimensionProperties;
 import zmaster587.advancedRocketry.stations.SpaceObject;
+import zmaster587.advancedRocketry.stations.SpaceObjectManager;
+import zmaster587.libVulpes.network.BasePacket;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -36,16 +37,22 @@ public class PacketSpaceStationInfo extends BasePacket {
 			
 			//Try to send the nbt data of the dimension to the client, if it fails(probably due to non existent Biome ids) then remove the dimension
 			try {
-				spaceObject.getProperties().writeToNBT(nbt);
+				spaceObject.writeToNbt(nbt);
+				//spaceObject.getProperties().writeToNBT(nbt);
 				PacketBuffer packetBuffer = new PacketBuffer(out);
 				out.writeBoolean(false);
 				//TODO: error handling
 				try {
+					packetBuffer.writeStringToBuffer(SpaceObjectManager.getSpaceManager().getItentifierFromClass(spaceObject.getClass()));
 					packetBuffer.writeNBTTagCompoundToBuffer(nbt);
-					out.writeInt(spaceObject.getForwardDirection().ordinal());
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
+				packetBuffer.writeBoolean(spaceObject.hasWarpCores);
+				
+				out.writeInt(spaceObject.getForwardDirection().ordinal());
+				out.writeInt(spaceObject.getFuelAmount());
+				
 			} catch(NullPointerException e) {
 				out.writeBoolean(true);
 				Logger.getLogger("advancedRocketry").warning("Dimension " + stationNumber + " has thrown an exception trying to write NBT, deleting!");
@@ -73,32 +80,42 @@ public class PacketSpaceStationInfo extends BasePacket {
 		else {
 			//TODO: error handling
 			int direction;
+			String clazzId;
 			try {
+				clazzId = packetBuffer.readStringFromBuffer(127);
 				nbt = packetBuffer.readNBTTagCompoundFromBuffer();
 				
 			} catch (IOException e) {
 				e.printStackTrace();
 				return;
 			}
-			
+			boolean hasWarpCores = in.readBoolean();
 			direction = in.readInt();
+			int fuelAmt = in.readInt();
+			
 			
 			ISpaceObject iObject = SpaceObjectManager.getSpaceManager().getSpaceStation(stationNumber);
+			
+			
+			
 			//TODO: interface
 			spaceObject = (SpaceObject)iObject;
 			
 			//Station needs to be created
 			if( iObject == null ) {
-				SpaceObject object = new SpaceObject();
+				ISpaceObject object = SpaceObjectManager.getSpaceManager().getNewSpaceObjectFromIdentifier(clazzId);
+				object.readFromNbt(nbt);
 				object.setProperties(DimensionProperties.createFromNBT(stationNumber, nbt));
-				
-				object.setForwardDirection(ForgeDirection.getOrientation(direction));
-				
+				((SpaceObject)object).setForwardDirection(ForgeDirection.values()[direction]);
+				((SpaceObject)object).hasWarpCores = hasWarpCores;
 				SpaceObjectManager.getSpaceManager().registerSpaceObjectClient(object, object.getOrbitingPlanetId(), stationNumber);
 			}
 			else {
-				iObject.setProperties(DimensionProperties.createFromNBT(stationNumber, nbt));
-				spaceObject.setForwardDirection(ForgeDirection.getOrientation(direction));
+				iObject.readFromNbt(nbt);
+				//iObject.setProperties(DimensionProperties.createFromNBT(stationNumber, nbt));
+				((SpaceObject)iObject).setForwardDirection(ForgeDirection.values()[direction]);
+				((SpaceObject)iObject).setFuelAmount(fuelAmt);
+				((SpaceObject)iObject).hasWarpCores = hasWarpCores;
 			}
 		}
 	}

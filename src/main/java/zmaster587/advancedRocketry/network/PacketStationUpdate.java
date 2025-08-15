@@ -9,15 +9,17 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.PacketBuffer;
+import net.minecraftforge.common.util.ForgeDirection;
 import zmaster587.advancedRocketry.api.stations.ISpaceObject;
-import zmaster587.advancedRocketry.api.stations.SpaceObjectManager;
 import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.event.PlanetEventHandler;
 import zmaster587.advancedRocketry.event.RocketEventHandler;
 import zmaster587.advancedRocketry.stations.SpaceObject;
+import zmaster587.advancedRocketry.stations.SpaceObjectManager;
+import zmaster587.libVulpes.network.BasePacket;
 
 public class PacketStationUpdate extends BasePacket {
-	SpaceObject spaceObject;
+	ISpaceObject spaceObject;
 	int stationNumber;
 	Type type;
 
@@ -27,7 +29,8 @@ public class PacketStationUpdate extends BasePacket {
 		SIGNAL_WHITE_BURST,
 		FUEL_UPDATE,
 		ROTANGLE_UPDATE, 
-		DIM_PROPERTY_UPDATE
+		DIM_PROPERTY_UPDATE,
+		ALTITUDE_UPDATE
 	}
 
 	public PacketStationUpdate() {}
@@ -51,11 +54,19 @@ public class PacketStationUpdate extends BasePacket {
 			out.writeInt(spaceObject.getOrbitingPlanetId());
 			break;
 		case FUEL_UPDATE:
-			out.writeInt(spaceObject.getFuelAmount());
+			if(spaceObject instanceof SpaceObject)
+				out.writeInt(((SpaceObject)spaceObject).getFuelAmount());
 			break;
 		case ROTANGLE_UPDATE:
-			out.writeDouble(spaceObject.getRotation());
-			out.writeDouble(spaceObject.getDeltaRotation());
+			out.writeDouble(spaceObject.getRotation(ForgeDirection.EAST));
+			out.writeDouble(spaceObject.getRotation(ForgeDirection.UP));
+			out.writeDouble(spaceObject.getRotation(ForgeDirection.NORTH));
+			out.writeDouble(spaceObject.getDeltaRotation(ForgeDirection.EAST));
+			out.writeDouble(spaceObject.getDeltaRotation(ForgeDirection.UP));
+			out.writeDouble(spaceObject.getDeltaRotation(ForgeDirection.NORTH));
+			break;
+		case ALTITUDE_UPDATE:
+			out.writeFloat(spaceObject.getOrbitalDistance());
 			break;
 		case DIM_PROPERTY_UPDATE:
 			NBTTagCompound nbt = new NBTTagCompound();
@@ -65,7 +76,6 @@ public class PacketStationUpdate extends BasePacket {
 				//TODO: error handling
 				try {
 					packetBuffer.writeNBTTagCompoundToBuffer(nbt);
-					out.writeInt(spaceObject.getForwardDirection().ordinal());
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -81,7 +91,7 @@ public class PacketStationUpdate extends BasePacket {
 	@Override
 	public void readClient(ByteBuf in) {
 		stationNumber = in.readInt();
-		spaceObject = (SpaceObject)SpaceObjectManager.getSpaceManager().getSpaceStation(stationNumber);
+		spaceObject = SpaceObjectManager.getSpaceManager().getSpaceStation(stationNumber);
 		type = Type.values()[in.readInt()];
 
 
@@ -93,21 +103,29 @@ public class PacketStationUpdate extends BasePacket {
 			spaceObject.setOrbitingBody(in.readInt());
 			break;
 		case FUEL_UPDATE:
-			spaceObject.setFuelAmount(in.readInt());
+			if(spaceObject instanceof SpaceObject)
+				((SpaceObject)spaceObject).setFuelAmount(in.readInt());
 			break;
 		case ROTANGLE_UPDATE:
-			spaceObject.setRotation(in.readDouble());
-			spaceObject.setDeltaRotation(in.readDouble());
+			spaceObject.setRotation(in.readDouble(), ForgeDirection.EAST);
+			spaceObject.setRotation(in.readDouble(), ForgeDirection.UP);
+			spaceObject.setRotation(in.readDouble(), ForgeDirection.NORTH);
+			spaceObject.setDeltaRotation(in.readDouble(), ForgeDirection.EAST);
+			spaceObject.setDeltaRotation(in.readDouble(), ForgeDirection.UP);
+			spaceObject.setDeltaRotation(in.readDouble(), ForgeDirection.NORTH);
 			break;
 		case SIGNAL_WHITE_BURST:
 			PlanetEventHandler.runBurst(Minecraft.getMinecraft().theWorld.getTotalWorldTime() + 20, 20);
+			break;
+		case ALTITUDE_UPDATE:
+			spaceObject.setOrbitalDistance(in.readFloat());
 			break;
 		case DIM_PROPERTY_UPDATE:
 			PacketBuffer packetBuffer = new PacketBuffer(in);
 			NBTTagCompound nbt;
 			try {
 				nbt = packetBuffer.readNBTTagCompoundFromBuffer();
-				
+
 			} catch (IOException e) {
 				e.printStackTrace();
 				return;

@@ -12,9 +12,17 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
+import zmaster587.advancedRocketry.api.Configuration;
+import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.dimension.DimensionProperties;
+import zmaster587.advancedRocketry.event.PlanetEventHandler;
+import zmaster587.advancedRocketry.util.OreGenProperties;
+import zmaster587.advancedRocketry.util.OreGenProperties.OreEntry;
+import zmaster587.advancedRocketry.world.decoration.MapGenCaveExt;
 import zmaster587.advancedRocketry.world.decoration.MapGenCrater;
 import zmaster587.advancedRocketry.world.decoration.MapGenGeode;
+import zmaster587.advancedRocketry.world.gen.CustomizableOreGen;
+import zmaster587.advancedRocketry.world.decoration.MapGenRavineExt;
 import zmaster587.advancedRocketry.world.provider.WorldProviderPlanet;
 import cpw.mods.fml.common.eventhandler.Event.Result;
 import net.minecraft.block.Block;
@@ -74,7 +82,11 @@ public class ChunkProviderPlanet implements IChunkProvider {
 	private MapGenMineshaft mineshaftGenerator = new MapGenMineshaft();
 	private MapGenScatteredFeature scatteredFeatureGenerator = new MapGenScatteredFeature();
 	/** Holds ravine generator */
-	private MapGenBase ravineGenerator = new MapGenRavine();
+	private MapGenBase ravineGenerator = new MapGenRavineExt();
+	private int seaLevel;
+	protected Block oceanBlock;
+	protected Block fillblock;
+	
 
 	private MapGenCrater craterGenerator;
 	private MapGenGeode geodeGenerator;
@@ -120,7 +132,20 @@ public class ChunkProviderPlanet implements IChunkProvider {
 				this.parabolicField[j + 2 + (k + 2) * 5] = f;
 			}
 		}
-
+		
+		DimensionProperties dimProperties = DimensionManager.getInstance().getDimensionProperties(p_i2006_1_.provider.dimensionId);
+		
+		seaLevel = dimProperties.getSeaLevel();
+		oceanBlock = dimProperties.getOceanBlock();
+		
+		if (oceanBlock == null)
+			oceanBlock = Blocks.water;
+		
+		fillblock = dimProperties.getStoneBlock();
+		
+		if (fillblock == null)
+			fillblock = Blocks.stone;
+		
 		NoiseGenerator[] noiseGens = {field_147431_j, field_147432_k, field_147429_l, field_147430_m, noiseGen5, noiseGen6, mobSpawnerNoise};
 		noiseGens = TerrainGen.getModdedNoiseGenerators(p_i2006_1_, this.rand, noiseGens);
 		this.field_147431_j = (NoiseGeneratorOctaves)noiseGens[0];
@@ -139,8 +164,8 @@ public class ChunkProviderPlanet implements IChunkProvider {
 		else 
 			craterGenerator = null;
 		
-		if(atmDensity > 1.25f) {
-			geodeGenerator = new MapGenGeode(8000);
+		if(atmDensity > 1.25f && Configuration.generateGeodes) {
+			geodeGenerator = new MapGenGeode(800);
 		}
 		else
 			geodeGenerator = null;
@@ -148,7 +173,7 @@ public class ChunkProviderPlanet implements IChunkProvider {
 
 	public void func_147424_a(int p_147424_1_, int p_147424_2_, Block[] p_147424_3_)
 	{
-		byte b0 = 63;
+		int b0 = seaLevel;
 		//TODO: may break for little planets
 		this.biomesForGeneration = ((ChunkManagerPlanet)this.worldObj.getWorldChunkManager()).getBiomesForGeneration(this.biomesForGeneration, p_147424_1_ * 4 - 2, p_147424_2_ * 4 - 2, 10, 10, ((WorldProviderPlanet)worldObj.provider).getDimensionProperties(0,0));
 		this.func_147423_a(p_147424_1_ * 4, 0, p_147424_2_ * 4);
@@ -198,11 +223,11 @@ public class ChunkProviderPlanet implements IChunkProvider {
 							{
 								if ((d15 += d16) > 0.0D)
 								{
-									p_147424_3_[j3 += short1] = Blocks.stone;
+									p_147424_3_[j3 += short1] = fillblock;
 								}
 								else if (k2 * 8 + l2 < b0)
 								{
-									p_147424_3_[j3 += short1] = Blocks.water;
+									p_147424_3_[j3 += short1] = oceanBlock;
 								}
 								else
 								{
@@ -255,30 +280,44 @@ public class ChunkProviderPlanet implements IChunkProvider {
 	 * Will return back a chunk, if it doesn't exist and its not a MP client it will generates all the blocks for the
 	 * specified chunk from the map seed and chunk seed
 	 */
-	public Chunk provideChunk(int p_73154_1_, int p_73154_2_)
+	public BlockMetacoupling getChunkPrimer(int p_73154_1_, int p_73154_2_)
 	{
-		this.rand.setSeed((long)p_73154_1_ * 341873128712L + (long)p_73154_2_ * 132897987541L);
-		Block[] ablock = new Block[65536];
-		byte[] abyte = new byte[65536];
-		this.func_147424_a(p_73154_1_, p_73154_2_, ablock);
+		BlockMetacoupling ablock = new BlockMetacoupling();
+		this.func_147424_a(p_73154_1_, p_73154_2_, ablock.ablock);
 		this.biomesForGeneration = this.worldObj.getWorldChunkManager().loadBlockGeneratorData(this.biomesForGeneration, p_73154_1_ * 16, p_73154_2_ * 16, 16, 16);
-		this.replaceBlocksForBiome(p_73154_1_, p_73154_2_, ablock, abyte, this.biomesForGeneration);
-		this.caveGenerator.func_151539_a(this, this.worldObj, p_73154_1_, p_73154_2_, ablock);
-		this.ravineGenerator.func_151539_a(this, this.worldObj, p_73154_1_, p_73154_2_, ablock);
+		this.replaceBlocksForBiome(p_73154_1_, p_73154_2_, ablock.ablock, ablock.abyte, this.biomesForGeneration);
+		this.caveGenerator.func_151539_a(this, this.worldObj, p_73154_1_, p_73154_2_, ablock.ablock);
+		this.ravineGenerator.func_151539_a(this, this.worldObj, p_73154_1_, p_73154_2_, ablock.ablock);
 
 		if(this.craterGenerator != null)
-			this.craterGenerator.func_151539_a(this, this.worldObj, p_73154_1_, p_73154_2_, ablock);
+			this.craterGenerator.func_151539_a(this, this.worldObj, p_73154_1_, p_73154_2_, ablock.ablock);
 		
 		if(this.geodeGenerator != null)
-			this.geodeGenerator.func_151539_a(this, this.worldObj, p_73154_1_, p_73154_2_, ablock);
+			this.geodeGenerator.func_151539_a(this, this.worldObj, p_73154_1_, p_73154_2_, ablock.ablock);
 
 		if (this.mapFeaturesEnabled)
 		{
 			//TODO: structures
 		}
+		
+		return ablock;
+	}
+	
+	/**
+	 * Will return back a chunk, if it doesn't exist and its not a MP client it will generates all the blocks for the
+	 * specified chunk from the map seed and chunk seed
+	 */
+	@Override
+	public Chunk provideChunk(int x, int z)
+	{
+		this.rand.setSeed((long)x * 341873128712L + (long)z * 132897987541L);
 
+		BlockMetacoupling ablock = getChunkPrimer(x, z);
 		//ChunkExtendedBiome
-		Chunk chunk = new Chunk(this.worldObj, ablock, abyte, p_73154_1_, p_73154_2_);
+		Chunk chunk = new Chunk(this.worldObj, ablock.ablock, ablock.abyte, x, z);
+		if(this.geodeGenerator != null)
+			geodeGenerator.setMetaPos(chunk, x, z);
+		
 		//TODO: convert back to int
 		byte[] abyte1 = chunk.getBiomeArray();
 
@@ -293,7 +332,6 @@ public class ChunkProviderPlanet implements IChunkProvider {
 
 	private void func_147423_a(int p_147423_1_, int p_147423_2_, int p_147423_3_)
 	{
-
 		this.field_147426_g = this.noiseGen6.generateNoiseOctaves(this.field_147426_g, p_147423_1_, p_147423_3_, 5, 5, 200.0D, 200.0D, 0.5D);
 		this.field_147427_d = this.field_147429_l.generateNoiseOctaves(this.field_147427_d, p_147423_1_, p_147423_2_, p_147423_3_, 5, 33, 5, 8.555150000000001D, 4.277575000000001D, 8.555150000000001D);
 		this.field_147428_e = this.field_147431_j.generateNoiseOctaves(this.field_147428_e, p_147423_1_, p_147423_2_, p_147423_3_, 5, 33, 5, 684.412D, 684.412D, 684.412D);
@@ -445,9 +483,26 @@ public class ChunkProviderPlanet implements IChunkProvider {
 		k += 8;
 		l += 8;
 
+		//If a planet is terraformed chenge upper blocks
+		if(zmaster587.advancedRocketry.api.Configuration.allowTerraforming && worldObj.provider.getClass() == WorldProviderPlanet.class) {
+
+			if(DimensionManager.getInstance().getDimensionProperties(worldObj.provider.dimensionId).isTerraformed()) {
+				Chunk chunk = worldObj.getChunkFromChunkCoords(p_73153_2_, p_73153_3_);
+				PlanetEventHandler.modifyChunk(worldObj, (WorldProviderPlanet)worldObj.provider, chunk);
+			}
+		}
+		
 		if (populationFlag)
 			MinecraftForge.EVENT_BUS.post(new PopulateChunkEvent.Post(p_73153_1_, worldObj, rand, p_73153_2_, p_73153_3_, flag));
 
+		OreGenProperties oreGenProperties = DimensionManager.getInstance().getDimensionProperties(this.worldObj.provider.dimensionId).getOreGenProperties(this.worldObj);
+		
+		if(oreGenProperties != null) {
+			for(OreEntry entry : oreGenProperties.getOreEntries()) {
+				new CustomizableOreGen(entry).generate(rand, p_73153_2_, p_73153_3_, this.worldObj, this, this.worldObj.getChunkProvider());
+			}
+		}
+		
 		BlockFalling.fallInstantly = false;
 	}
 
@@ -495,10 +550,10 @@ public class ChunkProviderPlanet implements IChunkProvider {
 	 */
 	@Override
 	public List getPossibleCreatures(EnumCreatureType p_73155_1_, int p_73155_2_, int p_73155_3_, int p_73155_4_)
-	{
-		//BiomeGenBase biomegenbase = this.worldObj.getBiomeGenForCoords(p_73155_2_, p_73155_4_);
-		return null; // p_73155_1_ == EnumCreatureType.monster && this.scatteredFeatureGenerator.func_143030_a(p_73155_2_, p_73155_3_, p_73155_4_) ? this.scatteredFeatureGenerator.getScatteredFeatureSpawnList() : biomegenbase.getSpawnableList(p_73155_1_);
-	}
+    {
+        BiomeGenBase biomegenbase = this.worldObj.getBiomeGenForCoords(p_73155_2_, p_73155_4_);
+        return p_73155_1_ == EnumCreatureType.monster && this.scatteredFeatureGenerator.func_143030_a(p_73155_2_, p_73155_3_, p_73155_4_) ? this.scatteredFeatureGenerator.getScatteredFeatureSpawnList() : biomegenbase.getSpawnableList(p_73155_1_);
+    }
 
 	public ChunkPosition func_147416_a(World p_147416_1_, String p_147416_2_, int p_147416_3_, int p_147416_4_, int p_147416_5_)
 	{
@@ -516,6 +571,12 @@ public class ChunkProviderPlanet implements IChunkProvider {
 		{
 
 		}
+	}
+	
+	public static class BlockMetacoupling
+	{
+		public Block[] ablock = new Block[65536];
+		public byte[] abyte = new byte[65536];
 	}
 
 }

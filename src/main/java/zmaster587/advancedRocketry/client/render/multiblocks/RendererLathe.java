@@ -2,6 +2,7 @@ package zmaster587.advancedRocketry.client.render.multiblocks;
 
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
+import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.model.AdvancedModelLoader;
@@ -10,10 +11,10 @@ import net.minecraftforge.common.util.ForgeDirection;
 
 import org.lwjgl.opengl.GL11;
 
-import zmaster587.advancedRocketry.api.material.MaterialRegistry;
-import zmaster587.advancedRocketry.tile.multiblock.TileMultiblockMachine;
 import zmaster587.advancedRocketry.util.Debugger;
+import zmaster587.libVulpes.api.material.MaterialRegistry;
 import zmaster587.libVulpes.block.RotatableBlock;
+import zmaster587.libVulpes.tile.multiblock.TileMultiblockMachine;
 
 public class RendererLathe extends TileEntitySpecialRenderer {
 	IModelCustom model = AdvancedModelLoader.loadModel(new ResourceLocation("advancedrocketry:models/lathe.obj"));
@@ -50,6 +51,7 @@ public class RendererLathe extends TileEntitySpecialRenderer {
 		GL11.glRotatef((front.offsetX == 1 ? 180 : 0) + front.offsetZ*90f, 0, 1, 0);
 		GL11.glTranslated(-.5f, -1f, -2.5f);
 
+		ItemStack outputStack;
 		if(multiBlockTile.isRunning()) {
 
 			float progress = multiBlockTile.getProgress(0)/(float)multiBlockTile.getTotalProgress(0);
@@ -74,12 +76,19 @@ public class RendererLathe extends TileEntitySpecialRenderer {
 			GL11.glRotatef(progress*1500, 0, 0, 1);
 			model.renderOnly("Cylinder");
 
-			int color = MaterialRegistry.getColorFromItemMaterial(multiBlockTile.getOutputs().get(0));
+			int color;
+			//Check for rare bug when outputs is null, usually occurs if player opens machine within 1st tick
+			if(multiBlockTile.getOutputs() != null && (outputStack = multiBlockTile.getOutputs().get(0)) != null)
+				color = MaterialRegistry.getColorFromItemMaterial(outputStack);
+			else
+				color = 0;
+			
 			GL11.glColor3d((0xff & color >> 16)/256f, (0xff & color >> 8)/256f , (color & 0xff)/256f);
 
 			model.renderOnly("rod");
 			GL11.glPopMatrix();
-
+			
+			GL11.glColor4f(1f, 1f, 1f, 1f);
 		}
 		else {
 			bindTexture(texture);
