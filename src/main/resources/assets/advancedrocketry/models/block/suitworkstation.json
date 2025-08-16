@@ -1,9 +1,0 @@
-{
-    "parent": "advancedrocketry:block/orientablebottom",
-    "textures": {
-        "top": "advancedrocketry:blocks/suitworkstation",
-        "front": "advancedrocketry:blocks/panelsideworkstation",
-        "side": "advancedrocketry:blocks/panelsideworkstation",
-        "bottom": "libvulpes:blocks/machinegeneric"
-    }
-}
