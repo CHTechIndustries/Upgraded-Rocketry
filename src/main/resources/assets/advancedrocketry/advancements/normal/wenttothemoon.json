@@ -1,0 +1,20 @@
+{
+    "display": {
+        "icon": {
+            "item": "advancedrocketry:spaceBoots"
+        },
+        "title": {
+            "translate": "advancement.weReallyWentToTheMoon"
+        },
+        "description": {
+            "translate": "advancement.weReallyWentToTheMoon.desc"
+        },
+        "frame": "challenge"
+    },
+    "parent": "advancedrocketry:normal/moonlanding",
+    "criteria": {
+        "wenttothemoon": {
+            "trigger": "wenttothemoon"
+        }
+    }
+} 
