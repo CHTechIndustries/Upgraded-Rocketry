@@ -1,6 +1,0 @@
-{
-    "variants": {
-        "powered=false": { "model": "advancedrocketry:block/oxygendetection" },
-        "powered=true": { "model": "advancedrocketry:block/oxygendetection_on" }
-    }
-}
