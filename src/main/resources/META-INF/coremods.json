@@ -1,5 +1,0 @@
-{
-	"selectSky": "javascript/insertSky.js",
-	"maxTimeOfDay": "javascript/insertMaxTimeOfDay.js",
-	"atmHandler": "javascript/insertAtmHandler.js"
-}

@@ -1,9 +1,0 @@
-{
-    "parent": "block/orientable",
-    "textures": {
-        "top": "advancedrocketry:blocks/laserbottom",
-        "front": "advancedrocketry:blocks/machinewarning",
-        "side": "advancedrocketry:blocks/machinewarning"
-        
-    }
-}
