@@ -1,6 +1,0 @@
-{
-    "variants": {
-        "visible=false": { "model": "advancedrocketry:block/guidancecomputeraccesshatch" },
-        "visible=true": { "model": "advancedrocketry:block/guidancecomputeraccesshatch" }
-    }
-}

@@ -1,9 +1,0 @@
-{
-    "parent": "block/orientable",
-    "textures": {
-        "top": "libvulpes:blocks/machinegeneric",
-        "front": "advancedrocketry:blocks/machines/satellitebay",
-        "side": "libvulpes:blocks/machinegeneric"
-        
-    }
-}

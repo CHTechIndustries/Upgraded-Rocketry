@@ -1,6 +1,0 @@
-{
-    "variants": {
-        "visible=false": { "model": "libvulpes:block/inputhatch" },
-        "visible=true": { "model": "libvulpes:block/inputhatch" }
-    }
-}

@@ -1,9 +1,0 @@
-{
-    "parent": "block/orientable",
-    "textures": {
-        "top": "advancedrocketry:blocks/machines/drill",
-        "front": "advancedrocketry:blocks/machines/gears",
-        "side": "advancedrocketry:blocks/machines/gears"
-        
-    }
-}
