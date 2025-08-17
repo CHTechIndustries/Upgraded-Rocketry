@@ -5,13 +5,15 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
-import zmaster587.advancedRocketry.api.Configuration;
+import zmaster587.advancedRocketry.api.ARConfiguration;
 import zmaster587.advancedRocketry.api.stations.ISpaceObject;
-import zmaster587.advancedRocketry.stations.SpaceObject;
 import zmaster587.advancedRocketry.stations.SpaceObjectManager;
+import zmaster587.advancedRocketry.stations.SpaceStationObject;
 import zmaster587.libVulpes.block.multiblock.BlockMultiblockMachine;
 import zmaster587.libVulpes.tile.multiblock.TileMultiBlock;
 import zmaster587.libVulpes.util.HashedBlockPosition;
+
+import javax.annotation.Nonnull;
 
 public class BlockWarpCore extends BlockMultiblockMachine {
 
@@ -22,28 +24,26 @@ public class BlockWarpCore extends BlockMultiblockMachine {
 
 	@Override
 	public void onBlockPlacedBy(World world, BlockPos pos, IBlockState state,
-			EntityLivingBase placer, ItemStack stack) {
-		// TODO Auto-generated method stub
+			EntityLivingBase placer, @Nonnull ItemStack stack) {
 		super.onBlockPlacedBy(world, pos, state, placer, stack);
 		
-		if(!world.isRemote && world.provider.getDimension() == Configuration.spaceDimId) {
+		if(!world.isRemote && world.provider.getDimension() == ARConfiguration.getCurrentConfig().spaceDimId) {
 			ISpaceObject spaceObj = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(pos);
 		
-			if(spaceObj instanceof SpaceObject)
-				((SpaceObject)spaceObj).addWarpCore(new HashedBlockPosition(pos));
+			if(spaceObj instanceof SpaceStationObject)
+				((SpaceStationObject)spaceObj).addWarpCore(new HashedBlockPosition(pos));
 		}
 	}
 	
 	@Override
 	public void onBlockDestroyedByPlayer(World world, BlockPos pos,
 			IBlockState state) {
-		// TODO Auto-generated method stub
 		super.onBlockDestroyedByPlayer(world, pos, state);
 		
-		if(world.provider.getDimension() == Configuration.spaceDimId) {
+		if(world.provider.getDimension() == ARConfiguration.getCurrentConfig().spaceDimId) {
 			ISpaceObject spaceObj = SpaceObjectManager.getSpaceManager().getSpaceStationFromBlockCoords(pos);
-			if(spaceObj instanceof SpaceObject)
-				((SpaceObject)spaceObj).removeWarpCore(new HashedBlockPosition(pos));
+			if(spaceObj instanceof SpaceStationObject)
+				((SpaceStationObject)spaceObj).removeWarpCore(new HashedBlockPosition(pos));
 		}
 	}
 }

@@ -8,8 +8,11 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.IFluidHandler;
+import zmaster587.advancedRocketry.api.AdvancedRocketryBlocks;
 import zmaster587.advancedRocketry.world.util.WorldDummy;
 import zmaster587.libVulpes.tile.multiblock.hatch.TileFluidHatch;
+
+import javax.annotation.Nonnull;
 
 public class TileFluidTank extends TileFluidHatch {
 
@@ -51,54 +54,68 @@ public class TileFluidTank extends TileFluidHatch {
 		
 		if(resource == null)
 			return 0;
+
+		TileFluidTank handler2 = this.getFluidTankInDirection(EnumFacing.UP);
 		
-		IFluidHandler handler = this.getFluidTankInDirection(EnumFacing.DOWN);
+		//Move up, check if we can fill there, do top down
+		if(handler2 != null && handler2.canFill(resource))
+		{
+			return handler2.fill(resource, doFill);
+		}
+		return fillInternal2(resource, doFill);
+	}
+	
+	private int fillInternal2(FluidStack resource, boolean doFill) {
+		
+		TileFluidTank handler = this.getFluidTankInDirection(EnumFacing.DOWN);
+		
 		int amt = 0;
 
 		if(handler != null) {
-			amt = handler.fill(resource, doFill);
+			amt = handler.fillInternal2(resource, doFill);
 		}
-		//Copy to avoid modifiying the passed one
+		//Copy to avoid modifying the passed one
 		FluidStack resource2 = resource.copy();
 		resource2.amount -= amt;
 		if(resource2.amount > 0)
 			amt += super.fill(resource2, doFill);
 		
 		if(amt > 0 && doFill)
-			fluidChanged = true;	
+			fluidChanged = true;
 		
 		checkForUpdate();
 		
 		return amt;
+	}
+	
+	@Override
+	public String getModularInventoryName() {
+		return AdvancedRocketryBlocks.blockPressureTank.getLocalizedName();
 	}
 
 	@Override
 	public FluidStack drain(int maxDrain, boolean doDrain) {
 		IFluidHandler handler = this.getFluidTankInDirection(EnumFacing.UP);
 
-		FluidStack stack = null;
+		FluidStack fStack = null;
 		if(handler != null && handler.getTankProperties()[0].getContents() != null && 
 				fluidTank.getFluid() != null && fluidTank.getFluid().getFluid() ==
 				handler.getTankProperties()[0].getContents().getFluid()) {
 
-			stack = handler.drain(maxDrain, doDrain);
+			fStack = handler.drain(maxDrain, doDrain);
 		}
-		if(stack != null)
-			return stack;
+		if(fStack != null)
+			return fStack;
 
-		FluidStack stack2 = super.drain(maxDrain - (stack != null ? stack.amount : 0), doDrain);
+		FluidStack fStack2 = super.drain(maxDrain, doDrain);
 
-		if(stack != null && stack2 != null)
-			stack2.amount += stack.amount;
-
-		
-		if(stack2 != null && doDrain) {
+		if(fStack2 != null && doDrain) {
 			fluidChanged = true;
 		}
 		checkForUpdate();
 		
 		
-		return stack2;
+		return fStack2;
 	}
 
 	@Override
@@ -118,6 +135,13 @@ public class TileFluidTank extends TileFluidHatch {
 		}
 		return null;
 	}
+	
+	private boolean canFill(FluidStack fStack)
+	{
+		FluidStack fStack2 = fluidTank.getFluid();
+		
+		return fStack2 == null || (fStack2.getFluid() == fStack.getFluid());
+	}
 
 	@Override
 	protected NBTTagCompound writeToNBTHelper(NBTTagCompound nbtTagCompound) {
@@ -133,7 +157,7 @@ public class TileFluidTank extends TileFluidHatch {
 	}
 
 	@Override
-	protected boolean useBucket(int slot, ItemStack stack) {
+	protected boolean useBucket(int slot, @Nonnull ItemStack stack) {
 		boolean bucketUsed = super.useBucket(slot, stack);
 
 		if(bucketUsed) {

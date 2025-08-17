@@ -4,6 +4,8 @@ import net.minecraft.block.Block;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
+import java.util.List;
+
 /** Interface used to talk to the internal seal handler for advanced rocketry.
  *
  * Keep in mind most blocks are already check for seal vs not seal. So you
@@ -36,4 +38,9 @@ public interface IAtmosphereSealHandler
      * @param block - block to allow, will remove off of disable list if present.
      */
     void addSealableBlock(Block block);
+    
+    /**
+     * Returns a list of blocks that can have been forced to be sealable
+     */
+    List<Block> getOverriddenSealableBlocks();
 }

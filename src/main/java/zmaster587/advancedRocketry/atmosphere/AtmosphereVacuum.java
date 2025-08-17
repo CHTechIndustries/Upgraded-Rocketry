@@ -2,13 +2,10 @@ package zmaster587.advancedRocketry.atmosphere;
 
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.EntityEquipmentSlot;
-import net.minecraft.item.ItemStack;
-import zmaster587.advancedRocketry.api.EntityRocketBase;
-import zmaster587.advancedRocketry.api.capability.CapabilitySpaceArmor;
-import zmaster587.advancedRocketry.entity.EntityElevatorCapsule;
+import net.minecraft.potion.Potion;
+import net.minecraft.potion.PotionEffect;
+import zmaster587.advancedRocketry.api.ARConfiguration;
 import zmaster587.advancedRocketry.network.PacketOxygenState;
-import zmaster587.advancedRocketry.util.ItemAirUtils;
 import zmaster587.libVulpes.LibVulpes;
 import zmaster587.libVulpes.network.PacketHandler;
 
@@ -16,49 +13,31 @@ import zmaster587.libVulpes.network.PacketHandler;
  * Atmosphere type for vaccum (No air)
  * @author Zmaster
  */
-public class AtmosphereVacuum extends AtmosphereType {
-
+public class AtmosphereVacuum extends AtmosphereNeedsSuit {
 
 	public static int damageValue;
+	public static boolean enableNausea = ARConfiguration.getCurrentConfig().enableNausea;
 
 	public AtmosphereVacuum() {
-		super(true, false, "vacuum");
+		super(true, false, false, "vacuum");
 	}
 
 	@Override
 	public void onTick(EntityLivingBase player) {
 		if(player.world.getTotalWorldTime() % 10  == 0 && !isImmune(player)) {
-			if(!isImmune(player)) {
-				player.attackEntityFrom(AtmosphereHandler.vacuumDamage, damageValue);
-				if(player instanceof EntityPlayer)
-					PacketHandler.sendToPlayer(new PacketOxygenState(), (EntityPlayer)player);
+			player.attackEntityFrom(AtmosphereHandler.vacuumDamage, damageValue);
+			player.addPotionEffect(new PotionEffect(Potion.getPotionById(2), 40, 4));
+			player.addPotionEffect(new PotionEffect(Potion.getPotionById(4), 40, 4));
+			if(enableNausea) {
+				player.addPotionEffect(new PotionEffect(Potion.getPotionById(9), 400, 1));
 			}
+			if(player instanceof EntityPlayer)
+				PacketHandler.sendToPlayer(new PacketOxygenState(), (EntityPlayer)player);
 		}
 	}
 
 	@Override
 	public String getDisplayMessage() {
 		return LibVulpes.proxy.getLocalizedString("msg.noOxygen");
-	}
-
-	@Override
-	public boolean isImmune(EntityLivingBase player) {
-
-		
-		//Checks if player is wearing spacesuit or anything that extends ItemSpaceArmor
-
-		ItemStack feet = player.getItemStackFromSlot(EntityEquipmentSlot.FEET);
-		ItemStack leg = player.getItemStackFromSlot(EntityEquipmentSlot.LEGS /*so hot you can fry an egg*/ );
-		ItemStack chest = player.getItemStackFromSlot(EntityEquipmentSlot.CHEST);
-		ItemStack helm = player.getItemStackFromSlot(EntityEquipmentSlot.HEAD);
-
-		return (player instanceof EntityPlayer && ((((EntityPlayer)player).capabilities.isCreativeMode) || ((EntityPlayer)player).isSpectator()))
-				|| player.getRidingEntity() instanceof EntityRocketBase || player.getRidingEntity() instanceof EntityElevatorCapsule ||
-				protectsFrom(helm) && protectsFrom(leg) && protectsFrom(feet) && protectsFrom(chest);
-		}
-
-	public boolean protectsFrom(ItemStack stack) {
-		return (ItemAirUtils.INSTANCE.isStackValidAirContainer(stack) && new ItemAirUtils.ItemAirWrapper(stack).protectsFromSubstance(this, stack, true) ) || (!stack.isEmpty() && stack.hasCapability(CapabilitySpaceArmor.PROTECTIVEARMOR, null) &&
-				stack.getCapability(CapabilitySpaceArmor.PROTECTIVEARMOR, null).protectsFromSubstance(this, stack, true));
 	}
 }

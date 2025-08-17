@@ -15,12 +15,13 @@ import zmaster587.advancedRocketry.AdvancedRocketry;
 import zmaster587.advancedRocketry.api.satellite.SatelliteBase;
 import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.inventory.GuiHandler;
-import zmaster587.advancedRocketry.inventory.modules.ModuleOreMapper;
 import zmaster587.advancedRocketry.satellite.SatelliteOreMapping;
 import zmaster587.libVulpes.LibVulpes;
 import zmaster587.libVulpes.inventory.modules.IModularInventory;
 import zmaster587.libVulpes.inventory.modules.ModuleBase;
 
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -28,8 +29,7 @@ public class ItemOreScanner extends Item implements IModularInventory {
 
 
 	@Override
-	public void addInformation(ItemStack stack, World player,
-			List list, ITooltipFlag arg5) {
+	public void addInformation(@Nonnull ItemStack stack, World player, List<String> list, ITooltipFlag arg5) {
 		
 		SatelliteBase sat = DimensionManager.getInstance().getSatellite(this.getSatelliteID(stack));
 		
@@ -43,8 +43,8 @@ public class ItemOreScanner extends Item implements IModularInventory {
 			list.add(LibVulpes.proxy.getLocalizedString("msg.itemorescanner.nosat"));
 		else if(mapping.getDimensionId() == player.provider.getDimension()) {
 			list.add(LibVulpes.proxy.getLocalizedString("msg.connected"));
-			list.add(LibVulpes.proxy.getLocalizedString("msg.maxzoom") + mapping.getZoomRadius());
-			list.add(LibVulpes.proxy.getLocalizedString("msg.filter") + mapping.canFilterOre());
+			list.add(LibVulpes.proxy.getLocalizedString("msg.itemorescanner.maxzoom") + mapping.getZoomRadius());
+			list.add(LibVulpes.proxy.getLocalizedString("msg.itemorescanner.filter") + mapping.canFilterOre());
 		}
 		else
 			list.add(LibVulpes.proxy.getLocalizedString("msg.notconnected"));
@@ -52,7 +52,7 @@ public class ItemOreScanner extends Item implements IModularInventory {
 		super.addInformation(stack, player, list, arg5);
 	}
 	
-	public void setSatelliteID(ItemStack stack, long id) {
+	public void setSatelliteID(@Nonnull ItemStack stack, long id) {
 		NBTTagCompound nbt;
 		if(!stack.hasTagCompound())
 			nbt = new NBTTagCompound();
@@ -63,7 +63,7 @@ public class ItemOreScanner extends Item implements IModularInventory {
 		stack.setTagCompound(nbt);
 	}
 
-	public long getSatelliteID(ItemStack stack) {
+	public long getSatelliteID(@Nonnull ItemStack stack) {
 		NBTTagCompound nbt;
 		if(!stack.hasTagCompound())
 			return -1;
@@ -74,23 +74,44 @@ public class ItemOreScanner extends Item implements IModularInventory {
 	}
 	
 	@Override
+	@ParametersAreNonnullByDefault
+	@Nonnull
 	public ActionResult<ItemStack> onItemRightClick(World worldIn, EntityPlayer playerIn, EnumHand hand) {
 		ItemStack stack = playerIn.getHeldItem(hand);
-		if(!playerIn.world.isRemote && stack != null)
-			playerIn.openGui(AdvancedRocketry.instance, GuiHandler.guiId.OreMappingSatellite.ordinal(), worldIn, (int)playerIn.getPosition().getX(), (int)getSatelliteID(stack), (int)playerIn.getPosition().getZ());
+		if(!playerIn.world.isRemote && !stack.isEmpty())
+		{
+			int satelliteId = (int)getSatelliteID(stack);
+			
+			SatelliteBase satellite = DimensionManager.getInstance().getSatellite(satelliteId);
+			
+			if(satellite instanceof SatelliteOreMapping && satellite.getDimensionId() == worldIn.provider.getDimension())
+				playerIn.openGui(AdvancedRocketry.instance, GuiHandler.guiId.OreMappingSatellite.ordinal(), worldIn, playerIn.getPosition().getX(), (int)getSatelliteID(stack), playerIn.getPosition().getZ());
 
+		}
+			
 		return super.onItemRightClick(worldIn, playerIn, hand);
 	}
 	
 	@Override
+	@Nonnull
 	public EnumActionResult onItemUse(EntityPlayer playerIn,
 			World worldIn, BlockPos pos, EnumHand hand, EnumFacing facing,
 			float hitX, float hitY, float hitZ) {
 		if(!playerIn.world.isRemote && hand == EnumHand.MAIN_HAND)
-			playerIn.openGui(AdvancedRocketry.instance, GuiHandler.guiId.OreMappingSatellite.ordinal(), worldIn, (int)playerIn.getPosition().getX(), (int)getSatelliteID(playerIn.getHeldItem(hand)), (int)playerIn.getPosition().getZ());
+		{
+			ItemStack stack = playerIn.getHeldItem(hand);
+			if(!playerIn.world.isRemote && !stack.isEmpty())
+			{
+				int satelliteId = (int)getSatelliteID(stack);
+				
+				SatelliteBase satellite = DimensionManager.getInstance().getSatellite(satelliteId);
+				
+				if(satellite instanceof SatelliteOreMapping && satellite.getDimensionId() == worldIn.provider.getDimension())
+					playerIn.openGui(AdvancedRocketry.instance, GuiHandler.guiId.OreMappingSatellite.ordinal(), worldIn, playerIn.getPosition().getX(), (int)getSatelliteID(stack), playerIn.getPosition().getZ());
 
-		return super.onItemUse(playerIn, worldIn, pos, hand, facing, hitX, hitY,
-				hitZ);
+			}
+		}
+		return super.onItemUse(playerIn, worldIn, pos, hand, facing, hitX, hitY, hitZ);
 	}
 
 
@@ -100,8 +121,8 @@ public class ItemOreScanner extends Item implements IModularInventory {
 
 	@Override
 	public List<ModuleBase> getModules(int id, EntityPlayer player) {
-		List<ModuleBase> modules = new LinkedList<ModuleBase>();
-		modules.add(new ModuleOreMapper(0, 0));
+		List<ModuleBase> modules = new LinkedList<>();
+		//modules.add(new ModuleOreMapper(0, 0));
 		return modules;
 	}
 

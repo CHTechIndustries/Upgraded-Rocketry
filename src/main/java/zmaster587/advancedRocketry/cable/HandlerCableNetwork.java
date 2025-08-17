@@ -5,11 +5,10 @@ import net.minecraft.util.EnumFacing;
 import zmaster587.advancedRocketry.tile.cables.TilePipe;
 
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.Map.Entry;
 
 public class HandlerCableNetwork {
-	protected Hashtable<Integer,CableNetwork> networks = new Hashtable<Integer,CableNetwork>();
+	protected Hashtable<Integer,CableNetwork> networks = new Hashtable<>();
 
 	//private static final String FILENAME = "/data/insanityCraft.dat";
 	
@@ -65,7 +64,7 @@ public class HandlerCableNetwork {
 
 	public int mergeNetworks(int a, int b) {
 		
-		assert(networks.get(Math.max(a, b)) != null && networks.get(Math.min(a, b)) != null);
+		assert(networks.get(Math.max(a, b)) == null || networks.get(Math.min(a, b)) == null);
 		
 		networks.get(Math.min(a, b)).merge(networks.get(Math.max(a, b)));
 		networks.get(Math.min(a, b)).numCables += networks.get(Math.max(a, b)).numCables;
@@ -77,9 +76,8 @@ public class HandlerCableNetwork {
 	}
 
 	public void tickAllNetworks() {
-		Iterator<Entry<Integer, CableNetwork>> iter = networks.entrySet().iterator();
-		while(iter.hasNext()) {
-			iter.next().getValue().tick();
+		for (Entry<Integer, CableNetwork> integerCableNetworkEntry : networks.entrySet()) {
+			integerCableNetworkEntry.getValue().tick();
 		}
 	}
 

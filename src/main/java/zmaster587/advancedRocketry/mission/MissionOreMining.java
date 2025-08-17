@@ -9,13 +9,16 @@ import net.minecraft.world.World;
 import net.minecraftforge.common.DimensionManager;
 import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
-import zmaster587.advancedRocketry.api.Configuration;
+import zmaster587.advancedRocketry.AdvancedRocketry;
+import zmaster587.advancedRocketry.api.ARConfiguration;
+import zmaster587.advancedRocketry.api.AdvancedRocketryItems;
 import zmaster587.advancedRocketry.api.DataStorage.DataType;
 import zmaster587.advancedRocketry.api.IInfrastructure;
 import zmaster587.advancedRocketry.entity.EntityRocket;
 import zmaster587.advancedRocketry.item.ItemAsteroidChip;
-import zmaster587.advancedRocketry.util.AsteroidSmall;
-import zmaster587.advancedRocketry.util.AsteroidSmall.StackEntry;
+import zmaster587.advancedRocketry.tile.TileGuidanceComputer;
+import zmaster587.advancedRocketry.util.Asteroid;
+import zmaster587.advancedRocketry.util.Asteroid.StackEntry;
 import zmaster587.libVulpes.util.HashedBlockPosition;
 
 import java.util.LinkedList;
@@ -39,7 +42,13 @@ public class MissionOreMining extends MissionResourceCollection {
 		if(rocketStats.getDrillingPower() != 0f) {
 			int distanceData, compositionData, massData, maxData;
 
-			ItemStack stack = rocketStorage.getGuidanceComputer().getStackInSlot(0);
+			TileGuidanceComputer computer = rocketStorage.getGuidanceComputer();
+			if(computer == null)
+			{
+				AdvancedRocketry.logger.warn("Cannot find guidance computer in rocket landing at " + x + ", " + z + " in dim " + launchDimension + ".  Unable to respawn the rocket.");
+				return;
+			}
+			ItemStack stack = computer.getStackInSlot(0);
 
 			if(!stack.isEmpty() && stack.getItem() instanceof ItemAsteroidChip) {
 
@@ -52,12 +61,12 @@ public class MissionOreMining extends MissionResourceCollection {
 				if(distanceData/(double)maxData > Math.random()) {
 					ItemStack[] stacks;
 
-					AsteroidSmall asteroid = Configuration.asteroidTypes.get(((ItemAsteroidChip)stack.getItem()).getType(stack));
+					Asteroid asteroid = ARConfiguration.getCurrentConfig().asteroidTypes.get(((ItemAsteroidChip)stack.getItem()).getType(stack));
 
 					if(asteroid != null) {
 
 						List<StackEntry> stacks2 = asteroid.getHarvest(((ItemAsteroidChip)stack.getItem()).getUUID(stack));
-						List<ItemStack> totalStacksList = new LinkedList<ItemStack>();
+						List<ItemStack> totalStacksList = new LinkedList<>();
 						for(StackEntry entry : stacks2) {
 
 							if(compositionData/(float)maxData >= Math.random())
@@ -101,10 +110,11 @@ public class MissionOreMining extends MissionResourceCollection {
 					}
 				}
 			}
-
 		}
 
 		rocketStorage.getGuidanceComputer().setInventorySlotContents(0, ItemStack.EMPTY);
+		//Return asteroid ID chip
+		rocketStorage.getGuidanceComputer().setInventorySlotContents(0, new ItemStack(AdvancedRocketryItems.itemAsteroidChip));
 		EntityRocket rocket = new EntityRocket(DimensionManager.getWorld(launchDimension), rocketStorage, rocketStats, x, 999, z);
 
 		World world = DimensionManager.getWorld(launchDimension);

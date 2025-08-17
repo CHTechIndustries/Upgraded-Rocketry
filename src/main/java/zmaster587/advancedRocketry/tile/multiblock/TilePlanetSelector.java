@@ -8,6 +8,7 @@ import net.minecraft.network.play.server.SPacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraftforge.fml.relauncher.Side;
 import org.apache.commons.lang3.ArrayUtils;
+import zmaster587.advancedRocketry.api.Constants;
 import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.dimension.DimensionProperties;
 import zmaster587.advancedRocketry.inventory.modules.ModulePlanetSelector;
@@ -57,7 +58,7 @@ public class TilePlanetSelector extends TilePointer implements ISelectionNotify,
 	}
 
 	private void selectSystem(int id) {
-		if(id == -1)
+		if(id == Constants.INVALID_PLANET)
 			dimCache = null;
 		else
 			dimCache = DimensionManager.getInstance().getDimensionProperties(container.getSelectedSystem());
@@ -66,9 +67,10 @@ public class TilePlanetSelector extends TilePointer implements ISelectionNotify,
 	@Override
 	public List<ModuleBase> getModules(int ID, EntityPlayer player) {
 
-		List<ModuleBase> modules = new LinkedList<ModuleBase>();
+		List<ModuleBase> modules = new LinkedList<>();
 
-		container = new ModulePlanetSelector(0, TextureResources.starryBG, this, true);
+                DimensionProperties props = DimensionManager.getEffectiveDimId(player.world, player.getPosition());
+		container = new ModulePlanetSelector((props != null ? props.getStarId() : 0), TextureResources.starryBG, this, true);
 		container.setOffset(1000, 1000);
 		modules.add(container);
 
@@ -109,7 +111,7 @@ public class TilePlanetSelector extends TilePointer implements ISelectionNotify,
 
 				ItemStack stack = ((ITilePlanetSystemSelectable)getMasterBlock()).getChipWithId(container.getSelectedSystem());
 
-				if(stack != null) {
+				if(!stack.isEmpty()) {
 
 					DataType data;
 					if(id == 0)
@@ -139,9 +141,9 @@ public class TilePlanetSelector extends TilePointer implements ISelectionNotify,
 		if(dimCache == null)
 			return 50;
 		if(id == 0)
-			return dimCache.getAtmosphereDensity()/2;
+			return dimCache.getAtmosphereDensity()/16;
 		else if(id == 1)
-			return dimCache.orbitalDist/2;
+			return dimCache.orbitalDist/16;
 		else //if(id == 2)
 			return (int) (dimCache.gravitationalMultiplier*50);
 	}

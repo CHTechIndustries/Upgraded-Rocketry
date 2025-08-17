@@ -3,7 +3,6 @@ package zmaster587.advancedRocketry.client;
 import net.minecraft.client.audio.MovingSound;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvent;
-import zmaster587.advancedRocketry.dimension.DimensionManager;
 import zmaster587.advancedRocketry.entity.EntityRocket;
 
 public class SoundRocketEngine extends MovingSound {
@@ -22,10 +21,7 @@ public class SoundRocketEngine extends MovingSound {
 		if(rocket.isDead)
 			this.donePlaying = true;
 
-		if(rocket.isInFlight() && rocket.areEnginesRunning())
-			this.volume = Math.max(DimensionManager.getInstance().getDimensionProperties(rocket.world.provider.getDimension()).getAtmosphereDensityAtHeight(rocket.posY), 0.05f);
-		else
-			this.volume = 0;
+		this.volume = rocket.getEnginePower();
 
 		this.pitch = (volume + 1f)*0.6f;
 		

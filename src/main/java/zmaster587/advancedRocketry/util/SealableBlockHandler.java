@@ -5,6 +5,7 @@ import net.minecraft.block.BlockDoor;
 import net.minecraft.block.BlockDoor.EnumDoorHalf;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.IBlockAccess;
@@ -15,6 +16,7 @@ import zmaster587.advancedRocketry.api.AdvancedRocketryBlocks;
 import zmaster587.advancedRocketry.api.atmosphere.IAtmosphereSealHandler;
 import zmaster587.libVulpes.util.HashedBlockPosition;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -27,17 +29,17 @@ import java.util.List;
 public final class SealableBlockHandler implements IAtmosphereSealHandler
 {
 	/** List of blocks not allowed. */
-	private List<Block> blockBanList = new ArrayList();
+	private List<Block> blockBanList = new ArrayList<>();
 	/** List of blocks that are allowed regardless of properties. */
-	private List<Block> blockAllowList = new ArrayList();
+	private List<Block> blockAllowList = new ArrayList<>();
 	/** List of block materials not allowed. */
-	private List<Material> materialBanList = new ArrayList();
+	private List<Material> materialBanList = new ArrayList<>();
 	/** List of block materials that are allowed regardless of properties. */
-	private List<Material> materialAllowList = new ArrayList();
+	private List<Material> materialAllowList = new ArrayList<>();
 	
-	private HashSet<HashedBlockPosition> doorPositions = new HashSet<HashedBlockPosition>();
+	private HashSet<HashedBlockPosition> doorPositions = new HashSet<>();
 	//TODO add meta support
-	//TODO add complex logic support threw API interface
+	//TODO add complex logic support through API interface
 	//TODO add complex logic handler for integration support
 
 	/** INSTANCE */
@@ -52,7 +54,7 @@ public final class SealableBlockHandler implements IAtmosphereSealHandler
 	 * @return
 	 */
 	@Override
-	public boolean isBlockSealed(World world, BlockPos pos)
+	public boolean isBlockSealed(@Nonnull World world, @Nonnull BlockPos pos)
 	{
 		//Ensure we are not checking outside of the map
 		if(pos.getY() >= 0 && pos.getY() <= 256)
@@ -99,7 +101,7 @@ public final class SealableBlockHandler implements IAtmosphereSealHandler
 				return doorIsSealed;
 			}
 			//TODO add is side solid check, which will require forge direction or side check. Eg more complex logic...
-			return isFulBlock(world, pos);
+			return isFullBlock(world, pos);
 		}
 		return false;
 	}
@@ -111,10 +113,7 @@ public final class SealableBlockHandler implements IAtmosphereSealHandler
 		{
 			blockBanList.add(block);
 		}
-		if (blockAllowList.contains(block))
-		{
-			blockAllowList.remove(block);
-		}
+		blockAllowList.remove(block);
 	}
 
 	@Override
@@ -124,10 +123,12 @@ public final class SealableBlockHandler implements IAtmosphereSealHandler
 		{
 			blockAllowList.add(block);
 		}
-		if (blockBanList.contains(block))
-		{
-			blockBanList.remove(block);
-		}
+		blockBanList.remove(block);
+	}
+	
+	public List<Block> getOverriddenSealableBlocks()
+	{
+		return blockAllowList;
 	}
 
 	/**
@@ -140,7 +141,7 @@ public final class SealableBlockHandler implements IAtmosphereSealHandler
 	 * @param pos   - location
 	 * @return true if full block
 	 */
-	public static boolean isFulBlock(World world, BlockPos pos)
+	public static boolean isFullBlock(World world, BlockPos pos)
 	{
 		return isFullBlock(world, pos, world.getBlockState(pos));
 	}
@@ -151,12 +152,14 @@ public final class SealableBlockHandler implements IAtmosphereSealHandler
 	 * have a 3D model that doesn't look a full block in size. There
 	 * is no way around this other than to make a black list check.
 	 *
-	 * @param block - block to compare
+	 * @param world
+	 * @param pos block to compare
+	 * @param state
 	 * @return true if full block
 	 */
 	public static boolean isFullBlock(IBlockAccess world, BlockPos pos, IBlockState state)
 	{
-		AxisAlignedBB bb = state.getCollisionBoundingBox((World) world, pos);
+		AxisAlignedBB bb = state.getCollisionBoundingBox(world, pos);
 		
     	if(bb == null)
     		return false;
@@ -182,7 +185,20 @@ public final class SealableBlockHandler implements IAtmosphereSealHandler
 		if(state.getValue(BlockDoor.OPEN))
 			return isBlockSealed(world, pos.offset(state2.getValue(BlockDoor.FACING))) && isBlockSealed(world, pos.offset(state2.getValue(BlockDoor.FACING).rotateYCCW().rotateYCCW())); 
 		//state.getValue(BlockDoor.FACING)
-		return isBlockSealed(world, pos.offset(state2.getValue(BlockDoor.FACING).rotateY())) && isBlockSealed(world, pos.offset(state2.getValue(BlockDoor.FACING).rotateYCCW())); 
+		boolean sealed = isBlockSealed(world, pos.offset(state2.getValue(BlockDoor.FACING).rotateY())) && isBlockSealed(world, pos.offset(state2.getValue(BlockDoor.FACING).rotateYCCW())); 
+		
+		// If not sealed, check if the airlock is against the edge of sealed blocks (see issue #89)
+		// Right now only works for single doors with edges, TODO extend to allow other blocks to be placed alongside the same axis as the door (see photo in #89, has two doors)
+		if(!sealed && !state.getValue(BlockDoor.OPEN)) {
+			EnumFacing face = state2.getValue(BlockDoor.FACING);
+			
+			// Rotate to both opposite axises, offset by the original facing value opposite and check if it's sealed.
+			// ex: D = door - E = first offset result - B = second offset result
+			//   EDE
+			//   B B
+			sealed = isBlockSealed(world, pos.offset(face.rotateYCCW()).offset(face.getOpposite())) && isBlockSealed(world, pos.offset(face.rotateY()).offset(face.getOpposite()));
+		}
+		return sealed;
 	}
 
 	/**

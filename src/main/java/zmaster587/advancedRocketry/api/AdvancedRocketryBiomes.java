@@ -1,13 +1,13 @@
 package zmaster587.advancedRocketry.api;
 
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.biome.Biome;
 import net.minecraftforge.registries.IForgeRegistry;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-
-import zmaster587.advancedRocketry.world.biome.BiomeGenMoon;
 
 
 /**
@@ -31,12 +31,14 @@ public class AdvancedRocketryBiomes {
 	public static Biome marsh;
 	public static Biome oceanSpires;
 	public static Biome moonBiomeDark;
+	public static Biome volcanic;
+	public static Biome volcanicBarren;
 
 	private AdvancedRocketryBiomes() {
-		registeredBiomes = new ArrayList<Biome>();
-		registeredHighPressureBiomes = new LinkedList<Biome>();
-		blackListedBiomeIds = new ArrayList<Integer>();
-		registeredSingleBiome = new ArrayList<Biome>();
+		registeredBiomes = new ArrayList<>();
+		registeredHighPressureBiomes = new LinkedList<>();
+		blackListedBiomeIds = new ArrayList<>();
+		registeredSingleBiome = new ArrayList<>();
 	}
 
 	/**
@@ -133,6 +135,19 @@ public class AdvancedRocketryBiomes {
 		}
 
 		return Biome.getBiome(id);
+	}
+
+	@Nullable
+	public static Biome getBiome(String string) {
+		Biome biome = Biome.REGISTRY.getObject(new ResourceLocation(string));
+		
+		//Fallback to ID
+		if( biome == null)
+		{
+			biome = Biome.getBiome(Integer.parseInt(string));
+		}
+		
+		return biome;
 	}
 
 }
