@@ -1,7 +1,0 @@
-{
-    "parent": "block/door_top",
-    "textures": {
-        "bottom": "advancedrocketry:blocks/smallairlockdoor_lower",
-        "top": "advancedrocketry:blocks/smallairlockdoor_upper"
-    }
-}

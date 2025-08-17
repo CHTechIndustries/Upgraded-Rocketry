@@ -1,8 +1,0 @@
-{
-    "parent": "block/orientable",
-    "textures": {
-        "top": "advancedrocketry:blocks/guidancecomputeraccesshatch",
-        "front": "advancedrocketry:blocks/guidancecomputeraccesshatch",
-        "side": "advancedrocketry:blocks/guidancecomputeraccesshatch"
-    }
-}

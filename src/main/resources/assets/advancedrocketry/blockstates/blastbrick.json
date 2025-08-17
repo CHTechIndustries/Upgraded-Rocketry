@@ -1,6 +1,0 @@
-{
-    "variants": {
-        "visible=true": { "model": "advancedrocketry:block/blastbrick" },
-        "visible=false": { "model": "advancedrocketry:block/blastbrick" }
-    }
-}
