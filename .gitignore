@@ -1,0 +1,29 @@
+# eclipse
+bin
+*.launch
+.settings
+.metadata
+.classpath
+.project
+
+# idea
+out
+*.ipr
+*.iws
+*.iml
+.idea
+
+# gradle
+build
+output
+.gradle
+
+# other
+eclipse
+run
+refresh.bat
+AdvancedRocketry.txt
+changelog.html
+lasthash.txt
+libs
+*.bak
